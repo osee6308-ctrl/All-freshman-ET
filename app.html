@@ -1785,5 +1785,70 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
-</body>
+ 
+</bo<!-- ANDROID HARDWARE BACK BUTTON — works on the APK -->
+<script>
+(function(){
+  function handleBack(){
+    // 1) Close app dialog (alert/confirm/prompt)
+    var dlg = document.getElementById('appDialogOverlay');
+    if(dlg){ dlg.remove(); return true; }
+
+    // 2) Close notification panel
+    var notif = document.getElementById('notifPanel');
+    if(notif && typeof closeNotifPanel === 'function'){ closeNotifPanel(); return true; }
+
+    // 3) Close report menu
+    var report = document.getElementById('reportMenu');
+    if(report && report.classList.contains('open') && typeof closeReport === 'function'){ closeReport(); return true; }
+
+    // 4) Close chat room
+    var chatRoom = document.getElementById('chatRoom');
+    if(chatRoom && chatRoom.classList.contains('open') && typeof closeChat === 'function'){ closeChat(); return true; }
+
+    // 5) Close composer sheet
+    var sheet = document.getElementById('sheet');
+    if(sheet && sheet.classList.contains('open') && typeof closeComposer === 'function'){ closeComposer(); return true; }
+
+    // 6) In-app navigation stack → go back one screen
+    if (typeof _screenStack !== 'undefined' && _screenStack.length > 0){
+      try { goBack(); } catch(e){}
+      return true;
+    }
+
+    // 7) Inside a sub-screen → go to base tab
+    if (typeof currentScreen !== 'undefined' && typeof currentTab !== 'undefined'
+        && currentScreen !== currentTab){
+      try { switchTab(currentTab); } catch(e){}
+      return true;
+    }
+
+    // 8) Nothing to close → exit the app
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App){
+      try { window.Capacitor.Plugins.App.exitApp(); } catch(e){}
+    }
+    return false;
+  }
+
+  function init(){
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App){
+      window.Capacitor.Plugins.App.addListener('backButton', function(){
+        handleBack();
+      });
+      console.log('Back button wired (Capacitor)');
+      return;
+    }
+    // Fallback for browser / PWA
+    window.addEventListener('popstate', function(e){
+      if(handleBack()){ e.preventDefault(); }
+      try { history.pushState({ nav: true }, ''); } catch(err){}
+    });
+    try { history.pushState({ nav: true }, ''); } catch(err){}
+    console.log('Back button wired (popstate)');
+  }
+
+  if (document.readyState === 'complete') init();
+  else window.addEventListener('load', init);
+})();
+</script>dy>
  </html>
