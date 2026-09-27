@@ -31,10 +31,8 @@ jobs:
       - name: Prepare keystore
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "Using keystore from secret"
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android-keystore.jks
           else
-            echo "No secret found — generating temporary keystore"
             keytool -genkey -v \
               -keystore android-keystore.jks \
               -alias allfreshman \
@@ -66,13 +64,12 @@ jobs:
         run: |
           npx cap add android || true
           npx cap sync android
+          npx cap sync
 
       - name: Overwrite MainActivity with FLAG_SECURE
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
-          echo "Rewriting: $FILE"
           PKG=$(grep '^package ' "$FILE" | sed 's/package //;s/;//')
-          echo "Package: $PKG"
           cat > "$FILE" <<EOF
           package $PKG;
 
@@ -88,8 +85,6 @@ jobs:
               }
           }
           EOF
-          echo "----- New MainActivity.java -----"
-          cat "$FILE"
           grep -q "FLAG_SECURE" "$FILE" && echo "OK: FLAG_SECURE applied"
 
       - name: Build signed AAB
@@ -125,6 +120,6 @@ jobs:
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
-      - name: Cleanup keystore from runner
+      - name: Cleanup keystore
         if: always()
         run: rm -f android-keystore.jks
