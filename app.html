@@ -846,10 +846,11 @@ function submitSignUp(){
   if(!isValidPassword(pw)) return err('Password/PIN must be at least 4 characters.');
   if(pw!==pw2) return err('Passwords do not match.');
   if(isPhoneBlacklisted(phone)){ appAlert('This number is blocked.'); setBlocked(true); renderBlockedScreen(); return; }
-  if(isPhoneUsed(phone)) return err('This phone number is ALREADY registered. Please use Sign In instead.');
+  if(isPhoneUsed(phone) && (findLocalUser(phone) || findRemoteUser(phone))) return err('This phone number is ALREADY registered. Please use Sign In instead.');
   if(findLocalUser(phone)) return err('Phone already registered on this device. Use Sign In.');
   const user = { name, phone, university:uni, stream, passwordHash:hashPassword(phone,pw), deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
   markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
+  try { var synced = JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT) || '{}'); if(!synced.users) synced.users = {}; synced.users[user.phone] = { name: user.name, phone: user.phone, university: user.university, stream: user.stream, passwordHash: user.passwordHash, deviceHash: user.deviceHash, createdAt: user.createdAt }; localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(synced)); } catch(e){}
   saveProfileData({ name, phone, university:uni, stream });
   setUniversity(uni); setCheckedIn(); startSession(phone);
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
@@ -877,7 +878,7 @@ function submitSignIn(){
   if(!isValidPassword(pw)) return err('Password must be at least 4 characters.');
   if(isPhoneBlacklisted(phone)){ err('Account blocked.'); setTimeout(()=>renderBlockedScreen(),1200); return; }
   let user = findLocalUser(phone);
-  if(!user){ const remote = findRemoteUser(phone); if(remote){ saveUser(remote); user = remote; } }
+  if(!user){ const remote = findRemoteUser(phone); if(remote){ saveUser(remote); user = remote; markPhoneUsed(phone); } }
   if(!user){ return err('No account found. Sign up first or contact admin.'); }
   const h = hashPassword(phone, pw);
   if(h !== user.passwordHash) return err('Wrong password.');
@@ -1615,8 +1616,8 @@ async function adminSaveGeneralSubject(key){ const subjects = getGeneralSubjects
 function exportContentForShipping(){
   setScreen('admin-content');
   const lib=getContentLibrary();
-  const wrap={ version:parseInt(localStorage.getItem(LS_SYNCED_VERSION)||'0')+1, updated:new Date().toISOString().slice(0,10), blacklist:getBlacklist(), notifications:getNotifications(), tutorials:getTutorials(), settings:getSettings(), registeredPhones:getRegisteredPhones(), universityInfo:getUniInfo(), generalSubjects:getGeneralSubjects(), universities:lib };
-  const json=JSON.stringify(wrap,null,2);
+  const wrap={ version:parseInt(localStorage.getItem(LS_SYNCED_VERSION)||'0')+1, updated:new Date().toISOString().slice(0,10), blacklist:getBlacklist(), notifications:getNotifications(), tutorials:getTutorials(), settings:getSettings(), registeredPhones:getRegisteredPhones(), universityInfo:getUniInfo(), generalSubjects:getGeneralSubjects(), universities:lib, users:getUsers() };
+ const json=JSON.stringify(wrap,null,2);
   app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Export Content</h2><div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; font-size:13px; color:#1565c0; margin-bottom:14px; line-height:1.7;"><strong>Next steps:</strong><br>1. Copy JSON<br>2. GitHub → content.json → edit → paste<br>3. Bump version.json<br>4. Commit</div><textarea readonly onclick="this.select()" style="width:100%; padding:12px; border:2px solid #e0e0e6; border-radius:10px; font-size:11px; font-family:monospace; min-height:400px; outline:none;">'+escapeHtml(json)+'</textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="copyExport()">Copy JSON</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function copyExport(){ const ta=document.querySelector('textarea[readonly]'); ta.select(); document.execCommand('copy'); await appAlert('Copied!'); }
@@ -1785,60 +1786,41 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
- 
-</bo<!-- ANDROID HARDWARE BACK BUTTON — works on the APK -->
+
+<!-- ANDROID HARDWARE BACK BUTTON — works on the APK -->
 <script>
 (function(){
   function handleBack(){
-    // 1) Close app dialog (alert/confirm/prompt)
     var dlg = document.getElementById('appDialogOverlay');
     if(dlg){ dlg.remove(); return true; }
-
-    // 2) Close notification panel
     var notif = document.getElementById('notifPanel');
     if(notif && typeof closeNotifPanel === 'function'){ closeNotifPanel(); return true; }
-
-    // 3) Close report menu
     var report = document.getElementById('reportMenu');
     if(report && report.classList.contains('open') && typeof closeReport === 'function'){ closeReport(); return true; }
-
-    // 4) Close chat room
     var chatRoom = document.getElementById('chatRoom');
     if(chatRoom && chatRoom.classList.contains('open') && typeof closeChat === 'function'){ closeChat(); return true; }
-
-    // 5) Close composer sheet
     var sheet = document.getElementById('sheet');
     if(sheet && sheet.classList.contains('open') && typeof closeComposer === 'function'){ closeComposer(); return true; }
-
-    // 6) In-app navigation stack → go back one screen
     if (typeof _screenStack !== 'undefined' && _screenStack.length > 0){
       try { goBack(); } catch(e){}
       return true;
     }
-
-    // 7) Inside a sub-screen → go to base tab
     if (typeof currentScreen !== 'undefined' && typeof currentTab !== 'undefined'
         && currentScreen !== currentTab){
       try { switchTab(currentTab); } catch(e){}
       return true;
     }
-
-    // 8) Nothing to close → exit the app
     if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App){
       try { window.Capacitor.Plugins.App.exitApp(); } catch(e){}
     }
     return false;
   }
-
   function init(){
     if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App){
-      window.Capacitor.Plugins.App.addListener('backButton', function(){
-        handleBack();
-      });
+      window.Capacitor.Plugins.App.addListener('backButton', function(){ handleBack(); });
       console.log('Back button wired (Capacitor)');
       return;
     }
-    // Fallback for browser / PWA
     window.addEventListener('popstate', function(e){
       if(handleBack()){ e.preventDefault(); }
       try { history.pushState({ nav: true }, ''); } catch(err){}
@@ -1846,9 +1828,9 @@ if ('serviceWorker' in navigator) {
     try { history.pushState({ nav: true }, ''); } catch(err){}
     console.log('Back button wired (popstate)');
   }
-
   if (document.readyState === 'complete') init();
   else window.addEventListener('load', init);
 })();
-</script>dy>
- </html>
+</script>
+</body>
+</html>
