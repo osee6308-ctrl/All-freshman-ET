@@ -73,7 +73,6 @@ jobs:
         run: |
           ICON=icon-512.png
           if [ -f "$ICON" ]; then
-            echo "Generating Android launcher icons from $ICON"
             mkdir -p android/app/src/main/res/mipmap-mdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
             mkdir -p android/app/src/main/res/mipmap-xhdpi
@@ -85,9 +84,7 @@ jobs:
             convert "$ICON" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
             convert "$ICON" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
             cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-            echo "✅ Icons generated"
-          else
-            echo "❌ WARNING: icon-512.png not found in repo root"
+            echo "Icons generated"
           fi
 
       - name: Overwrite MainActivity with FLAG_SECURE
