@@ -42,7 +42,7 @@
   .locked-box p { color:#666; font-size:13.5px; line-height:1.7; margin-bottom:16px; }
   .btn { padding:11px 20px; border:none; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; transition:opacity .15s; }
   .btn:active { opacity:.7; }
-  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
   .btn-primary { background:#6a3093; color:#fff; }
   .btn-ghost { background:#eee; color:#333; }
   .btn-danger { background:#ff4757; color:#fff; padding:6px 10px; font-size:12px; border-radius:6px; }
@@ -261,6 +261,87 @@ const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','
 const escapeAttr = s => escapeHtml(s).replace(/"/g,'&quot;');
 const formatTime = sec => { const m=String(Math.floor(sec/60)).padStart(2,'0'); const s=String(sec%60).padStart(2,'0'); return m+':'+s; };
 function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0; } return Math.abs(h).toString(36).toUpperCase(); }
+
+/* ================= CRYPTO HELPERS (Web Crypto API) ================= */
+function bytesToHex(bytes){ return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function hexToBytes(hex){ const out=new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(hex.substr(i*2,2),16); return out; }
+function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
+function b64ToBytes(b64){ const s=atob(b64); const out=new Uint8Array(s.length); for(let i=0;i<s.length;i++) out[i]=s.charCodeAt(i); return out; }
+function genSalt(n=16){ const b=new Uint8Array(n); crypto.getRandomValues(b); return bytesToHex(b); }
+
+async function pbkdf2Hash(password, saltHex, iterations=150000){
+  const enc = new TextEncoder();
+  const keyMat = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: hexToBytes(saltHex), iterations, hash:'SHA-256' },
+    keyMat, 256
+  );
+  return bytesToHex(new Uint8Array(bits));
+}
+async function hashPasswordNew(pw){
+  const salt = genSalt(16);
+  const iter = 150000;
+  const hash = await pbkdf2Hash(pw, salt, iter);
+  return 'pbkdf2$'+iter+'$'+salt+'$'+hash;
+}
+function timingSafeEqual(a, b){
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i=0;i<a.length;i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+let _aesKeyCache = null;
+async function getDeviceAesKey(){
+  if (_aesKeyCache) return _aesKeyCache;
+  const enc = new TextEncoder();
+  const keyMat = await crypto.subtle.importKey('raw', enc.encode(getDeviceId()), 'PBKDF2', false, ['deriveKey']);
+  _aesKeyCache = await crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: enc.encode('fh-aes-salt-v1'), iterations: 100000, hash:'SHA-256' },
+    keyMat,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['encrypt','decrypt']
+  );
+  return _aesKeyCache;
+}
+async function aesEncrypt(plaintext){
+  if (!plaintext) return '';
+  try {
+    const key = await getDeviceAesKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
+    return 'enc$' + bytesToB64(iv) + '$' + bytesToB64(new Uint8Array(ct));
+  } catch(e){ return plaintext; }
+}
+async function aesDecrypt(ciphertext){
+  if (!ciphertext || !ciphertext.startsWith('enc$')) return ciphertext || '';
+  const parts = ciphertext.split('$');
+  try {
+    const key = await getDeviceAesKey();
+    const iv = b64ToBytes(parts[1]);
+    const ct = b64ToBytes(parts[2]);
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+    return new TextDecoder().decode(pt);
+  } catch(e){ return ''; }
+}
+async function verifyPasswordAsync(phone, pw, user){
+  const stored = user && user.passwordHash ? user.passwordHash : '';
+  if (!stored) return false;
+  if (stored.startsWith('pbkdf2$')){
+    try {
+      const p = stored.split('$');
+      const iter = parseInt(p[1],10);
+      const salt = p[2];
+      const expected = p[3];
+      const actual = await pbkdf2Hash(pw, salt, iter);
+      return timingSafeEqual(actual, expected);
+    } catch(e){ return false; }
+  }
+  const legacy = simpleHash(CONFIG.SECRET + '|' + phone + '|' + pw);
+  return legacy === stored;
+}
+/* ==================================================================== */
+
 function gradeFor(pct){ if(pct>=90) return { letter:"A", color:"#4caf50" }; if(pct>=80) return { letter:"B", color:"#8bc34a" }; if(pct>=70) return { letter:"C", color:"#ffc107" }; if(pct>=60) return { letter:"D", color:"#ff9800" }; return { letter:"F", color:"#f44336" }; }
 function togglePassword(id, btn){ const inp=document.getElementById(id); if(!inp) return; const s = inp.type==='text'; inp.type = s?'password':'text'; if(btn) btn.textContent = s?'👁️':'🙈'; try{ inp.focus(); const v=inp.value; inp.setSelectionRange(v.length,v.length);}catch(e){} }
 function saveScrollNow(){ try { scrollMemory[currentTab+'_'+currentScreen] = window.scrollY || document.documentElement.scrollTop || 0; } catch(e){} }
@@ -801,13 +882,15 @@ function renderSignUp(){
     '</div><input type="hidden" id="rgStream" value="">'+
     '<label class="field-label">Password / PIN (min 4 chars)</label><div class="pw-wrap"><input type="password" id="rgPw" placeholder="••••••" class="field-input" autocomplete="new-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rgPw\', this)">👁️</button></div>'+
     '<label class="field-label">Confirm Password / PIN</label><div class="pw-wrap"><input type="password" id="rgPw2" placeholder="••••••" class="field-input" autocomplete="new-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rgPw2\', this)">👁️</button></div>'+
+    '<div style="font-size:11.5px; color:#666; background:#f7f7fa; border-left:4px solid #6a3093; border-radius:8px; padding:8px 12px; margin-top:10px; line-height:1.5;">🔒 Your password is encrypted with <strong>PBKDF2</strong> — even we can\'t read it.</div>'+
     '<div id="rgMsg" style="margin-top:10px; font-size:13px;"></div>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitSignUp()">Create Account</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="rgSubmitBtn" onclick="submitSignUp()">Create Account</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+
     renderBottomNav('my')+renderChatFab();
 }
 function pickStream(stream){ document.getElementById('rgStream').value=stream; const n=document.getElementById('rgNat'), s=document.getElementById('rgSoc'); [n,s].forEach(b=>{ b.style.background='#fff'; b.style.color='#555'; b.style.borderColor='#e0e0e6'; }); const a=stream==='Natural'?n:s; a.style.background='#6a3093'; a.style.color='#fff'; a.style.borderColor='#6a3093'; }
-function submitSignUp(){
+
+async function submitSignUp(){
   const name=(document.getElementById('rgName').value||'').trim();
   const phone=(document.getElementById('rgPhone').value||'').trim();
   const uni=document.getElementById('rgUni').value;
@@ -815,24 +898,50 @@ function submitSignUp(){
   const pw=document.getElementById('rgPw').value;
   const pw2=document.getElementById('rgPw2').value;
   const msg=document.getElementById('rgMsg');
+  const btn=document.getElementById('rgSubmitBtn');
   const err = t => { msg.innerHTML='<div style="color:#c62828; font-weight:600;">'+t+'</div>'; };
-  if(!name) return err('Enter name.');
+  const ok  = t => { msg.innerHTML='<div style="color:#2e7d32; font-weight:600;">'+t+'</div>'; };
+  if(!name) return err('Please enter your name.');
   if(!/^(09|07)\d{8}$/.test(phone)) return err('Phone must start with 09 or 07, 10 digits.');
-  if(!uni) return err('Choose university.');
-  if(!stream) return err('Choose stream.');
+  if(!uni) return err('Please choose your university.');
+  if(!stream) return err('Please choose your stream.');
   if(!isValidPassword(pw)) return err('Password/PIN must be at least 4 characters.');
   if(pw!==pw2) return err('Passwords do not match.');
   if(isPhoneBlacklisted(phone)){ appAlert('This number is blocked.'); setBlocked(true); renderBlockedScreen(); return; }
-  // FIX: only block if an account actually exists (local or remote).
-  // The registry alone (fh_registered_phones) is used to prevent duplicates, not to block signup.
-  if(findLocalUser(phone) || findRemoteUser(phone)) return err('This phone number is ALREADY registered. Please use Sign In instead.');
-  const user = { name, phone, university:uni, stream, passwordHash:hashPassword(phone,pw), deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
-  markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
-  try { var synced = JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT) || '{}'); if(!synced.users) synced.users = {}; synced.users[user.phone] = { name: user.name, phone: user.phone, university: user.university, stream: user.stream, passwordHash: user.passwordHash, deviceHash: user.deviceHash, createdAt: user.createdAt }; localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(synced)); } catch(e){}
-  saveProfileData({ name, phone, university:uni, stream });
-  setUniversity(uni); setCheckedIn(); startSession(phone);
-  if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
-  setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 250);
+  if(findLocalUser(phone) || findRemoteUser(phone)) return err('This phone number is already registered. Please use Sign In.');
+
+  if(btn){ btn.disabled = true; btn.textContent = 'Creating account…'; }
+  try {
+    const pwHash = await hashPasswordNew(pw);
+    const encPhone = await aesEncrypt(phone);
+    const user = {
+      name, phone, university:uni, stream,
+      passwordHash: pwHash,
+      phoneEnc: encPhone,
+      deviceId:getDeviceId(), deviceHash:getDeviceHash(),
+      createdAt:Date.now()
+    };
+    markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
+    try {
+      var synced = JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT) || '{}');
+      if(!synced.users) synced.users = {};
+      synced.users[user.phone] = {
+        name: user.name, phone: user.phone,
+        university: user.university, stream: user.stream,
+        passwordHash: user.passwordHash,
+        deviceHash: user.deviceHash, createdAt: user.createdAt
+      };
+      localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(synced));
+    } catch(e){}
+    saveProfileData({ name, phone, university:uni, stream });
+    setUniversity(uni); setCheckedIn(); startSession(phone);
+    if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
+    ok('✓ Account created!');
+    setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
+  } catch(e){
+    err('Signup failed. Please try again.');
+    if(btn){ btn.disabled = false; btn.textContent = 'Create Account'; }
+  }
 }
 
 function renderSignIn(){
@@ -841,31 +950,50 @@ function renderSignIn(){
     '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
     '<label class="field-label">Password / PIN</label><div class="pw-wrap"><input type="password" id="siPw" placeholder="••••••" class="field-input" autocomplete="current-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'siPw\', this)">👁️</button></div>'+
     '<div id="siMsg" style="margin-top:10px; font-size:13px;"></div>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitSignIn()">Sign In</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
     '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">If you reinstalled the app, sign in here to rebind to this device.</div></div>'+
     renderBottomNav('my')+renderChatFab();
 }
-function submitSignIn(){
+async function submitSignIn(){
   const phone=(document.getElementById('siPhone').value||'').trim();
   const pw=document.getElementById('siPw').value;
   const msg=document.getElementById('siMsg');
+  const btn=document.getElementById('siSubmitBtn');
   const err = t => { msg.innerHTML='<div style="color:#c62828; font-weight:600;">'+t+'</div>'; };
+  const ok  = t => { msg.innerHTML='<div style="color:#2e7d32; font-weight:600;">'+t+'</div>'; };
   if(!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
   if(!isValidPassword(pw)) return err('Password must be at least 4 characters.');
   if(isPhoneBlacklisted(phone)){ err('Account blocked.'); setTimeout(()=>renderBlockedScreen(),1200); return; }
   let user = findLocalUser(phone);
   if(!user){ const remote = findRemoteUser(phone); if(remote){ saveUser(remote); user = remote; } }
   if(!user){ return err('No account found. Sign up first or contact admin.'); }
-  const h = hashPassword(phone, pw);
-  if(h !== user.passwordHash) return err('Wrong password.');
-  user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash();
-  saveUser(user); setCurrentUserPhone(phone);
-  saveProfileData({ name:user.name, phone:user.phone, university:user.university, stream:user.stream });
-  setUniversity(user.university); setCheckedIn(); startSession(phone); markPhoneUsed(phone);
-  msg.innerHTML='<div style="color:#2e7d32; font-weight:600;">Signed in!</div>';
-  setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 250);
+
+  if(btn){ btn.disabled = true; btn.textContent = 'Checking…'; }
+  try {
+    const valid = await verifyPasswordAsync(phone, pw, user);
+    if(!valid){
+      if(btn){ btn.disabled = false; btn.textContent = 'Sign In'; }
+      return err('Wrong password. Please try again.');
+    }
+    if(!user.passwordHash || !user.passwordHash.startsWith('pbkdf2$')){
+      try {
+        user.passwordHash = await hashPasswordNew(pw);
+        user.phoneEnc = await aesEncrypt(phone);
+      } catch(e){}
+    }
+    user.deviceId = getDeviceId();
+    user.deviceHash = getDeviceHash();
+    saveUser(user); setCurrentUserPhone(phone);
+    saveProfileData({ name:user.name, phone:user.phone, university:user.university, stream:user.stream });
+    setUniversity(user.university); setCheckedIn(); startSession(phone); markPhoneUsed(phone);
+    ok('✓ Signed in!');
+    setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
+  } catch(e){
+    if(btn){ btn.disabled = false; btn.textContent = 'Sign In'; }
+    err('Sign-in failed. Please try again.');
+  }
 }
 function renderForgotPassword(){
   setScreen('auth');
@@ -1482,7 +1610,11 @@ async function saveUserEdit(oldPhone){
   user.name = newName;
   user.university = newUni || user.university;
   user.stream = newStream || user.stream;
-  if(newPw){ if(newPw.length < 4) return appAlert('Password must be at least 4 characters.'); user.passwordHash = hashPassword(newPhone, newPw); }
+  if(newPw){
+    if(newPw.length < 4) return appAlert('Password must be at least 4 characters.');
+    try { user.passwordHash = await hashPasswordNew(newPw); user.phoneEnc = await aesEncrypt(newPhone); }
+    catch(e){ user.passwordHash = hashPassword(newPhone, newPw); }
+  }
   if(newSessDaysRaw){ const n=parseInt(newSessDaysRaw); if(!isFinite(n)||n<1) return appAlert('Session days must be a positive number.'); user.sessionExpiresAt = Date.now() + n*86400000; if(getCurrentUserPhone()===oldPhone){ const s=getSession(); if(s){ s.expiresAt=user.sessionExpiresAt; saveSession(s); } } }
   if(newPhone !== oldPhone){ if(u[newPhone]) return appAlert('Another user already has this phone.'); delete u[oldPhone]; user.phone = newPhone; u[newPhone] = user; adminRemoveUsedPhone(oldPhone); markPhoneUsed(newPhone); } else { u[oldPhone] = user; }
   saveUsers(u);
@@ -1897,7 +2029,9 @@ Object.assign(window, {
   addPaymentMethod, removePaymentMethod, renderPaymentMethodRow,
   trialUnisDisplay, trialSubjectsDisplay, isTrialSubjectKey, isTrialExamAllowed, isTrialNoteAllowed, isTrialCocAllowed,
   openSupportGroup, appAlert, appConfirm, appPrompt,
-  isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays
+  isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays,
+  // New crypto helpers (also exposed for debugging)
+  hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt
 });
 </script>
 
