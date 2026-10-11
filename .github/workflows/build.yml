@@ -66,6 +66,30 @@ jobs:
           npx cap sync android
           npx cap sync
 
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Generate Android icons
+        run: |
+          ICON=icon-512.png
+          if [ -f "$ICON" ]; then
+            echo "Generating Android launcher icons from $ICON"
+            mkdir -p android/app/src/main/res/mipmap-mdpi
+            mkdir -p android/app/src/main/res/mipmap-hdpi
+            mkdir -p android/app/src/main/res/mipmap-xhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+            convert "$ICON" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert "$ICON" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert "$ICON" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert "$ICON" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert "$ICON" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+            echo "✅ Icons generated"
+          else
+            echo "❌ WARNING: icon-512.png not found in repo root"
+          fi
+
       - name: Overwrite MainActivity with FLAG_SECURE
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
