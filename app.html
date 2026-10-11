@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="All Freshman">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<style>
+<style>if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
   html { zoom: 1; }
   body { min-height:100vh; background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#222; transition: background .3s, color .3s; }
@@ -374,7 +374,7 @@ function registerWrongKey(){ const a=getKeyAttempts(); a.count++; if(a.count>=CO
 function resetKeyAttempts(){ saveKeyAttempts({count:0,blockedUntil:0,blockCount:0}); }
 
 function getRegisteredPhones(){ let local=[], remote=[]; try{ local=JSON.parse(localStorage.getItem(LS_REGISTERED_PHONES)||'[]'); }catch(e){} try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); if(Array.isArray(s.registeredPhones)) remote=s.registeredPhones; }catch(e){} const seen=new Set(); const out=[]; [...local,...remote].forEach(p=>{ const n=String(p).replace(/[^\d]/g,''); if(n&&!seen.has(n)){ seen.add(n); out.push(String(p)); } }); return out; }
-function isPhoneUsed(phone){ if(!phone) return false; const n=String(phone).replace(/[^\d]/g,''); return getRegisteredPhones().some(p=>String(p).replace(/[^\d]/g,'')===n); }
+ function isPhoneUsed(phone){ if(!phone) return false; const n=String(phone).replace(/[^\d]/g,''); return getRegisteredPhones().some(p=>String(p).replace(/[^\d]/g,'')===n); }
 function markPhoneUsed(phone){ if(!phone) return; const list=JSON.parse(localStorage.getItem(LS_REGISTERED_PHONES)||'[]'); const n=String(phone).replace(/[^\d]/g,''); if(!list.some(p=>String(p).replace(/[^\d]/g,'')===n)){ list.push(String(phone)); localStorage.setItem(LS_REGISTERED_PHONES,JSON.stringify(list)); } }
 function adminRemoveUsedPhone(phone){ const n=String(phone).replace(/[^\d]/g,''); const list=JSON.parse(localStorage.getItem(LS_REGISTERED_PHONES)||'[]'); const filtered=list.filter(p=>String(p).replace(/[^\d]/g,'')!==n); localStorage.setItem(LS_REGISTERED_PHONES,JSON.stringify(filtered)); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); if(Array.isArray(s.registeredPhones)){ s.registeredPhones=s.registeredPhones.filter(p=>String(p).replace(/[^\d]/g,'')!==n); localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); } }catch(e){} }
 
@@ -491,7 +491,7 @@ function getContentLibrary(){
 function saveContentLibrary(l){ localStorage.setItem(LS_CONTENT_DRAFT,JSON.stringify(l)); }
 function getUniContent(u,stream,semester){ const lib=getContentLibrary(); const s=String(semester); if(!lib[u]||!lib[u][stream]) return {pdfs:[],notes:[],exams:[],cocs:[]}; const c=lib[u][stream][s]||{}; return { pdfs:c.pdfs||[], notes:c.notes||[], exams:c.exams||[], cocs:c.cocs||[] }; }
 function setUniContent(u,stream,semester,c){ const lib=getContentLibrary(); if(!lib[u]) lib[u]={}; if(!lib[u][stream]) lib[u][stream]={"1":{pdfs:[],notes:[],exams:[],cocs:[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; lib[u][stream][String(semester)]=c; saveContentLibrary(lib); }
-function getBlacklist(){ try{ const d=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'null'); if(d&&d._blacklist) return d._blacklist; }catch(e){} return []; }
+function findRemoteUser(p){ try { const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); if(s.users && s.users[p]) return s.users[p]; }catch(e){} return null; }
 function isPhoneBlacklisted(p){ if(!p) return false; const n=String(p).replace(/[^\d]/g,''); return getBlacklist().some(x=>String(x).replace(/[^\d]/g,'')===n); }
 function isDeviceBlacklisted(){ return isPhoneBlacklisted(getProfile().phone); }
 
@@ -520,9 +520,14 @@ async function syncRemoteContent(){
   try {
     const res = await fetch(base + '/content.json?t=' + Date.now(), { cache:'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const remote = await res.json();
-    if (!remote) return;
-    localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(remote));
+const remote = await res.json();
+if (!remote) return;
+// Decrypt sensitive fields before storing
+if (typeof remote.users === 'string') remote.users = decryptData(remote.users);
+if (typeof remote.registeredPhones === 'string') remote.registeredPhones = decryptData(remote.registeredPhones);
+if (typeof remote.blacklist === 'string') remote.blacklist = decryptData(remote.blacklist);
+if (typeof remote._blacklist === 'string') remote._blacklist = decryptData(remote._blacklist);
+localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(remote));
     localStorage.setItem(LS_SYNCED_VERSION, remoteVersion || String(remote.version || '1'));
     localStorage.setItem(LS_SYNCED_UPDATED, String(remote.updated || ''));
     if (remote.tutorials) saveTutorials(remote.tutorials);
@@ -1615,8 +1620,8 @@ async function adminSaveGeneralSubject(key){ const subjects = getGeneralSubjects
 
 function exportContentForShipping(){
   setScreen('admin-content');
-  const lib=getContentLibrary();
-  const wrap={ version:parseInt(localStorage.getItem(LS_SYNCED_VERSION)||'0')+1, updated:new Date().toISOString().slice(0,10), blacklist:getBlacklist(), notifications:getNotifications(), tutorials:getTutorials(), settings:getSettings(), registeredPhones:getRegisteredPhones(), universityInfo:getUniInfo(), generalSubjects:getGeneralSubjects(), universities:lib, users:getUsers() };
+ const lib=getContentLibrary();
+ const wrap={ version:parseInt(localStorage.getItem(LS_SYNCED_VERSION)||'0')+1, updated:new Date().toISOString().slice(0,10), blacklist:getBlacklist(), notifications:getNotifications(), tutorials:getTutorials(), settings:getSettings(), registeredPhones:getRegisteredPhones(), universityInfo:getUniInfo(), generalSubjects:getGeneralSubjects(), universities:lib, users:getUsers() };
  const json=JSON.stringify(wrap,null,2);
   app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Export Content</h2><div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; font-size:13px; color:#1565c0; margin-bottom:14px; line-height:1.7;"><strong>Next steps:</strong><br>1. Copy JSON<br>2. GitHub → content.json → edit → paste<br>3. Bump version.json<br>4. Commit</div><textarea readonly onclick="this.select()" style="width:100%; padding:12px; border:2px solid #e0e0e6; border-radius:10px; font-size:11px; font-family:monospace; min-height:400px; outline:none;">'+escapeHtml(json)+'</textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="copyExport()">Copy JSON</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
