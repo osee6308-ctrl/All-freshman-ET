@@ -1,4 +1,4 @@
-const CACHE_NAME = 'all-freshman-v1';
+const CACHE_NAME = 'all-freshman-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
