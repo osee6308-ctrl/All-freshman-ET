@@ -1,5 +1,5 @@
 /* ============ All Freshman ET — Service Worker ============ */
-const CACHE_NAME = 'freshman-cache-v2';   // BUMP THIS every release
+const CACHE_NAME = 'freshman-cache-v3';   // BUMP THIS on every release
 
 const CORE_ASSETS = [
   './',
@@ -7,7 +7,6 @@ const CORE_ASSETS = [
   './manifest.json'
 ];
 
-// ---- Install: cache core files ----
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
@@ -15,23 +14,17 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// ---- Activate: delete old caches ----
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
 
-// ---- Fetch: network-first for API, cache-first for static ----
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
-
-  // Skip non-GET
   if (req.method !== 'GET') return;
 
   // Cloudflare Worker API → network only
@@ -42,15 +35,13 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // External CDNs (pdf.js, fonts, YouTube) → network, fall back to cache
+  // External (pdf.js, YouTube, CDNs) → network first
   if (url.origin !== location.origin) {
-    e.respondWith(
-      fetch(req).catch(() => caches.match(req))
-    );
+    e.respondWith(fetch(req).catch(() => caches.match(req)));
     return;
   }
 
-  // Local files → cache-first
+  // Local → cache-first
   e.respondWith(
     caches.match(req).then(hit => hit || fetch(req).then(res => {
       const copy = res.clone();
