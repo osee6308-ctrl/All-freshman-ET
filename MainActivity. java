@@ -66,7 +66,8 @@ public class MainActivity extends AppCompatActivity {
                     view.loadUrl(url);
                     return true;
                 }
-                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
+                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
+                catch (Exception ignored) {}
                 return true;
             }
         });
@@ -88,7 +89,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void handleOnBackPressed() {
                 if (webView.canGoBack()) webView.goBack();
-                else { setEnabled(false); getOnBackPressedDispatcher().onBackPressed(); }
+                else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
             }
         });
 
@@ -99,7 +103,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == FILE_CHOOSER_CODE) {
             if (filePathCallback != null) {
-                filePathCallback.onReceiveValue(FileChooserParams.parseResult(resultCode, data));
+                filePathCallback.onReceiveValue(
+                    FileChooserParams.parseResult(resultCode, data)
+                );
                 filePathCallback = null;
             }
         }
