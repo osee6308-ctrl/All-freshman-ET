@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="All Freshman">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-192x192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
@@ -17,7 +19,7 @@
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
   body:not(.admin-mode) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   body:not(.admin-mode) input, body:not(.admin-mode) textarea { -webkit-user-select: text; user-select: text; }
-  body.blur-sensitive .container { filter: blur(22px) grayscale(1); pointer-events: none; }
+  body.blur-sensitive .container { filter: blur(22px) grayscale(1); }
   body.blur-sensitive::after { content: "Protected Content"; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(30,60,114,.85); color: #fff; font-size: 18px; font-weight: 700; z-index: 99999; }
   .container { width:100%; max-width:800px; }
   .app-header { display:flex; justify-content:space-between; align-items:center; color:#fff; margin-bottom:12px; padding:0 4px; gap:8px; }
@@ -555,19 +557,34 @@ function setScreen(name){
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
 
-/* --- Keyboard-safe blur guard --- */
-function _isInputFocused(){
-  const el = document.activeElement;
-  if(!el) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
-}
+/* --- Keyboard-safe blur guard (FIXED) --- */
+window._isTyping = false;
 document.addEventListener('focusin', (e) => {
   const t = e.target;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) document.body.classList.remove('blur-sensitive');
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
+    window._isTyping = true;
+    document.body.classList.remove('blur-sensitive');
+  }
 }, true);
-document.addEventListener('visibilitychange',()=>{ if(_isInputFocused()) return; document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed()); });
-/* Removed window.blur/focus listeners to prevent keyboard from dropping down on Android */
+document.addEventListener('focusout', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
+    window._isTyping = false;
+  }
+}, true);
+document.addEventListener('visibilitychange', () => {
+  if (window._isTyping) return;
+  document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed());
+});
+window.addEventListener('blur', () => {
+  if (window._isTyping) return;
+  if (!isScreenshotAllowed()) document.body.classList.add('blur-sensitive');
+});
+window.addEventListener('focus', () => document.body.classList.remove('blur-sensitive'));
+document.addEventListener('contextmenu', e => {
+  if (window._isTyping) return;
+  if (!isScreenshotAllowed()) e.preventDefault();
+});
 
 let _navSilent = false;
 let _navReady = false;
@@ -760,23 +777,16 @@ async function submitSignUp(){
   try {
     const exists = await backendGetUser(phone);
     if (exists && exists.ok) { if(btn){ btn.disabled=false; btn.textContent='Create Account'; } return err('This phone is already registered. Tap Sign In — your account is on the server.'); }
-    
-    const pwHash = await hashPasswordNew(pw); 
-    const encPhone = await aesEncrypt(phone);
+    const pwHash = await hashPasswordNew(pw); const encPhone = await aesEncrypt(phone);
     const user = { name, phone, university:uni, stream, passwordHash:pwHash, phoneEnc:encPhone, deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
-    
     markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
-    
     backendRegister(user).then(r => {
       if (r && r.ok) console.log('✅ Backed up');
       else console.warn('⚠️ Backup failed:', r && r.err);
     });
-    
     saveProfileData({ name, phone, university:uni, stream }); setUniversity(uni); setCheckedIn(); startSession(phone);
     if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
-    
-    ok('✓ Account created!'); 
-    setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
+    ok('✓ Account created!'); setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
