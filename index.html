@@ -174,6 +174,19 @@
 
 <script>
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+/* ============ GLOBAL DISPLAY ZOOM (default 15% bigger) ============ */
+(function(){
+  function applyZoom(v){
+    v = String(v);
+    try { localStorage.setItem('app_zoom', v); } catch(e){}
+    document.documentElement.style.zoom = v;
+    if (document.body) document.body.style.zoom = v;
+  }
+  window.setAppZoom = function(v){ applyZoom(v); if (typeof window.renderMy === 'function') window.renderMy(); };
+  window.getAppZoom = function(){ return parseFloat(localStorage.getItem('app_zoom') || '1.15'); };
+  window._applySavedZoom = function(){ applyZoom(localStorage.getItem('app_zoom') || '1.15'); };
+  applyZoom(localStorage.getItem('app_zoom') || '1.15');
+})();
 
 /* ============ GLOBAL DISPLAY ZOOM (default 15% bigger everywhere) ============ */
 (function(){
@@ -550,7 +563,23 @@ document.addEventListener('focusin', (e) => {
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) document.body.classList.remove('blur-sensitive');
 }, true);
 document.addEventListener('visibilitychange',()=>{ if(_isInputFocused()) return; document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed()); });
-window.addEventListener('blur',()=>{ if(_isInputFocused()) return; if(!isScreenshotAllowed()) document.body.classList.add('blur-sensitive'); });
+/* --- Keyboard-safe blur guard --- */
+function _isInputFocused(){
+  const el = document.activeElement;
+  if(!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) {
+    document.body.classList.remove('blur-sensitive');
+  }
+}, true);
+window.addEventListener('blur',()=>{
+  if(_isInputFocused()) return;
+  if(!isScreenshotAllowed()) document.body.classList.add('blur-sensitive');
+});
 window.addEventListener('focus',()=>document.body.classList.remove('blur-sensitive'));
 document.addEventListener('contextmenu',e=>{ if(_isInputFocused()) return; if(!isScreenshotAllowed()) e.preventDefault(); });
 
@@ -746,8 +775,25 @@ async function submitSignUp(){
     const exists = await backendGetUser(phone);
     if (exists && exists.ok) { if(btn){ btn.disabled=false; btn.textContent='Create Account'; } return err('This phone is already registered. Tap Sign In — your account is on the server.'); }
     const pwHash = await hashPasswordNew(pw); const encPhone = await aesEncrypt(phone);
-    const user = { name, phone, university:uni, stream, passwordHash: pwHash, phoneEnc: encPhone, deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
-    markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
+    // Check Cloudflare first (survives reinstall)
+try {
+  const exists = await backendGetUser(phone);
+  if (exists && exists.ok) {
+    const b = document.getElementById('rgSubmitBtn');
+    if(b){ b.disabled=false; b.textContent='Create Account'; }
+    return err('This phone is already registered. Tap Sign In — your account is on the server.');
+  }
+} catch(e){}
+
+const pwHash = await hashPasswordNew(pw);
+const encPhone = await aesEncrypt(phone);
+const user = { name, phone, university:uni, stream, passwordHash:pwHash, phoneEnc:encPhone, deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
+markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
+// Backup to Cloudflare
+backendRegister(user).then(r => {
+  if (r && r.ok) console.log('✅ Backed up');
+  else console.warn('⚠️ Backup failed:', r && r.err);
+});
     saveProfileData({ name, phone, university:uni, stream }); setUniversity(uni); setCheckedIn(); startSession(phone);
     if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
     backendRegister(user).then(r => { if (r && r.ok) console.log('✅ Backed up'); else console.warn('⚠️ Cloud backup failed:', r && r.err); });
@@ -800,7 +846,13 @@ function renderForgotPassword(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Forgot Password</h2><p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Only admin can reset your password/PIN. Contact admin on Telegram with your phone number and device hash.</p><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;"><div><strong>Device Hash:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Your phone:</strong> <code>'+(getCurrentUserPhone()||'-')+'</code></div></div><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'?text='+encodeURIComponent('FORGOT PASSWORD — Phone: '+getCurrentUserPhone()+' | Hash: '+getDeviceHash())+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 Message Admin on Telegram</a>'+((CONFIG.CONTACT_PHONE||'').trim()?'<a href="tel:'+escapeAttr((CONFIG.CONTACT_PHONE||'').trim())+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call '+escapeHtml(CONFIG.CONTACT_PHONE)+'</a>':'')+'<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-
+'<div class="panel"><h2>Display Size</h2><div style="display:flex; gap:8px; flex-wrap:wrap;">'+
+  ['1','1.15','1.3','1.5'].map(function(v){
+    var labels = {'1':'Normal','1.15':'Large','1.3':'X-Large','1.5':'Huge'};
+    var active = Math.abs(getAppZoom() - parseFloat(v)) < 0.01;
+    return '<button onclick="setAppZoom('+v+')" style="flex:1; min-width:70px; padding:14px 4px; border:2px solid '+(active?'#6a3093':'#e0e0e6')+'; background:'+(active?'#6a3093':'#fff')+'; color:'+(active?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer; font-size:12px;">'+labels[v]+'</button>';
+  }).join('')+
+'</div><p style="font-size:12px; color:#888; margin-top:10px; text-align:center;">Applies to the whole app.</p></div>'+
 function switchTab(tab){
   _clearNavStack(); saveScrollNow();
   if(BASE_TABS[tab]) _lastBaseTab = tab;
@@ -1038,8 +1090,8 @@ function renderMy(introMsg){
     '<div class="panel"><h2>Contact Admin</h2><p style="color:#666; font-size:13px; margin-bottom:12px;">Reach admin on Telegram'+(phone?' or call':'')+'.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a>'+(phone?'<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none;margin-top:8px;">📞 '+escapeHtml(phone)+'</a>':'')+'</div>'+
     '<div class="panel"><h2>Theme</h2><div style="display:flex; gap:8px;"><button onclick="setTheme(\'light\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='light'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='light'?'#6a3093':'#fff')+'; color:'+(theme==='light'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">☀️ Light</button><button onclick="setTheme(\'dark\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='dark'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='dark'?'#6a3093':'#fff')+'; color:'+(theme==='dark'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">🌙 Dark</button></div></div>'+
     '<div class="panel"><h2>Display Size</h2><div style="display:flex; gap:8px; flex-wrap:wrap;">'+
-      ['1','1.15','1.3','1.5'].map(function(v){
-        var labels = {'1':'Normal','1.15':'Large','1.3':'X-Large','1.5':'Huge'};
+      ['1.1','1.15','1.2','1.3'].map(function(v){
+        var labels = {'1.1':'Normal','1.15':'Large','1.2':'X-Large','1.3':'Huge'};
         var active = Math.abs(getAppZoom() - parseFloat(v)) < 0.01;
         return '<button onclick="setAppZoom('+v+')" style="flex:1; min-width:70px; padding:14px 4px; border:2px solid '+(active?'#6a3093':'#e0e0e6')+'; background:'+(active?'#6a3093':'#fff')+'; color:'+(active?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer; font-size:12px;">'+labels[v]+'</button>';
       }).join('')+
@@ -1463,7 +1515,9 @@ Object.assign(window, {
   trialUnisDisplay, trialSubjectsDisplay, isTrialSubjectKey, isTrialExamAllowed, isTrialNoteAllowed, isTrialCocAllowed,
   openSupportGroup, appAlert, appConfirm, appPrompt,
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays,
-  hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt,
+  ,setAppZoom, getAppZoom, backendRegister, backendLogin, backendGetUser, backendUpdateUser,
+hashPasswordNew, verifyPasswordAsync, aesEncrypt
+ hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt,
   backendRegister, backendLogin, backendGetUser, backendUpdateUser,
   setAppZoom, getAppZoom
 });
