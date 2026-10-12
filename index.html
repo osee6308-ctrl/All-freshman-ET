@@ -267,9 +267,48 @@ function getSettings(){
 function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }
 let CONFIG = getSettings();
 
-/* ==================== BACKEND URL — YOUR CLOUDFLARE WORKER ==================== */
+/* ==================== BACKEND URL ==================== */
 const BACKEND_URL = 'https://all-freshman-db.osee6308.workers.dev';
-/* ============================================================================ */
+
+async function backendRegister(user) {
+  try {
+    const r = await fetch(BACKEND_URL + '/api/register', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: user.phone, name: user.name, university: user.university,
+        stream: user.stream, passwordHash: user.passwordHash,
+        deviceHash: user.deviceHash, createdAt: user.createdAt })
+    });
+    return await r.json();
+  } catch(e){ return { ok:false, err:'network' }; }
+}
+async function backendLogin(phone, password) {
+  try {
+    const r = await fetch(BACKEND_URL + '/api/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, password })
+    });
+    return await r.json();
+  } catch(e){ return { ok:false, err:'network' }; }
+}
+async function backendGetUser(phone) {
+  try {
+    const r = await fetch(BACKEND_URL + '/api/get-user', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone })
+    });
+    return await r.json();
+  } catch(e){ return { ok:false, err:'network' }; }
+}
+async function backendUpdateUser(user) {
+  try {
+    const r = await fetch(BACKEND_URL + '/api/update-user', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: user.phone, passwordHash: user.passwordHash, deviceHash: user.deviceHash })
+    });
+    return await r.json();
+  } catch(e){ return { ok:false }; }
+}
+/* ==================================================== */
 
 function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
