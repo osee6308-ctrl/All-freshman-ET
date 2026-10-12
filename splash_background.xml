@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@color/brand_blue" />
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/logo" />
-    </item>
-</layer-list>
+<resources>
+    <!-- You can replace the hex code below with whatever blue you want -->
+    <color name="brand_blue">#1565C0</color> 
+</resources>
