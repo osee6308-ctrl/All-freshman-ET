@@ -229,7 +229,7 @@ const LS_SETTINGS='fh_settings', LS_USERS='fh_users', LS_CURRENT_USER='fh_curren
       LS_ADMIN_ACTIVATED='fh_admin_activated', LS_ADMIN_ACTIVATED_AT='fh_admin_activated_at',
       LS_BOOK_ZOOM='fh_book_zoom', LS_NOTE_ZOOM='fh_note_zoom',
       LS_GENERAL_SUBJECTS='fh_general_subjects', LS_ADMIN_KEYS='fh_admin_keys',
-      LS_ACT_PHONE='fh_activated_phone';
+      LS_ACT_PHONE='fh_activated_phone', LS_GRACE_UNTIL='fh_grace_until'; // NEW: Grace period storage
 
 function getSettings(){
   try {
@@ -441,7 +441,16 @@ function tryActivateLicense(key){
   if(!isLicenseForThisDevice(c)){ const r=registerWrongKey(); if(r.blocked) return {ok:false,reason:'blocked',blockCount:r.blockCount}; return {ok:false,reason:'wrong-device',remaining:r.remaining}; }
   setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); if(curPhone) localStorage.setItem(LS_ACT_PHONE,curPhone); resetKeyAttempts(); return {ok:true};
 }
+
 function checkAccess(){
+  // NEW: Check if the device is in a 12-hour grace period
+  const graceUntil = parseInt(localStorage.getItem(LS_GRACE_UNTIL) || '0');
+  if (graceUntil > Date.now()) {
+    const hoursLeft = Math.ceil((graceUntil - Date.now()) / (1000 * 60 * 60));
+    return { status:'licensed', daysLeft: hoursLeft, grace: true };
+  }
+  // END NEW
+
   if(isAdminMode()) return { status:'licensed', daysLeft:9999, master:true, admin:true };
   const curPhone = getCurrentUserPhone();
   const actPhone = localStorage.getItem(LS_ACT_PHONE) || '';
@@ -710,7 +719,7 @@ function renderHeader(activeTab, opts){
   const signedIn = isSignedIn() && hasActiveSession();
   let subtitle;
   if(!signedIn) subtitle = 'Not registered · tap My tab';
-  else if(accessNow.status==='licensed'){ const dstr = accessNow.master ? 'unlimited' : (accessNow.daysLeft+'d left'); subtitle = (uni||'Choose university')+' · '+dstr; }
+  else if(accessNow.status==='licensed'){ const dstr = accessNow.master ? 'unlimited' : (accessNow.grace ? accessNow.daysLeft+'h grace' : (accessNow.daysLeft+'d left')); subtitle = (uni||'Choose university')+' · '+dstr; }
   else if(accessNow.status==='trial'){ subtitle = (u&&u.name ? u.name+' · ' : '')+'Trial · '+accessNow.daysLeft+'d left'; }
   else subtitle = 'Expired — contact admin';
   const unread = unreadNotifCount();
@@ -816,17 +825,39 @@ async function submitSignIn(){
   try {
     let user = findLocalUser(phone); let fromServer = false;
     if (!user) { const remote = findRemoteUser(phone); if (remote) { saveUser(remote); user = remote; } }
+    
+    // --- NEW: Grace Period Check on Login ---
+    let graceGranted = false;
+    if (user) {
+      const backendRes = await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, deviceHash: getDeviceHash() });
+      if (backendRes && backendRes.gracePeriod) {
+        graceGranted = true;
+        localStorage.setItem(LS_GRACE_UNTIL, Date.now() + (12 * 60 * 60 * 1000)); // 12 hours
+      }
+    }
+    // ----------------------------------------
+
     if (!user) { const resp = await backendGetUser(phone); if (resp && resp.ok && resp.user) { user = resp.user; user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); markPhoneUsed(phone); fromServer = true; } }
     if (!user) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('No account found for this phone. Please sign up first.'); }
     const valid = await verifyPasswordAsync(phone, pw, user);
     if (!valid) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('Wrong password. Please try again.'); }
-    let needsUpload = false;
-    if (!user.passwordHash || !user.passwordHash.startsWith('pbkdf2$')) { try { user.passwordHash = await hashPasswordNew(pw); user.phoneEnc = await aesEncrypt(phone); needsUpload = true; } catch(e){} }
+    
     user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); setCurrentUserPhone(phone);
     saveProfileData({ name:user.name, phone:user.phone, university:user.university, stream:user.stream });
     setUniversity(user.university); setCheckedIn(); startSession(phone); markPhoneUsed(phone);
-    if (fromServer || needsUpload) { backendUpdateUser({ phone:user.phone, passwordHash:user.passwordHash, deviceHash:user.deviceHash }).then(()=>console.log('✅ Cloud updated')).catch(()=>{}); }
-    ok('✓ Signed in!'); setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
+    
+    if (fromServer) { backendUpdateUser({ phone:user.phone, passwordHash:user.passwordHash, deviceHash:user.deviceHash }).then(()=>console.log('✅ Cloud updated')).catch(()=>{}); }
+    
+    ok('✓ Signed in!'); 
+    setTimeout(()=>{ 
+      showPostAuthWarning(()=>{ 
+        _clearNavStack(); 
+        if (graceGranted) {
+          appAlert('Welcome back! You have been granted a 12-hour grace period. Please contact Admin after 12 hours to renew your license.');
+        }
+        switchTab('book'); 
+      }); 
+    }, 400);
   } catch(e){
     if(btn){ btn.disabled=false; btn.textContent='Sign In'; } err('Sign-in failed. Please try again.');
   }
@@ -1064,7 +1095,13 @@ function renderMy(introMsg){
   setScreen('my');
   const intro = introMsg ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:13px; color:#856404; margin-bottom:14px; font-weight:600;">'+escapeHtml(introMsg)+'</div>' : '';
   let licenseBox;
-  if(access.status==='licensed'){ if(access.master||access.admin){ licenseBox='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:14px; color:#2e7d32; font-weight:700;">Unlocked — unlimited</div>'; } else { licenseBox='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:14px; color:#2e7d32; font-weight:700;">Unlocked — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</div>'; } }
+  if(access.status==='licensed'){ 
+    if(access.grace) {
+      licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Grace Period — '+access.daysLeft+' hour(s) left<br><span style="font-weight:600; font-size:12px;">Contact Admin to get a permanent key for your new Device Hash: <code>'+getDeviceHash()+'</code></span></div>';
+    }
+    else if(access.master||access.admin){ licenseBox='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:14px; color:#2e7d32; font-weight:700;">Unlocked — unlimited</div>'; } 
+    else { licenseBox='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:14px; color:#2e7d32; font-weight:700;">Unlocked — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</div>'; } 
+  }
   else if(access.status==='expired'){ licenseBox='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">Expired — contact admin to renew</div>'; }
   else { const tSub = escapeHtml(trialSubjectsDisplay()); const tUni = escapeHtml(trialUnisDisplay()); const tContent = (CONFIG.TRIAL_CONTENT||[]).map(k=>({book:'Modules',note:'Note',exam:'Exam',coc:'COC',info:'Info'})[k]||k).join(' + '); licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Trial — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left<br><span style="font-weight:600; font-size:12px;">Includes: '+escapeHtml(tContent)+'<br>Universities: '+tUni+'<br>Practice subjects: '+tSub+'</span></div>'; }
   const sessLeft = sessionDaysLeft(); const phone = (CONFIG.CONTACT_PHONE || '').trim();
@@ -1511,4 +1548,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
- </html>
+</html>
