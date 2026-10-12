@@ -567,12 +567,7 @@ document.addEventListener('focusin', (e) => {
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) document.body.classList.remove('blur-sensitive');
 }, true);
 document.addEventListener('visibilitychange',()=>{ if(_isInputFocused()) return; document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed()); });
-window.addEventListener('blur',()=>{
-  if(_isInputFocused()) return;
-  if(!isScreenshotAllowed()) document.body.classList.add('blur-sensitive');
-});
-window.addEventListener('focus',()=>document.body.classList.remove('blur-sensitive'));
-document.addEventListener('contextmenu',e=>{ if(_isInputFocused()) return; if(!isScreenshotAllowed()) e.preventDefault(); });
+/* Removed window.blur/focus listeners to prevent keyboard from dropping down on Android */
 
 let _navSilent = false;
 let _navReady = false;
@@ -765,16 +760,23 @@ async function submitSignUp(){
   try {
     const exists = await backendGetUser(phone);
     if (exists && exists.ok) { if(btn){ btn.disabled=false; btn.textContent='Create Account'; } return err('This phone is already registered. Tap Sign In — your account is on the server.'); }
-    const pwHash = await hashPasswordNew(pw); const encPhone = await aesEncrypt(phone);
+    
+    const pwHash = await hashPasswordNew(pw); 
+    const encPhone = await aesEncrypt(phone);
     const user = { name, phone, university:uni, stream, passwordHash:pwHash, phoneEnc:encPhone, deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
+    
     markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
+    
     backendRegister(user).then(r => {
       if (r && r.ok) console.log('✅ Backed up');
       else console.warn('⚠️ Backup failed:', r && r.err);
     });
+    
     saveProfileData({ name, phone, university:uni, stream }); setUniversity(uni); setCheckedIn(); startSession(phone);
     if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
-    ok('✓ Account created!'); setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
+    
+    ok('✓ Account created!'); 
+    setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
