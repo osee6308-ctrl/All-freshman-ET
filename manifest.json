@@ -1,26 +1,20 @@
 {
   "name": "All Freshman ET",
   "short_name": "All Freshman",
-  "description": "Ethiopian freshman study hub — modules, notes, exams, COC",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#1e3c72",
   "theme_color": "#6a3093",
-  "lang": "en",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "icon-maskable-512.png",
+      "src": "icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     }
   ]
 }
