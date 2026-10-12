@@ -175,6 +175,28 @@
 <script>
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+/* ============ GLOBAL DISPLAY ZOOM (default 15% bigger everywhere) ============ */
+(function(){
+  function applyZoom(v){
+    v = String(v);
+    try { localStorage.setItem('app_zoom', v); } catch(e){}
+    document.documentElement.style.zoom = v;
+    if (document.body) document.body.style.zoom = v;
+  }
+  window.setAppZoom = function(v){
+    applyZoom(v);
+    if (typeof window.renderMy === 'function') window.renderMy();
+  };
+  window.getAppZoom = function(){
+    return parseFloat(localStorage.getItem('app_zoom') || '1.15');
+  };
+  window._applySavedZoom = function(){
+    applyZoom(localStorage.getItem('app_zoom') || '1.15');
+  };
+  applyZoom(localStorage.getItem('app_zoom') || '1.15');
+})();
+/* ============================================================================ */
+
 const DEFAULT_CONFIG = {
   TRIAL_DAYS: 3, LICENSE_DAYS: 365, SESSION_DAYS: 365, PRICE_BIRR: 200, OWNER_NAME: "Osama Abdi",
   TELEBIRR: "0924956308", CBE_BIRR: "1000637777274", AWASH_BANK: "01425410611600", EBIRR: "0924956308",
@@ -716,10 +738,36 @@ function setScreen(name){
 }
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
-document.addEventListener('visibilitychange',()=>{ document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed()); });
-window.addEventListener('blur',()=>{ if(!isScreenshotAllowed()) document.body.classList.add('blur-sensitive'); });
+
+/* --- Keyboard-safe blur guard ---
+   When the mobile keyboard opens, Android fires window 'blur' even though the
+   input is actually focused. Detecting that and skipping the blur class
+   prevents the keyboard from being dismissed mid-typing. --- */
+function _isInputFocused(){
+  const el = document.activeElement;
+  if(!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) {
+    document.body.classList.remove('blur-sensitive');
+  }
+}, true);
+document.addEventListener('visibilitychange',()=>{
+  if(_isInputFocused()) return;
+  document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed());
+});
+window.addEventListener('blur',()=>{
+  if(_isInputFocused()) return;
+  if(!isScreenshotAllowed()) document.body.classList.add('blur-sensitive');
+});
 window.addEventListener('focus',()=>document.body.classList.remove('blur-sensitive'));
-document.addEventListener('contextmenu',e=>{ if(!isScreenshotAllowed()) e.preventDefault(); });
+document.addEventListener('contextmenu',e=>{
+  if(_isInputFocused()) return;
+  if(!isScreenshotAllowed()) e.preventDefault();
+});
 
 let _navSilent = false;
 let _navReady = false;
@@ -1380,6 +1428,13 @@ function renderMy(introMsg){
     '<div class="panel"><h2>My Profile</h2><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:12px;"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Device Hash:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
     '<div class="panel"><h2>Contact Admin</h2><p style="color:#666; font-size:13px; margin-bottom:12px;">Reach admin on Telegram'+(phone?' or call':'')+'.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a>'+(phone?'<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none;margin-top:8px;">📞 '+escapeHtml(phone)+'</a>':'')+'</div>'+
     '<div class="panel"><h2>Theme</h2><div style="display:flex; gap:8px;"><button onclick="setTheme(\'light\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='light'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='light'?'#6a3093':'#fff')+'; color:'+(theme==='light'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">☀️ Light</button><button onclick="setTheme(\'dark\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='dark'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='dark'?'#6a3093':'#fff')+'; color:'+(theme==='dark'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">🌙 Dark</button></div></div>'+
+    '<div class="panel"><h2>Display Size</h2><div style="display:flex; gap:8px; flex-wrap:wrap;">'+
+      ['1','1.15','1.3','1.5'].map(function(v){
+        var labels = {'1':'Normal','1.15':'Large','1.3':'X-Large','1.5':'Huge'};
+        var active = Math.abs(getAppZoom() - parseFloat(v)) < 0.01;
+        return '<button onclick="setAppZoom('+v+')" style="flex:1; min-width:70px; padding:14px 4px; border:2px solid '+(active?'#6a3093':'#e0e0e6')+'; background:'+(active?'#6a3093':'#fff')+'; color:'+(active?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer; font-size:12px;">'+labels[v]+'</button>';
+      }).join('')+
+    '</div><p style="font-size:12px; color:#888; margin-top:10px; text-align:center;">Applies to the whole app — text, buttons, PDFs, notes.</p></div>'+
     '<div class="panel"><h2>License</h2>'+licenseBox+'<button class="btn btn-full" style="margin-top:14px; padding:14px; font-size:15px; font-weight:800; '+(access.status==='licensed' ? 'background:#4caf50; color:#fff;' : 'background:#ff4757; color:#fff;')+'" onclick="showActivationStatus()">'+(access.status==='licensed' ? '✅ Active' : '❌ Inactive')+'</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderEnterKey()">Enter License Key</button></div>'+
     '<div class="panel"><h2>Tutorials</h2>'+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+renderTutorialCard('pay',tutorials.pay.title,tutorials.pay.url)+'</div>'+
     (isAdminMode() ? '<div class="panel"><h2>Progress (admin view)</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box"><div class="num">'+stats.total+'</div><div class="label">Attempts</div></div><div class="stat-box"><div class="num">'+stats.avg+'%</div><div class="label">Average</div></div><div class="stat-box"><div class="num">'+stats.best+'%</div><div class="label">Best</div></div></div><button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="renderProgress()">View history</button></div>' : '')+
@@ -1885,6 +1940,7 @@ function parseQuestions(text){
 
 (function init(){
   applyTheme(); applyAdminModeClass(); reloadConfig();
+  if(window._applySavedZoom) window._applySavedZoom();
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
   syncRemoteContent().catch(()=>{});
   try { history.pushState({ nav: true }, ''); } catch(e){}
@@ -1933,7 +1989,8 @@ Object.assign(window, {
   openSupportGroup, appAlert, appConfirm, appPrompt,
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays,
   hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt,
-  backendRegister, backendLogin, backendGetUser, backendUpdateUser
+  backendRegister, backendLogin, backendGetUser, backendUpdateUser,
+  setAppZoom, getAppZoom
 });
 </script>
 
