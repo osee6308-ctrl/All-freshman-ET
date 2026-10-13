@@ -566,34 +566,19 @@ function setScreen(name){
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
 
-/* --- Keyboard-safe blur guard (FIXED) --- */
-window._isTyping = false;
-document.addEventListener('focusin', (e) => {
-  const t = e.target;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
-    window._isTyping = true;
+/* --- Safe Blur Guard (Keyboard stays open) --- */
+document.addEventListener('visibilitychange', () => {
+  // Only blur if the app goes to the background (not just typing)
+  if (document.hidden && !isScreenshotAllowed()) {
+    document.body.classList.add('blur-sensitive');
+  } else {
     document.body.classList.remove('blur-sensitive');
   }
-}, true);
-document.addEventListener('focusout', (e) => {
-  const t = e.target;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
-    window._isTyping = false;
-  }
-}, true);
-document.addEventListener('visibilitychange', () => {
-  if (window._isTyping) return;
-  document.body.classList.toggle('blur-sensitive', document.hidden && !isScreenshotAllowed());
 });
-window.addEventListener('blur', () => {
-  if (window._isTyping) return;
-  if (!isScreenshotAllowed()) document.body.classList.add('blur-sensitive');
+window.addEventListener('focus', () => {
+  document.body.classList.remove('blur-sensitive');
 });
-window.addEventListener('focus', () => document.body.classList.remove('blur-sensitive'));
-document.addEventListener('contextmenu', e => {
-  if (window._isTyping) return;
-  if (!isScreenshotAllowed()) e.preventDefault();
-});
+/* --- End Safe Blur Guard --- */
 
 let _navSilent = false;
 let _navReady = false;
@@ -1622,4 +1607,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
- </html>
+</html>
