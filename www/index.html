@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="android-disable-cache" content="true">
 <title>All Freshman ET</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#6a3093">
@@ -556,6 +557,10 @@ function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.
 
 const SS_ALLOWED_SCREENS=['payment','payment-proof','payment-upload','my','register','auth','chat'];
 function setScreen(name){
+  // NEW: auto-dismiss keyboard when changing screens (Android back / navigation)
+  if (typeof _isInputFocused === 'function' && _isInputFocused()) {
+    try { _dismissKeyboard(); } catch(e){}
+  }
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
   if (!_goingBack && _navReady && !_navSilent) { 
     const prev = currentScreen; 
@@ -680,14 +685,91 @@ function _renderNoteViewerDirect(){
   app.innerHTML = renderHeader('note')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(n.title)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()-0.25)" title="Zoom out">A−</button><span class="zoom-pct" id="noteZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()+0.25)" title="Zoom in">A+</button><button class="zoom-btn" onclick="setNoteZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="noteZoomBody" class="viewer-note-body" style="font-size:'+(15*z)+'px;"><p style="color:#777; font-size:.85em; margin-bottom:14px;">'+escapeHtml(v.uni)+' · '+escapeHtml(v.stream)+' · Sem '+v.sem+'</p>'+(n.body||'')+'</div></div>'+(attach ? '<div style="margin-top:12px;">'+attach+'</div>' : '')+'<div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Use A+ / A− to change text size. Tap "⟲" to reset.</div>'+renderBottomNav('note')+renderChatFab();
 }
 
-window.addEventListener('popstate', () => {
-  if (!_navReady) return;
-  if (_screenStack.length > 0) {
-    const prev = _screenStack.pop(); _goingBack = true;
-    try { _renderScreenByName(prev); } finally { setTimeout(() => { _goingBack = false; }, 100); }
-    try { history.pushState({ nav: true }, ''); } catch(e){}
+/* ============ UNIFIED ANDROID BACK HANDLER (Capacitor + PWA + WebView) ============ */
+let _lastBackTime = 0;
+const _DOUBLE_BACK_DELAY = 2000;
+let _backToastEl = null;
+
+function _isInputFocused() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const t = el.tagName;
+  return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.isContentEditable;
+}
+
+async function _dismissKeyboard() {
+  try {
+    if (_isInputFocused() && document.activeElement) document.activeElement.blur();
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
+      await window.Capacitor.Plugins.Keyboard.hide();
+    }
+  } catch(e){}
+}
+
+function _showBackToast() {
+  if (_backToastEl) _backToastEl.remove();
+  _backToastEl = document.createElement('div');
+  _backToastEl.textContent = 'Press back again to exit';
+  _backToastEl.style.cssText =
+    'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);' +
+    'background:rgba(0,0,0,.85);color:#fff;padding:10px 22px;border-radius:24px;' +
+    'font-size:13px;font-weight:600;z-index:2147483647;pointer-events:none;' +
+    'opacity:1;transition:opacity .3s;white-space:nowrap;';
+  document.body.appendChild(_backToastEl);
+  setTimeout(() => {
+    if (_backToastEl) {
+      _backToastEl.style.opacity = '0';
+      setTimeout(() => { if (_backToastEl) { _backToastEl.remove(); _backToastEl = null; } }, 320);
+    }
+  }, 1600);
+}
+
+function _exitApp() {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.exitApp();
   }
+}
+
+async function handleAndroidBack() {
+  // 1) Keyboard / text field open → hide keyboard first (do NOT go back)
+  if (_isInputFocused()) {
+    await _dismissKeyboard();
+    return;
+  }
+
+  // 2) In-app navigation stack has entries → go back one screen
+  if (_screenStack.length > 0) {
+    const prev = _screenStack.pop();
+    _goingBack = true;
+    try { _renderScreenByName(prev); }
+    finally { setTimeout(() => { _goingBack = false; }, 100); }
+    return;
+  }
+
+  // 3) Not on a base tab → jump to base tab
+  if (!BASE_SCREENS.has(currentScreen) && currentScreen !== _lastBaseTab) {
+    switchTab(_lastBaseTab);
+    return;
+  }
+
+  // 4) On base tab with empty stack → double-press to exit
+  const now = Date.now();
+  if (now - _lastBackTime < _DOUBLE_BACK_DELAY) {
+    _exitApp();
+    return;
+  }
+  _lastBackTime = now;
+  _showBackToast();
+}
+window.handleAndroidBack = handleAndroidBack;
+
+window.addEventListener('popstate', (e) => {
+  if (!_navReady) return;
+  try { history.pushState({ nav: true }, ''); } catch(err){}
+  handleAndroidBack();
 });
+/* ============ END UNIFIED ANDROID BACK HANDLER ============ */
+
 function goBack() {
   if (_screenStack.length > 0) { const prev = _screenStack.pop(); _goingBack = true; try { _renderScreenByName(prev); } finally { setTimeout(() => { _goingBack = false; }, 100); } return; }
   if (isAdminMode()) { renderMy(); return; }
@@ -777,7 +859,6 @@ async function submitSignUp(){
     const pwHash = await hashPasswordNew(pw); const encPhone = await aesEncrypt(phone);
     const user = { name, phone, university:uni, stream, passwordHash:pwHash, phoneEnc:encPhone, deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
     
-    // --- CRITICAL FIX: Wait for Cloudflare to save the user ---
     try {
       const backendRes = await backendRegister(user);
       if (!backendRes || !backendRes.ok) {
@@ -789,7 +870,6 @@ async function submitSignUp(){
       if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
       return err('Network error: Could not connect to the server. Check your internet.');
     }
-    // --------------------------------------------------------
 
     markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
     saveProfileData({ name, phone, university:uni, stream }); setUniversity(uni); setCheckedIn(); startSession(phone);
@@ -1564,17 +1644,13 @@ function parseQuestions(text){
   return questions.filter(q=>q.options.length>=2);
 }
 
-/* --- Capacitor Native Back Button Fix --- */
+/* --- Capacitor Native Back Button --- */
 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
   window.Capacitor.Plugins.App.addListener('backButton', () => {
-    if (_screenStack.length > 0) {
-      goBack();
-    } else {
-      window.Capacitor.Plugins.App.exitApp();
-    }
+    handleAndroidBack();
   });
 }
-/* --- End Back Button Fix --- */
+/* --- End --- */
 
 (function init(){
   applyTheme(); applyAdminModeClass(); reloadConfig();
@@ -1639,4 +1715,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
- </html>
+</html>
