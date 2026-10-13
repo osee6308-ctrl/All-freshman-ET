@@ -66,19 +66,17 @@ jobs:
 
       - name: Force Replace Android Icons
         run: |
-          # 1. Find the icon (checks multiple possible locations)
           ICON=""
           for f in "www/icon-512.png" "icon-512.png" "www/logo.png" "logo.png"; do
             if [ -f "$f" ]; then ICON="$f"; break; fi
           done
 
           if [ -z "$ICON" ]; then
-            echo "❌ ERROR: No icon file found! Checked www/icon-512.png, icon-512.png, www/logo.png, logo.png"
+            echo "❌ ERROR: No icon file found!"
             exit 1
           fi
           echo "✅ Using icon: $ICON"
 
-          # 2. Generate standard legacy icons
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
@@ -97,7 +95,6 @@ jobs:
           cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
 
-          # 3. CRITICAL FIX: Overwrite/Delete Adaptive Icon XMLs to force legacy PNGs
           MIPMAP_DIR="android/app/src/main/res/mipmap-anydpi-v26"
           if [ -d "$MIPMAP_DIR" ]; then
             rm -rf "$MIPMAP_DIR"
@@ -106,7 +103,6 @@ jobs:
           
           find android/app/src/main/res -name "ic_launcher.xml" -exec rm -f {} \;
           find android/app/src/main/res -name "ic_launcher_round.xml" -exec rm -f {} \;
-          
           echo "✅ Icons forced successfully!"
 
       - name: Overwrite MainActivity with FLAG_SECURE and BackButton Fix
@@ -129,7 +125,7 @@ jobs:
 
               @Override
               public void onBackPressed() {
-                  if (this.bridge.getWebView().canGoBack()) {
+                  if (this.bridge != null && this.bridge.getWebView() != null && this.bridge.getWebView().canGoBack()) {
                       this.bridge.getWebView().goBack();
                   } else {
                       super.onBackPressed();
