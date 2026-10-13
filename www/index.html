@@ -229,7 +229,7 @@ const LS_SETTINGS='fh_settings', LS_USERS='fh_users', LS_CURRENT_USER='fh_curren
       LS_ADMIN_ACTIVATED='fh_admin_activated', LS_ADMIN_ACTIVATED_AT='fh_admin_activated_at',
       LS_BOOK_ZOOM='fh_book_zoom', LS_NOTE_ZOOM='fh_note_zoom',
       LS_GENERAL_SUBJECTS='fh_general_subjects', LS_ADMIN_KEYS='fh_admin_keys',
-      LS_ACT_PHONE='fh_activated_phone', LS_GRACE_UNTIL='fh_grace_until'; // Grace period storage
+      LS_ACT_PHONE='fh_activated_phone', LS_GRACE_UNTIL='fh_grace_until';
 
 function getSettings(){
   try {
@@ -256,7 +256,6 @@ function getSettings(){
 function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }
 let CONFIG = getSettings();
 
-/* ==================== BACKEND URL ==================== */
 const BACKEND_URL = 'https://all-freshman-db.osee6308.workers.dev';
 
 async function backendRegister(user) {
@@ -297,7 +296,6 @@ async function backendUpdateUser(user) {
     return await r.json();
   } catch(e){ return { ok:false }; }
 }
-/* ==================================================== */
 
 function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
@@ -316,7 +314,6 @@ const escapeAttr = s => escapeHtml(s).replace(/"/g,'&quot;');
 const formatTime = sec => { const m=String(Math.floor(sec/60)).padStart(2,'0'); const s=String(sec%60).padStart(2,'0'); return m+':'+s; };
 function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0; } return Math.abs(h).toString(36).toUpperCase(); }
 
-/* ============ CRYPTO HELPERS (PBKDF2 + AES-GCM) ============ */
 function bytesToHex(bytes){ return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function hexToBytes(hex){ const out=new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(hex.substr(i*2,2),16); return out; }
 function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
@@ -443,13 +440,11 @@ function tryActivateLicense(key){
 }
 
 function checkAccess(){
-  // NEW: Check if the device is in a 12-hour grace period
   const graceUntil = parseInt(localStorage.getItem(LS_GRACE_UNTIL) || '0');
   if (graceUntil > Date.now()) {
     const hoursLeft = Math.ceil((graceUntil - Date.now()) / (1000 * 60 * 60));
     return { status:'licensed', daysLeft: hoursLeft, grace: true };
   }
-  // END NEW
 
   if(isAdminMode()) return { status:'licensed', daysLeft:9999, master:true, admin:true };
   const curPhone = getCurrentUserPhone();
@@ -559,7 +554,14 @@ function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.
 const SS_ALLOWED_SCREENS=['payment','payment-proof','payment-upload','my','register','auth','chat'];
 function setScreen(name){
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
-  if (!_goingBack && _navReady && !_navSilent) { const prev = currentScreen; if (prev && prev !== name) { if (BASE_SCREENS.has(name)) _screenStack.length = 0; else _screenStack.push(prev); } }
+  if (!_goingBack && _navReady && !_navSilent) { 
+    const prev = currentScreen; 
+    if (prev && prev !== name) { 
+      if (BASE_SCREENS.has(name)) _screenStack.length = 0; 
+      else _screenStack.push(prev); 
+      try { history.pushState({ nav: true }, ''); } catch(e){}
+    } 
+  }
   currentScreen = name; updateScreenshotGuard();
   if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){ try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){} }
 }
@@ -568,7 +570,6 @@ function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!is
 
 /* --- Safe Blur Guard (Keyboard stays open) --- */
 document.addEventListener('visibilitychange', () => {
-  // Only blur if the app goes to the background (not just typing)
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
   } else {
@@ -578,7 +579,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => {
   document.body.classList.remove('blur-sensitive');
 });
-/* --- End Safe Blur Guard --- */
 
 let _navSilent = false;
 let _navReady = false;
@@ -811,16 +811,14 @@ async function submitSignIn(){
     let user = findLocalUser(phone); let fromServer = false;
     if (!user) { const remote = findRemoteUser(phone); if (remote) { saveUser(remote); user = remote; } }
     
-    // --- NEW: Grace Period Check on Login ---
     let graceGranted = false;
     if (user) {
       const backendRes = await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, deviceHash: getDeviceHash() });
       if (backendRes && backendRes.gracePeriod) {
         graceGranted = true;
-        localStorage.setItem(LS_GRACE_UNTIL, Date.now() + (12 * 60 * 60 * 1000)); // 12 hours
+        localStorage.setItem(LS_GRACE_UNTIL, Date.now() + (12 * 60 * 60 * 1000));
       }
     }
-    // ----------------------------------------
 
     if (!user) { const resp = await backendGetUser(phone); if (resp && resp.ok && resp.user) { user = resp.user; user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); markPhoneUsed(phone); fromServer = true; } }
     if (!user) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('No account found for this phone. Please sign up first.'); }
@@ -1215,7 +1213,7 @@ function renderAdminSettings(){
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-danger btn-full" style="margin-top:16px;" onclick="wipeAllLocalData()">🚨 Wipe All Local Data</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function saveAdminSettings(){
   const s=getSettings();
@@ -1245,6 +1243,19 @@ async function saveAdminSettings(){
   await appAlert('✅ Settings saved.'); renderAdminSettings();
 }
 function resetAdminSettings(){ appConfirm('Reset ALL settings to factory defaults?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); appAlert('Settings reset.'); renderAdminSettings(); }); }
+function wipeAllLocalData() {
+  if (!isAdminMode()) return;
+  appConfirm('⚠️ WARNING: This will DELETE ALL local data, including users, content drafts, settings, history, and login sessions. Are you ABSOLUTELY sure?').then(ok1 => {
+    if (!ok1) return;
+    appPrompt('Type "DELETE" to confirm.').then(text => {
+      if (text !== 'DELETE') return appAlert('Cancelled.');
+      localStorage.clear();
+      appAlert('All local data has been wiped. The app will now reload.').then(() => {
+        window.location.reload();
+      });
+    });
+  });
+}
 
 function renderAdminUsers(){
   if(!isAdminMode()){ renderMy(); return; }
@@ -1344,14 +1355,12 @@ function renderAdminBulkAdd(){
   const stream = adminBulkState.stream || 'Natural'; 
   const semester = adminBulkState.semester || 1;
   
-  // NEW: Add "ALL UNIVERSITIES" option
   const uniOpts = '<option value="__ALL__">🌟 ALL UNIVERSITIES</option>' + CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
   
   app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add</h2>'+
   
   '<label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select>'+
   
-  // NEW: Stream and Semester buttons
   '<label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;">'+
   '<button onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button>'+
   '<button onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div>'+
@@ -1379,7 +1388,6 @@ async function adminSubmitBulk(){
   const examName = (document.getElementById('bulkExamName').value||'').trim(); 
   const examText = (document.getElementById('bulkExamText').value||'').trim();
 
-  // Validate if at least one section is filled
   let hasSomething = false;
   if(bookName && bookUrl) hasSomething = true;
   if(noteTitle && noteBody) hasSomething = true;
@@ -1389,12 +1397,11 @@ async function adminSubmitBulk(){
       return appAlert('Fill at least one section with valid data (e.g., URL for Module, Body for Note, Questions for Exam).');
   }
 
-  // Determine which universities to update
   let targetUnis = [];
   if (uni === '__ALL__') {
-      targetUnis = CONFIG.UNIVERSITIES; // Loop through all
+      targetUnis = CONFIG.UNIVERSITIES; 
   } else {
-      targetUnis = [uni]; // Only the selected one
+      targetUnis = [uni]; 
   }
 
   let addedCount = 0;
@@ -1403,7 +1410,6 @@ async function adminSubmitBulk(){
       parsedQs = parseQuestions(examText);
   }
 
-  // Loop through the target universities
   targetUnis.forEach(targetUni => {
       let c = getUniContent(targetUni, stream, semester);
       let added = 0;
@@ -1574,7 +1580,7 @@ Object.assign(window, {
   openNotifPanel, closeNotifPanel, markSeen,
   renderAdminNotifications, sendAdminNotif, deleteAdminNotif,
   toggleTheme, setTheme, doLogout, showActivationStatus,
-  renderAdminSettings, saveAdminSettings, resetAdminSettings,
+  renderAdminSettings, saveAdminSettings, resetAdminSettings, wipeAllLocalData,
   renderAdminStats, renderAdminContentManager, renderAdminTutorials,
   renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit,
   adminDeleteUser, adminActivateThisUser,
