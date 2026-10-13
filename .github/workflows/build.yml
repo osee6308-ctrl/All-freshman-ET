@@ -64,25 +64,51 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-      - name: Generate Android icons
+      - name: Force Replace Android Icons
         run: |
-          ICON=www/icon-512.png
-          if [ -f "$ICON" ]; then
-            mkdir -p android/app/src/main/res/mipmap-mdpi
-            mkdir -p android/app/src/main/res/mipmap-hdpi
-            mkdir -p android/app/src/main/res/mipmap-xhdpi
-            mkdir -p android/app/src/main/res/mipmap-xxhdpi
-            mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-            convert "$ICON" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert "$ICON" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert "$ICON" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert "$ICON" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert "$ICON" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-            echo "Icons generated"
-          else
-            echo "Icon not found at $ICON"
+          # 1. Find the icon (checks multiple possible locations)
+          ICON=""
+          for f in "www/icon-512.png" "icon-512.png" "www/logo.png" "logo.png"; do
+            if [ -f "$f" ]; then ICON="$f"; break; fi
+          done
+
+          if [ -z "$ICON" ]; then
+            echo "❌ ERROR: No icon file found! Checked www/icon-512.png, icon-512.png, www/logo.png, logo.png"
+            exit 1
           fi
+          echo "✅ Using icon: $ICON"
+
+          # 2. Generate standard legacy icons
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          
+          convert "$ICON" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert "$ICON" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert "$ICON" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert "$ICON" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert "$ICON" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          
+          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+
+          # 3. CRITICAL FIX: Overwrite/Delete Adaptive Icon XMLs to force legacy PNGs
+          MIPMAP_DIR="android/app/src/main/res/mipmap-anydpi-v26"
+          if [ -d "$MIPMAP_DIR" ]; then
+            rm -rf "$MIPMAP_DIR"
+            echo "🗑️ Deleted adaptive icon XML folder"
+          fi
+          
+          # 4. Also overwrite any lingering adaptive icon XMLs
+          find android/app/src/main/res -name "ic_launcher.xml" -exec rm -f {} \;
+          find android/app/src/main/res -name "ic_launcher_round.xml" -exec rm -f {} \;
+          
+          echo "✅ Icons forced successfully!"
 
       - name: Overwrite MainActivity with FLAG_SECURE
         run: |
