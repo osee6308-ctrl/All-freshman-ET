@@ -1,11 +1,13 @@
-const CACHE_NAME = 'all-freshman-v2';
+const CACHE_NAME = 'all-freshman-v1';
 const ASSETS = [
   './index.html',
   './manifest.json',
   './logo.png',
   './favicon.png',
-  './icon-192x192.png',
-  './icon-512x512.png'
+  './icon-192.png',
+  './icon-512.png',
+  './content.json',
+  './version.json'
 ];
 
 self.addEventListener('install', (e) => {
