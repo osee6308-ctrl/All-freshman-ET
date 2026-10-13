@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="All Freshman">
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="icon-192x192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
@@ -229,7 +229,7 @@ const LS_SETTINGS='fh_settings', LS_USERS='fh_users', LS_CURRENT_USER='fh_curren
       LS_ADMIN_ACTIVATED='fh_admin_activated', LS_ADMIN_ACTIVATED_AT='fh_admin_activated_at',
       LS_BOOK_ZOOM='fh_book_zoom', LS_NOTE_ZOOM='fh_note_zoom',
       LS_GENERAL_SUBJECTS='fh_general_subjects', LS_ADMIN_KEYS='fh_admin_keys',
-      LS_ACT_PHONE='fh_activated_phone', LS_GRACE_UNTIL='fh_grace_until'; // NEW: Grace period storage
+      LS_ACT_PHONE='fh_activated_phone', LS_GRACE_UNTIL='fh_grace_until'; // Grace period storage
 
 function getSettings(){
   try {
@@ -1230,7 +1230,7 @@ function renderAdminSettings(){
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/Freshman-hub"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function saveAdminSettings(){
   const s=getSettings();
@@ -1355,25 +1355,99 @@ function renderAdminBulkAdd(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-bulk');
   if(!adminBulkState.uni) adminBulkState.uni = adminEditState.uni || CONFIG.UNIVERSITIES[0];
-  const uni = adminBulkState.uni; const stream = adminBulkState.stream || 'Natural'; const semester = adminBulkState.semester || 1;
-  const uniOpts = CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add</h2><label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module</h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><input type="url" id="bulkBookUrl" placeholder="URL" class="field-input" style="margin-bottom:8px;"></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note</h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body" class="field-textarea" style="margin-bottom:8px;"></textarea></div><div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam</h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><textarea id="bulkExamText" placeholder="Questions" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea></div><button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  const uni = adminBulkState.uni; 
+  const stream = adminBulkState.stream || 'Natural'; 
+  const semester = adminBulkState.semester || 1;
+  
+  // NEW: Add "ALL UNIVERSITIES" option
+  const uniOpts = '<option value="__ALL__">🌟 ALL UNIVERSITIES</option>' + CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
+  
+  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add</h2>'+
+  
+  '<label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select>'+
+  
+  // NEW: Stream and Semester buttons
+  '<label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;">'+
+  '<button onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button>'+
+  '<button onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div>'+
+  
+  '<label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:14px;">'+
+  '<button onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+'; background:'+(semester===1?'#6a3093':'#fff')+'; color:'+(semester===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button>'+
+  '<button onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+'; background:'+(semester===2?'#6a3093':'#fff')+'; color:'+(semester===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div>'+
+  
+  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module</h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><input type="url" id="bulkBookUrl" placeholder="URL" class="field-input" style="margin-bottom:8px;"></div>'+
+  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note</h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body" class="field-textarea" style="margin-bottom:8px;"></textarea></div>'+
+  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam</h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><textarea id="bulkExamText" placeholder="Questions" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea></div>'+
+  '<button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function adminSubmitBulk(){
   if(!isAdminMode()) return;
+  
   const uni = (document.getElementById('bulkUni')||{}).value || adminBulkState.uni;
-  const stream = adminBulkState.stream || 'Natural'; const semester = adminBulkState.semester || 1;
-  const bookName = (document.getElementById('bulkBookName').value||'').trim(); const bookUrl = (document.getElementById('bulkBookUrl').value||'').trim();
-  const noteTitle = (document.getElementById('bulkNoteTitle').value||'').trim(); const noteBody = (document.getElementById('bulkNoteBody').value||'').trim();
-  const examName = (document.getElementById('bulkExamName').value||'').trim(); const examText = (document.getElementById('bulkExamText').value||'').trim();
-  const c = getUniContent(uni, stream, semester); let added = 0;
-  if(bookName && bookUrl){ c.pdfs.push({name: bookName, url: bookUrl}); added++; }
-  if(noteTitle && (noteBody)){ c.notes.push({title: noteTitle, body: noteBody}); added++; }
-  if(examName && examText){ const qs = parseQuestions(examText); if(qs.length){ c.exams.push({name: examName, questions: qs, timeMinutes: 30}); added++; } }
-  if(added === 0) return appAlert('Fill at least one section');
-  setUniContent(uni, stream, semester, c);
-  await appAlert('✅ Added ' + added + ' item(s)');
-  renderAdminContentManager('exam');
+  const stream = adminBulkState.stream || 'Natural'; 
+  const semester = adminBulkState.semester || 1;
+  
+  const bookName = (document.getElementById('bulkBookName').value||'').trim(); 
+  const bookUrl = (document.getElementById('bulkBookUrl').value||'').trim();
+  const noteTitle = (document.getElementById('bulkNoteTitle').value||'').trim(); 
+  const noteBody = (document.getElementById('bulkNoteBody').value||'').trim();
+  const examName = (document.getElementById('bulkExamName').value||'').trim(); 
+  const examText = (document.getElementById('bulkExamText').value||'').trim();
+
+  // Validate if at least one section is filled
+  let hasSomething = false;
+  if(bookName && bookUrl) hasSomething = true;
+  if(noteTitle && noteBody) hasSomething = true;
+  if(examName && examText) hasSomething = true;
+  
+  if(!hasSomething) {
+      return appAlert('Fill at least one section with valid data (e.g., URL for Module, Body for Note, Questions for Exam).');
+  }
+
+  // Determine which universities to update
+  let targetUnis = [];
+  if (uni === '__ALL__') {
+      targetUnis = CONFIG.UNIVERSITIES; // Loop through all
+  } else {
+      targetUnis = [uni]; // Only the selected one
+  }
+
+  let addedCount = 0;
+  let parsedQs = [];
+  if (examText) {
+      parsedQs = parseQuestions(examText);
+  }
+
+  // Loop through the target universities
+  targetUnis.forEach(targetUni => {
+      let c = getUniContent(targetUni, stream, semester);
+      let added = 0;
+
+      if(bookName && bookUrl){ 
+          c.pdfs.push({name: bookName, url: bookUrl}); 
+          added++; 
+      }
+      if(noteTitle && noteBody){ 
+          c.notes.push({title: noteTitle, body: noteBody}); 
+          added++; 
+      }
+      if(examName && parsedQs.length > 0){ 
+          c.exams.push({name: examName, questions: parsedQs, timeMinutes: 30}); 
+          added++; 
+      }
+
+      if (added > 0) {
+          setUniContent(targetUni, stream, semester, c);
+          addedCount++;
+      }
+  });
+
+  if(addedCount > 0) {
+      await appAlert('✅ Successfully added content to ' + addedCount + ' university(ies)!');
+      renderAdminContentManager('exam');
+  } else {
+      appAlert('No valid content was added. Please check your inputs.');
+  }
 }
 
 let adminGeneralState = { editing:null };
