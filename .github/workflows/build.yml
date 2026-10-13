@@ -49,11 +49,6 @@ jobs:
             "appId": "com.osee6308.allfreshman",
             "appName": "All Freshman ET",
             "webDir": "www",
-            "server": {
-              "url": "https://osee6308-ctrl.github.io/All-freshman-ET/",
-              "androidScheme": "https",
-              "cleartext": false
-            },
             "android": {
               "allowMixedContent": false
             }
@@ -71,7 +66,7 @@ jobs:
 
       - name: Generate Android icons
         run: |
-          ICON=icon-512.png
+          ICON=www/icon-512.png
           if [ -f "$ICON" ]; then
             mkdir -p android/app/src/main/res/mipmap-mdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
@@ -85,6 +80,8 @@ jobs:
             convert "$ICON" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
             cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
             echo "Icons generated"
+          else
+            echo "Icon not found at $ICON"
           fi
 
       - name: Overwrite MainActivity with FLAG_SECURE
