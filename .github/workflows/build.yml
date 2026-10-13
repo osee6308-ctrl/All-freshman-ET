@@ -104,13 +104,12 @@ jobs:
             echo "🗑️ Deleted adaptive icon XML folder"
           fi
           
-          # 4. Also overwrite any lingering adaptive icon XMLs
           find android/app/src/main/res -name "ic_launcher.xml" -exec rm -f {} \;
           find android/app/src/main/res -name "ic_launcher_round.xml" -exec rm -f {} \;
           
           echo "✅ Icons forced successfully!"
 
-      - name: Overwrite MainActivity with FLAG_SECURE
+      - name: Overwrite MainActivity with FLAG_SECURE and BackButton Fix
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
           PKG=$(grep '^package ' "$FILE" | sed 's/package //;s/;//')
@@ -127,9 +126,18 @@ jobs:
                   super.onCreate(savedInstanceState);
                   getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
               }
+
+              @Override
+              public void onBackPressed() {
+                  if (this.bridge.getWebView().canGoBack()) {
+                      this.bridge.getWebView().goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
           }
           EOF
-          grep -q "FLAG_SECURE" "$FILE" && echo "OK: FLAG_SECURE applied"
+          grep -q "onBackPressed" "$FILE" && echo "OK: Back button fix applied"
 
       - name: Build signed AAB
         working-directory: android
