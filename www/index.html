@@ -256,6 +256,7 @@ function getSettings(){
 function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }
 let CONFIG = getSettings();
 
+/* ==================== BACKEND URL ==================== */
 const BACKEND_URL = 'https://all-freshman-db.osee6308.workers.dev';
 
 async function backendRegister(user) {
@@ -296,6 +297,7 @@ async function backendUpdateUser(user) {
     return await r.json();
   } catch(e){ return { ok:false }; }
 }
+/* ==================================================== */
 
 function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
@@ -314,6 +316,7 @@ const escapeAttr = s => escapeHtml(s).replace(/"/g,'&quot;');
 const formatTime = sec => { const m=String(Math.floor(sec/60)).padStart(2,'0'); const s=String(sec%60).padStart(2,'0'); return m+':'+s; };
 function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0; } return Math.abs(h).toString(36).toUpperCase(); }
 
+/* ============ CRYPTO HELPERS (PBKDF2 + AES-GCM) ============ */
 function bytesToHex(bytes){ return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function hexToBytes(hex){ const out=new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(hex.substr(i*2,2),16); return out; }
 function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
@@ -1550,6 +1553,18 @@ function parseQuestions(text){
   return questions.filter(q=>q.options.length>=2);
 }
 
+/* --- Capacitor Native Back Button Fix --- */
+if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+  window.Capacitor.Plugins.App.addListener('backButton', () => {
+    if (_screenStack.length > 0) {
+      goBack();
+    } else {
+      window.Capacitor.Plugins.App.exitApp();
+    }
+  });
+}
+/* --- End Back Button Fix --- */
+
 (function init(){
   applyTheme(); applyAdminModeClass(); reloadConfig();
   if(window._applySavedZoom) window._applySavedZoom();
@@ -1613,4 +1628,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
-</html>
+ </html>
