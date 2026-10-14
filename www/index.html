@@ -178,7 +178,7 @@
 <script>
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-/* ============ GLOBAL DISPLAY ZOOM (default 15% bigger everywhere) ============ */
+/* ============ GLOBAL DISPLAY ZOOM ============ */
 (function(){
   function applyZoom(v){
     v = String(v);
@@ -268,8 +268,11 @@ async function backendRegister(user) {
         stream: user.stream, passwordHash: user.passwordHash,
         deviceHash: user.deviceHash, createdAt: user.createdAt })
     });
-    return await r.json();
-  } catch(e){ return { ok:false, err:'network' }; }
+    let data;
+    try { data = await r.json(); } catch(e) { data = { ok:false, err:'bad-json', status:r.status }; }
+    console.log('REGISTER status:', r.status, 'body:', data);
+    return data;
+  } catch(e){ console.error('REGISTER fetch failed:', e); return { ok:false, err:'network' }; }
 }
 async function backendLogin(phone, password) {
   try {
@@ -277,7 +280,8 @@ async function backendLogin(phone, password) {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ phone, password })
     });
-    return await r.json();
+    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    return data;
   } catch(e){ return { ok:false, err:'network' }; }
 }
 async function backendGetUser(phone) {
@@ -286,7 +290,8 @@ async function backendGetUser(phone) {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ phone })
     });
-    return await r.json();
+    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    return data;
   } catch(e){ return { ok:false, err:'network' }; }
 }
 async function backendUpdateUser(user) {
@@ -295,7 +300,8 @@ async function backendUpdateUser(user) {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ phone: user.phone, passwordHash: user.passwordHash, deviceHash: user.deviceHash })
     });
-    return await r.json();
+    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    return data;
   } catch(e){ return { ok:false }; }
 }
 /* ==================================================== */
@@ -317,7 +323,7 @@ const escapeAttr = s => escapeHtml(s).replace(/"/g,'&quot;');
 const formatTime = sec => { const m=String(Math.floor(sec/60)).padStart(2,'0'); const s=String(sec%60).padStart(2,'0'); return m+':'+s; };
 function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0; } return Math.abs(h).toString(36).toUpperCase(); }
 
-/* ============ CRYPTO HELPERS (PBKDF2 + AES-GCM) ============ */
+/* ============ CRYPTO HELPERS ============ */
 function bytesToHex(bytes){ return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function hexToBytes(hex){ const out=new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(hex.substr(i*2,2),16); return out; }
 function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
@@ -557,10 +563,9 @@ function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.
 
 const SS_ALLOWED_SCREENS=['payment','payment-proof','payment-upload','my','register','auth','chat'];
 function setScreen(name){
-  // NEW: auto-dismiss keyboard when changing screens
-  if (typeof _isInputFocused === 'function' && _isInputFocused()) {
-    try { _dismissKeyboard(); } catch(e){}
-  }
+  // Always dismiss keyboard on screen change (double-tap for reliability)
+  try { _dismissKeyboard(); } catch(e){}
+  setTimeout(function(){ try { _dismissKeyboard(); } catch(e){} }, 50);
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
   if (!_goingBack && _navReady && !_navSilent) { 
     const prev = currentScreen; 
@@ -576,7 +581,6 @@ function setScreen(name){
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
 
-/* --- Safe Blur Guard (Keyboard stays open) --- */
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
@@ -685,7 +689,7 @@ function _renderNoteViewerDirect(){
   app.innerHTML = renderHeader('note')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(n.title)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()-0.25)" title="Zoom out">A−</button><span class="zoom-pct" id="noteZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()+0.25)" title="Zoom in">A+</button><button class="zoom-btn" onclick="setNoteZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="noteZoomBody" class="viewer-note-body" style="font-size:'+(15*z)+'px;"><p style="color:#777; font-size:.85em; margin-bottom:14px;">'+escapeHtml(v.uni)+' · '+escapeHtml(v.stream)+' · Sem '+v.sem+'</p>'+(n.body||'')+'</div></div>'+(attach ? '<div style="margin-top:12px;">'+attach+'</div>' : '')+'<div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Use A+ / A− to change text size. Tap "⟲" to reset.</div>'+renderBottomNav('note')+renderChatFab();
 }
 
-/* ============ UNIFIED ANDROID BACK HANDLER (Capacitor + PWA + WebView) ============ */
+/* ============ UNIFIED ANDROID BACK HANDLER ============ */
 let _lastBackTime = 0;
 const _DOUBLE_BACK_DELAY = 2000;
 let _backToastEl = null;
@@ -697,23 +701,24 @@ function _isInputFocused() {
   return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.isContentEditable;
 }
 
-async function _dismissKeyboard() {
+/* HARDENED: dismiss keyboard reliably on every Android IME */
+function _dismissKeyboard() {
   try {
-    if (_isInputFocused() && document.activeElement) document.activeElement.blur();
-    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
-      await window.Capacitor.Plugins.Keyboard.hide();
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && typeof ae.blur === 'function') {
+      ae.blur();
     }
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
+      try { window.Capacitor.Plugins.Keyboard.hide(); } catch(e){}
+    }
+    try { document.body.focus(); } catch(e){}
+    try { if (document.body && document.body.blur) document.body.blur(); } catch(e){}
   } catch(e){}
 }
 
-/* NEW: helper to force-blur before submit actions */
 function blurActiveInput(){
-  try {
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    _dismissKeyboard();
-  } catch(e){}
+  _dismissKeyboard();
+  setTimeout(_dismissKeyboard, 60);
 }
 window.blurActiveInput = blurActiveInput;
 
@@ -742,13 +747,10 @@ function _exitApp() {
 }
 
 async function handleAndroidBack() {
-  // 1) Keyboard / text field open → hide keyboard first (do NOT go back)
   if (_isInputFocused()) {
     await _dismissKeyboard();
     return;
   }
-
-  // 2) In-app navigation stack has entries → go back one screen
   if (_screenStack.length > 0) {
     const prev = _screenStack.pop();
     _goingBack = true;
@@ -756,14 +758,10 @@ async function handleAndroidBack() {
     finally { setTimeout(() => { _goingBack = false; }, 100); }
     return;
   }
-
-  // 3) Not on a base tab → jump to base tab
   if (!BASE_SCREENS.has(currentScreen) && currentScreen !== _lastBaseTab) {
     switchTab(_lastBaseTab);
     return;
   }
-
-  // 4) On base tab with empty stack → double-press to exit
   const now = Date.now();
   if (now - _lastBackTime < _DOUBLE_BACK_DELAY) {
     _exitApp();
@@ -781,27 +779,21 @@ window.addEventListener('popstate', (e) => {
 });
 /* ============ END UNIFIED ANDROID BACK HANDLER ============ */
 
-/* ============ AUTO KEYBOARD DISMISS LISTENERS ============ */
-/* 1) Tap outside any input → hide keyboard */
-document.addEventListener('touchstart', function(e){
-  if (!_isInputFocused()) return;
-  const t = e.target;
-  const tag = t && t.tagName ? t.tagName : '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return;
-  if (t.closest && t.closest('label')) return;
-  if (t.closest && t.closest('.pw-wrap')) return;
-  _dismissKeyboard();
-}, { passive: true });
+/* ============ AUTO KEYBOARD DISMISS LISTENERS (v2) ============ */
 
-document.addEventListener('mousedown', function(e){
+/* 1) Tap outside any input → hide keyboard (touch + mouse) */
+function _onOutsideTap(e){
   if (!_isInputFocused()) return;
   const t = e.target;
-  const tag = t && t.tagName ? t.tagName : '';
+  if (!t) return;
+  const tag = t.tagName || '';
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return;
   if (t.closest && t.closest('label')) return;
   if (t.closest && t.closest('.pw-wrap')) return;
   _dismissKeyboard();
-});
+}
+document.addEventListener('touchstart', _onOutsideTap, { passive: true });
+document.addEventListener('mousedown', _onOutsideTap);
 
 /* 2) Scroll page → hide keyboard (debounced) */
 let _scrollHideTimer = null;
@@ -810,28 +802,37 @@ window.addEventListener('scroll', function(){
   clearTimeout(_scrollHideTimer);
   _scrollHideTimer = setTimeout(function(){
     if (_isInputFocused()) _dismissKeyboard();
-  }, 180);
+  }, 150);
 }, { passive: true });
 
-/* 3) Any button / link tap → hide keyboard (capture phase, so it fires before app logic) */
+/* 3) Any button / link / tab tap → hide keyboard (capture phase) */
 document.addEventListener('click', function(e){
-  const btn = e.target.closest && e.target.closest('button, a, .tab, .chat-fab, .hdr-btn');
+  const btn = e.target && e.target.closest &&
+              e.target.closest('button, a, .tab, .chat-fab, .hdr-btn');
   if (!btn) return;
   if (btn.closest && btn.closest('.pw-wrap')) return;
   if (_isInputFocused()) _dismissKeyboard();
 }, true);
 
-/* 4) Press Enter / Go on keyboard → hide keyboard */
+/* 4) Soft keyboard Enter / Go / Done / Next / Tab → hide keyboard */
 document.addEventListener('keydown', function(e){
-  if (e.key !== 'Enter') return;
+  const code = e.keyCode || e.which || 0;
+  const key  = e.key || '';
+  const isEnter    = code === 13 || key === 'Enter';
+  const isTab      = code === 9  || key === 'Tab';
+  const isNextIME  = code === 229 && key === 'Unidentified';
+  if (!(isEnter || isTab || isNextIME)) return;
+
   const t = e.target;
   if (!t) return;
   if (t.tagName === 'TEXTAREA') return;
-  if (t.tagName === 'INPUT' || t.tagName === 'SELECT') {
-    _dismissKeyboard();
-    if (typeof t.blur === 'function') t.blur();
-  }
-});
+  if (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') return;
+
+  _dismissKeyboard();
+  setTimeout(function(){
+    try { t.blur(); } catch(err){}
+  }, 20);
+}, true);
 
 /* 5) <select> change → force blur */
 document.addEventListener('change', function(e){
@@ -841,7 +842,21 @@ document.addEventListener('change', function(e){
     _dismissKeyboard();
   }
 });
-/* ============ END AUTO KEYBOARD DISMISS LISTENERS ============ */
+
+/* 6) focusout → if no input is focused anymore, dismiss */
+document.addEventListener('focusout', function(){
+  setTimeout(function(){
+    if (!_isInputFocused()) _dismissKeyboard();
+  }, 60);
+});
+
+/* 7) Tapping on the app's main container (blank space) → hide keyboard */
+document.addEventListener('touchstart', function(e){
+  if (!_isInputFocused()) return;
+  if (e.target && e.target.id === 'app') _dismissKeyboard();
+}, { passive: true });
+
+/* ============ END AUTO KEYBOARD DISMISS LISTENERS (v2) ============ */
 
 function goBack() {
   if (_screenStack.length > 0) { const prev = _screenStack.pop(); _goingBack = true; try { _renderScreenByName(prev); } finally { setTimeout(() => { _goingBack = false; }, 100); } return; }
@@ -937,7 +952,8 @@ async function submitSignUp(){
       const backendRes = await backendRegister(user);
       if (!backendRes || !backendRes.ok) {
         if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
-        return err('Server error: Could not save your account. Please check your internet and try again.');
+        const errText = (backendRes && backendRes.err) ? String(backendRes.err) : 'unknown';
+        return err('Server error: Couldn\'t save your account. ('+errText+') Please check your internet and try again.');
       }
       console.log('✅ Backed up to Cloudflare');
     } catch(e) {
@@ -1020,6 +1036,7 @@ function renderForgotPassword(){
 }
 
 function switchTab(tab){
+  blurActiveInput();
   _clearNavStack(); saveScrollNow();
   if(BASE_TABS[tab]) _lastBaseTab = tab;
   if(quizState.timerId && currentScreen === 'quiz'){ clearInterval(quizState.timerId); quizState = {}; }
