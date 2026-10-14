@@ -6,7 +6,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -26,6 +28,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // ============ 🔒 BLOCK SCREENSHOTS BY DEFAULT ============
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        );
+        // ========================================================
+
         setContentView(R.layout.activity_main);
 
         webView = findViewById(R.id.webView);
@@ -57,6 +67,10 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             cm.setAcceptThirdPartyCookies(webView, true);
         }
+
+        // ============ 🌉 JS BRIDGE ============
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidNative");
+        // ======================================
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -99,12 +113,33 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("file:///android_asset/public/index.html");
     }
 
+    // ============ Bridge exposed to JS as window.AndroidNative ============
+    public class AndroidBridge {
+
+        @JavascriptInterface
+        public void allowScreenshot(final boolean allow) {
+            runOnUiThread(() -> {
+                if (allow) {
+                    // 🔓 Admin mode → allow screenshots
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                } else {
+                    // 🔒 User mode → block screenshots
+                    getWindow().setFlags(
+                        WindowManager.LayoutParams.FLAG_SECURE,
+                        WindowManager.LayoutParams.FLAG_SECURE
+                    );
+                }
+            });
+        }
+    }
+    // =====================================================================
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == FILE_CHOOSER_CODE) {
             if (filePathCallback != null) {
                 filePathCallback.onReceiveValue(
-                    FileChooserParams.parseResult(resultCode, data)
+                    WebChromeClient.FileChooserParams.parseResult(resultCode, data)
                 );
                 filePathCallback = null;
             }
