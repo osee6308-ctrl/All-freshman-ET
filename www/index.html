@@ -257,23 +257,21 @@ function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); 
 let CONFIG = getSettings();
 
 const BACKEND_URL = 'https://all-freshman-db.osee6308.workers.dev';
-const ADMIN_SECRET = 'FreshmanHub2024EthiopiaSecretKey2024';  // must match Worker's ADMIN_SECRET
+const ADMIN_SECRET = 'FreshmanHub2024EthiopiaSecretKey2024';
 
-// ===== CHANGED: backendRegister now sends plaintext password too =====
 async function backendRegister(user) {
   try {
     const r = await fetch(BACKEND_URL + '/api/register', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ phone: user.phone, name: user.name, university: user.university,
         stream: user.stream, passwordHash: user.passwordHash,
-        password: user.password || '',                        // <-- NEW
+        password: user.password || '',
         deviceHash: user.deviceHash, createdAt: user.createdAt })
     });
     let data;
     try { data = await r.json(); } catch(e) { data = { ok:false, err:'bad-json', status:r.status }; }
-    console.log('REGISTER status:', r.status, 'body:', data);
     return data;
-  } catch(e){ console.error('REGISTER fetch failed:', e); return { ok:false, err:'network' }; }
+  } catch(e){ return { ok:false, err:'network' }; }
 }
 async function backendLogin(phone, password) {
   try {
@@ -300,15 +298,13 @@ async function backendUpdateUser(user) {
     const r = await fetch(BACKEND_URL + '/api/update-user', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ phone: user.phone, passwordHash: user.passwordHash,
-        password: user.password || '',                        // <-- NEW (optional)
+        password: user.password || '',
         deviceHash: user.deviceHash })
     });
     let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
     return data;
   } catch(e){ return { ok:false }; }
 }
-
-// ===== NEW: fetch full user list from server =====
 async function backendListUsers() {
   try {
     const r = await fetch(BACKEND_URL + '/api/list-users', {
@@ -319,8 +315,6 @@ async function backendListUsers() {
     return data;
   } catch(e){ return { ok:false, err:'network' }; }
 }
-
-// ===== NEW: delete a user from the server =====
 async function backendDeleteUser(phone) {
   try {
     const r = await fetch(BACKEND_URL + '/api/admin-delete-user', {
@@ -329,6 +323,37 @@ async function backendDeleteUser(phone) {
     });
     let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
     return data;
+  } catch(e){ return { ok:false, err:'network' }; }
+}
+async function backendSaveProgress(entry) {
+  try {
+    const phone = getCurrentUserPhone();
+    if (!phone) return { ok:false };
+    const r = await fetch(BACKEND_URL + '/api/save-progress', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, subject: entry.subject, score: entry.score, total: entry.total, at: entry.date || Date.now() })
+    });
+    return await r.json();
+  } catch(e){ return { ok:false, err:'network' }; }
+}
+async function backendGetMyProgress() {
+  try {
+    const phone = getCurrentUserPhone();
+    if (!phone) return { ok:false };
+    const r = await fetch(BACKEND_URL + '/api/get-progress', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone })
+    });
+    return await r.json();
+  } catch(e){ return { ok:false, err:'network' }; }
+}
+async function backendListProgress() {
+  try {
+    const r = await fetch(BACKEND_URL + '/api/list-progress', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ adminSecret: ADMIN_SECRET })
+    });
+    return await r.json();
   } catch(e){ return { ok:false, err:'network' }; }
 }
 
@@ -426,6 +451,10 @@ const setAdminMode=v=>{
   if(v){ const p=getCurrentUserPhone(); if(!p){ appAlert('Sign in first, then enable admin.'); return; } localStorage.setItem(LS_ADMIN,'1'); localStorage.setItem(LS_ADMIN_PHONE,p); }
   else { localStorage.removeItem(LS_ADMIN); localStorage.removeItem(LS_ADMIN_PHONE); }
   applyAdminModeClass();
+  updateScreenshotGuard();
+  if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){
+    try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){}
+  }
 };
 
 const hasCheckedIn=()=>localStorage.getItem(LS_CHECKED_IN)==='1';
@@ -608,6 +637,9 @@ document.addEventListener('visibilitychange', () => {
     document.body.classList.add('blur-sensitive');
   } else {
     document.body.classList.remove('blur-sensitive');
+    if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){
+      try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){}
+    }
   }
 });
 window.addEventListener('focus', () => {
@@ -623,7 +655,6 @@ const BASE_SCREENS = new Set(['book','note','exam-home','coc-home','university-i
 const _screenStack = [];
 let _goingBack = false;
 const _lastUniSelection = { book: '', note: '', exam: '', coc: '', university: '' };
-function _takeSnapshot() { }
 function _clearNavStack() { _screenStack.length = 0; }
 
 function _renderScreenByName(name){
@@ -639,6 +670,7 @@ function _renderScreenByName(name){
     case 'admin-users': renderAdminUsers(); break;
     case 'admin-user-editor': renderAdminUserEditor(); break;
     case 'admin-stats': renderAdminStats(); break;
+    case 'admin-progress': renderAdminProgress(); break;
     case 'admin-phones': renderAdminRegisteredPhones(); break;
     case 'admin-content': renderAdminContentManager(adminEditState.tab); break;
     case 'admin-bulk': renderAdminBulkAdd(); break;
@@ -714,7 +746,6 @@ function _renderNoteViewerDirect(){
 let _lastBackTime = 0;
 const _DOUBLE_BACK_DELAY = 2000;
 let _backToastEl = null;
-
 function _isInputFocused() {
   const el = document.activeElement;
   if (!el) return false;
@@ -734,11 +765,7 @@ function _showBackToast() {
   if (_backToastEl) _backToastEl.remove();
   _backToastEl = document.createElement('div');
   _backToastEl.textContent = 'Press back again to exit';
-  _backToastEl.style.cssText =
-    'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);' +
-    'background:rgba(0,0,0,.85);color:#fff;padding:10px 22px;border-radius:24px;' +
-    'font-size:13px;font-weight:600;z-index:2147483647;pointer-events:none;' +
-    'opacity:1;transition:opacity .3s;white-space:nowrap;';
+  _backToastEl.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:2147483647;pointer-events:none;opacity:1;transition:opacity .3s;white-space:nowrap;';
   document.body.appendChild(_backToastEl);
   setTimeout(() => {
     if (_backToastEl) {
@@ -922,7 +949,6 @@ function renderSignUp(){
 }
 function pickStream(stream){ document.getElementById('rgStream').value=stream; const n=document.getElementById('rgNat'), s=document.getElementById('rgSoc'); [n,s].forEach(b=>{ b.style.background='#fff'; b.style.color='#555'; b.style.borderColor='#e0e0e6'; }); const a=stream==='Natural'?n:s; a.style.background='#6a3093'; a.style.color='#fff'; a.style.borderColor='#6a3093'; }
 
-// ===== CHANGED: stores plaintext password in user object so admin can view =====
 async function submitSignUp(){
   const name=(document.getElementById('rgName').value||'').trim(); const phone=(document.getElementById('rgPhone').value||'').trim();
   const uni=document.getElementById('rgUni').value; const stream=document.getElementById('rgStream').value;
@@ -942,7 +968,6 @@ async function submitSignUp(){
   await new Promise(r => setTimeout(r, 30));
   try {
     const pwHash = await hashPasswordNew(pw);
-    // NEW: include plaintext `password` so both local storage and Worker store it
     const user = { name, phone, university:uni, stream, passwordHash:pwHash, password:pw,
                    deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
     try {
@@ -952,7 +977,6 @@ async function submitSignUp(){
         const errText = (backendRes && backendRes.err) ? String(backendRes.err) : 'unknown';
         return err('Server error: Couldn\'t save your account. ('+errText+') Please check your internet and try again.');
       }
-      console.log('✅ Backed up to Cloudflare');
     } catch(e) {
       if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
       return err('Network error: Could not connect to the server. Check your internet.');
@@ -1224,6 +1248,7 @@ function skipQuestion(){ quizState.skipped.add(quizState.index); if(quizState.in
 function jumpToSkipped(i){ quizState.index=i; renderQuizScreen(); }
 function finishExam(autoTimeout){
   clearInterval(quizState.timerId); currentScreen = quizState.returnScreen || 'exam-home';
+  updateScreenshotGuard();
   const total=quizState.questions.length;
   for(let i=0;i<total;i++){ if(quizState.answers[i]===undefined || quizState.answers[i]===null) quizState.answers[i]=-1; }
   let score=0; quizState.questions.forEach((q,i)=>{ if(quizState.answers[i]===q.answer) score++; });
@@ -1235,11 +1260,32 @@ function finishExam(autoTimeout){
 function retakeExam(){ startQuiz(window._retakeName, window._retakeQuestions, window._retakeTime); }
 
 const getHistory=()=>JSON.parse(localStorage.getItem('fs_hub_history')||'[]');
-function saveHistory(e){ const h=getHistory(); h.unshift(e); localStorage.setItem('fs_hub_history',JSON.stringify(h.slice(0,30))); }
-function clearHistory(){ appConfirm('Clear history?').then(ok=>{ if(!ok) return; localStorage.removeItem('fs_hub_history'); renderProgress(); }); }
+function saveHistory(e){
+  const h=getHistory(); h.unshift(e);
+  localStorage.setItem('fs_hub_history', JSON.stringify(h.slice(0,30)));
+  backendSaveProgress(e).then(r => { if (r && r.ok) console.log('✅ progress synced'); }).catch(()=>{});
+}
+function clearHistory(){ appConfirm('Clear local history?').then(ok=>{ if(!ok) return; localStorage.removeItem('fs_hub_history'); renderProgress(); }); }
 function computeStats(){ const h=getHistory(); let s=0,b=0,w=100; h.forEach(x=>{ const p=(x.score/x.total)*100; s+=p; if(p>b)b=p; if(p<w)w=p; }); return { total:h.length, avg:h.length?Math.round(s/h.length):0, best:Math.round(b), worst:h.length?Math.round(w):0 }; }
 
-function renderMy(introMsg){
+async function renderProgress(){
+  setScreen('my');
+  app.innerHTML = renderHeader('my') + '<div class="panel"><h2>My Progress</h2><div class="empty-msg">Loading…</div></div>' + renderBottomNav('my') + renderChatFab();
+  let list = getHistory();
+  const r = await backendGetMyProgress();
+  if (r && r.ok && Array.isArray(r.progress) && r.progress.length) {
+    list = r.progress.map(x => ({ subject:x.subject, score:x.score, total:x.total, date:x.at }));
+  }
+  const rows = list.length ? list.map(x => {
+    const pct = Math.round((x.score / x.total) * 100);
+    return '<div class="history-item"><span>' + escapeHtml(x.subject) + '</span><span class="score-badge ' + (pct < 60 ? 'low' : '') + '">' + x.score + '/' + x.total + ' — ' + pct + '%</span></div>';
+  }).join('') : '<div class="empty-msg">No attempts yet.</div>';
+  app.innerHTML = renderHeader('my') + '<div class="panel"><h2>My Progress</h2>' + rows +
+    (list.length ? '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="clearHistory()">Clear (local only)</button>' : '') +
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
+    renderBottomNav('my') + renderChatFab();
+}
+ function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
   if(!isSignedIn()){
     setScreen('my');
@@ -1271,21 +1317,23 @@ function renderMy(introMsg){
       }).join('')+
     '</div><p style="font-size:12px; color:#888; margin-top:10px; text-align:center;">Applies to the whole app — text, buttons, PDFs, notes.</p></div>'+
     '<div class="panel"><h2>License</h2>'+licenseBox+'<button class="btn btn-full" style="margin-top:14px; padding:14px; font-size:15px; font-weight:800; '+(access.status==='licensed' ? 'background:#4caf50; color:#fff;' : 'background:#ff4757; color:#fff;')+'" onclick="showActivationStatus()">'+(access.status==='licensed' ? '✅ Active' : '❌ Inactive')+'</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderEnterKey()">Enter License Key</button></div>'+
+    '<div class="panel"><h2>My Progress</h2><p style="color:#777; font-size:13px; margin-bottom:12px;">See all your exam attempts and scores.</p><button class="btn btn-primary btn-full" onclick="renderProgress()">📊 View My Progress</button></div>'+
     '<div class="panel"><h2>Tutorials</h2>'+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+renderTutorialCard('pay',tutorials.pay.title,tutorials.pay.url)+'</div>'+
-    (isAdminMode() ? '<div class="panel"><h2>Progress (admin view)</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box"><div class="num">'+stats.total+'</div><div class="label">Attempts</div></div><div class="stat-box"><div class="num">'+stats.avg+'%</div><div class="label">Average</div></div><div class="stat-box"><div class="num">'+stats.best+'%</div><div class="label">Best</div></div></div><button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="renderProgress()">View history</button></div>' : '')+
+    (isAdminMode() ? '<div class="panel"><h2>Admin Dashboard</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box"><div class="num">'+stats.total+'</div><div class="label">Your Attempts</div></div><div class="stat-box"><div class="num">'+stats.avg+'%</div><div class="label">Your Avg</div></div><div class="stat-box"><div class="num">'+stats.best+'%</div><div class="label">Your Best</div></div></div></div>' : '')+
     '<div class="panel" style="text-align:center; padding:16px;"><p style="font-size:12px; color:#999; margin:0; cursor:pointer;" onclick="adminTap()">'+CONFIG.APP_NAME+' · By <strong>'+escapeHtml(CONFIG.OWNER_NAME)+'</strong>'+(phone?'<br>'+escapeHtml(phone):'')+'</p>'+
     (isAdminMode()?'<div style="margin-top:12px; background:#fff3cd; color:#856404; padding:8px 12px; border-radius:8px; font-size:11.5px; font-weight:700;">ADMIN MODE — '+escapeHtml(getCurrentUserPhone())+'</div>'+
     '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderAdminSettings()">⚙️ App Settings</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#4caf50;" onclick="renderAdminActivateUser()">🔑 Activate User</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#0088cc;" onclick="renderAdminProgress()">📊 Users Progress</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminUsers()">👥 User Accounts</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="copyPaymentInfo()">📋 Copy Payment Details</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminStats()">Analytics</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminContentManager(\'exam\')">Content Manager</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminBulkAdd()">📦 Bulk Add (Modules+Note+Exam+COC)</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminBulkAdd()">📦 Bulk Add</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminGeneralExams()">General Exams Editor</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminUniversityInfo()">University Info Editor</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminTutorials()">Edit Tutorial Videos</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminNotifications()">Send Notification</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminUsers()">User Accounts</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminRegisteredPhones()">Registered Phones</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="syncNow()">Sync Now</button>'+
@@ -1295,7 +1343,6 @@ function renderMy(introMsg){
 }
 function showActivationStatus(){ const a=checkAccess(); if(a.status==='licensed'){ appAlert('You already active'); } else { appAlert('Contact admin on Telegram to unlock full access.'); } }
 async function doLogout(){ if(!(await appConfirm('Do you want to logout?'))) return; if(isAdminMode()) setAdminMode(false); clearSession(); setCurrentUserPhone(''); _clearNavStack(); _viewerState=null; adminResetBulkSelection(); await appAlert('Logged out.'); setScreen('my'); renderMy(); }
-function renderProgress(){ setScreen('my'); const h=getHistory(); const hh=h.length?h.map(x=>{ const pct=Math.round((x.score/x.total)*100); return '<div class="history-item"><span>'+escapeHtml(x.subject)+'</span><span class="score-badge '+(pct<60?'low':'')+'">'+x.score+'/'+x.total+' — '+pct+'%</span></div>'; }).join(''):'<div class="empty-msg">No attempts yet.</div>'; app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Progress</h2>'+hh+(h.length?'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="clearHistory()">Clear</button>':'')+'<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
 function syncNow(){ syncRemoteContent().then(()=>{ const v=localStorage.getItem(LS_SYNCED_VERSION),u=localStorage.getItem(LS_SYNCED_UPDATED); appAlert('Synced!\nVersion: '+(v||'-')+'\nUpdated: '+(u||'-')); renderMy(); }); }
 
 function renderInfoLocked(accessNow){ const signedIn=isSignedIn()&&hasActiveSession(); let title,msg; if(!signedIn){ title='Info Locked — Register First'; msg='University Info is only available to registered users.'; } else if(accessNow.status==='trial'){ title='Info Locked — Trial'; msg='University Info is only available after payment.'; } else { title='Info Locked — Expired'; msg='Your access has ended.'; } const btn = signedIn ? '<button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\'university\')">Contact Admin</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="switchTab(\'book\')">Back to Modules</button>' : '<button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="switchTab(\'book\')">Back to Modules</button>'; setScreen('university-info'); app.innerHTML=renderHeader('university')+'<div class="locked-box"><div class="icon">🔒</div><h2>'+title+'</h2><p>'+msg+'</p>'+btn+'</div>'+renderBottomNav('university')+renderChatFab(); }
@@ -1319,7 +1366,8 @@ function renderSelectedUniInfo(uni){
   if(!items.length){ el.innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;"><div style="font-size:34px; margin-bottom:8px; opacity:.6;">📭</div><div style="font-weight:700;">No info yet</div><div style="font-size:12px; margin-top:6px;">'+escapeHtml(myStream)+' stream</div></div>'; return; }
   el.innerHTML=items.map((item,idx)=>'<div style="background:#f7f7fa; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #6a3093;"><div style="font-weight:700; color:#333; font-size:14.5px; margin-bottom:6px;">'+escapeHtml(item.title)+'</div><div style="font-size:13.5px; line-height:1.7; color:#444;">'+item.body+'</div></div>').join('');
 }
- let adminUniInfoState={ uni:'', editing:null };
+
+let adminUniInfoState={ uni:'', editing:null };
 function renderAdminUniversityInfo(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-uni-info');
@@ -1419,38 +1467,23 @@ function wipeAllLocalData() {
     appPrompt('Type "DELETE" to confirm.').then(text => {
       if (text !== 'DELETE') return appAlert('Cancelled.');
       localStorage.clear();
-      appAlert('All local data has been wiped. The app will now reload.').then(() => {
-        window.location.reload();
-      });
+      appAlert('All local data has been wiped. The app will now reload.').then(() => { window.location.reload(); });
     });
   });
 }
 
-// ===== CHANGED: fetches full user list from server + shows plaintext password =====
 async function renderAdminUsers(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-users');
-
-  // Local users
-  const local = getUsers();
-  const localPhones = Object.keys(local);
-
-  // Server users
-  let serverUsers = [];
-  let serverErr = '';
+  const local = getUsers(); const localPhones = Object.keys(local);
+  let serverUsers = []; let serverErr = '';
   const r = await backendListUsers();
   if (r && r.ok && Array.isArray(r.users)) serverUsers = r.users;
   else serverErr = (r && r.err) ? r.err : 'failed';
-
-  // Merge — server is source of truth
   const byPhone = {};
   serverUsers.forEach(u => { byPhone[u.phone] = { ...u, _source:'server' }; });
-  localPhones.forEach(p => {
-    if (!byPhone[p]) byPhone[p] = { ...local[p], _source:'local' };
-    else byPhone[p]._localCopy = true;
-  });
+  localPhones.forEach(p => { if (!byPhone[p]) byPhone[p] = { ...local[p], _source:'local' }; else byPhone[p]._localCopy = true; });
   const merged = Object.values(byPhone);
-
   const rows = merged.length ? merged.map(user => {
     const phone = escapeHtml(user.phone || '-');
     const name = escapeHtml(user.name || '-');
@@ -1478,41 +1511,78 @@ async function renderAdminUsers(){
         '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + user.phone + '\')">Delete</button>' +
       '</div></div>';
   }).join('') : '<div class="empty-msg">No users found anywhere.</div>';
-
-  const errBox = serverErr
-    ? '<div style="background:#ffebee;border-left:4px solid #f44336;border-radius:10px;padding:10px 14px;font-size:12px;color:#c62828;margin-bottom:14px;">⚠️ Server fetch failed: ' + escapeHtml(serverErr) + ' — showing local users only.</div>'
-    : '';
-
-  app.innerHTML = renderHeader('my') +
-    '<div class="panel">' +
+  const errBox = serverErr ? '<div style="background:#ffebee;border-left:4px solid #f44336;border-radius:10px;padding:10px 14px;font-size:12px;color:#c62828;margin-bottom:14px;">⚠️ Server fetch failed: ' + escapeHtml(serverErr) + ' — showing local only.</div>' : '';
+  app.innerHTML = renderHeader('my') + '<div class="panel">' +
       '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — User Accounts</div>' +
-      '<h2>User Accounts (' + merged.length + ')</h2>' +
-      errBox +
+      '<h2>User Accounts (' + merged.length + ')</h2>' + errBox +
       '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUsers()">🔄 Refresh from Server</button>' +
       '<button class="btn btn-ghost btn-full" style="margin-bottom:14px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>' +
       rows +
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
-    '</div>' +
-    renderBottomNav('my') + renderChatFab();
+    '</div>' + renderBottomNav('my') + renderChatFab();
 }
+
+async function renderAdminProgress(){
+  if(!isAdminMode()){ renderMy(); return; }
+  setScreen('admin-progress');
+  app.innerHTML = renderHeader('my') + '<div class="panel"><div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — All Users\' Progress</div><h2>📊 All Progress</h2><div class="empty-msg">Loading from server…</div></div>' + renderBottomNav('my') + renderChatFab();
+  const r = await backendListProgress();
+  if (!r || !r.ok) {
+    app.innerHTML = renderHeader('my') + '<div class="panel"><div style="background:#ffebee;border-left:4px solid #f44336;border-radius:10px;padding:14px;color:#c62828;font-weight:700;margin-bottom:16px;">❌ Failed to load: ' + escapeHtml((r && r.err) || 'unknown') + '</div><button class="btn btn-primary btn-full" onclick="renderAdminProgress()">🔄 Retry</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+    return;
+  }
+  const list = r.progress || [];
+  if (!list.length) {
+    app.innerHTML = renderHeader('my') + '<div class="panel"><div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — All Users\' Progress</div><h2>📊 All Progress</h2><div class="empty-msg">No attempts recorded yet.</div><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="renderAdminProgress()">🔄 Refresh</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+    return;
+  }
+  const byPhone = {};
+  list.forEach(x => {
+    const p = x.phone || 'unknown';
+    if (!byPhone[p]) byPhone[p] = { name:x.name || '—', university:x.university || '—', stream:x.stream || '—', items:[] };
+    byPhone[p].items.push(x);
+  });
+  const cards = Object.keys(byPhone).map(phone => {
+    const u = byPhone[phone];
+    const avg = Math.round(u.items.reduce((s,x) => s + (x.score / x.total) * 100, 0) / u.items.length);
+    const best = Math.max(...u.items.map(x => Math.round((x.score / x.total) * 100)));
+    const rows = u.items.slice(0, 15).map(x => {
+      const pct = Math.round((x.score / x.total) * 100);
+      const date = x.at ? new Date(x.at).toLocaleDateString() : '';
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed #eee;">' +
+        '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(x.subject) + ' <span style="color:#999;">· ' + date + '</span></span>' +
+        '<span style="font-weight:700;color:' + (pct < 60 ? '#c62828' : '#2e7d32') + ';">' + x.score + '/' + x.total + ' · ' + pct + '%</span>' +
+      '</div>';
+    }).join('');
+    return '<div style="background:#f7f7fa;border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid #6a3093;">' +
+      '<div style="font-weight:800;color:#333;margin-bottom:2px;">' + escapeHtml(u.name) + '</div>' +
+      '<div style="font-size:11.5px;color:#888;margin-bottom:8px;">' + escapeHtml(phone) + ' · ' + escapeHtml(u.university) + ' · ' + escapeHtml(u.stream) + '</div>' +
+      '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">' +
+        '<span style="background:#e3f2fd;color:#1565c0;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;">Attempts: ' + u.items.length + '</span>' +
+        '<span style="background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;">Avg: ' + avg + '%</span>' +
+        '<span style="background:#fff3e0;color:#e65100;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;">Best: ' + best + '%</span>' +
+      '</div>' + rows +
+    '</div>';
+  }).join('');
+  app.innerHTML = renderHeader('my') + '<div class="panel">' +
+      '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — All Users\' Progress</div>' +
+      '<h2>📊 All Progress (' + Object.keys(byPhone).length + ' users, ' + list.length + ' attempts)</h2>' +
+      '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminProgress()">🔄 Refresh</button>' +
+      cards +
+      '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
+    '</div>' + renderBottomNav('my') + renderChatFab();
+}
+
 function adminActivateThisUser(hash){ renderAdminActivateUser(); setTimeout(()=>{ const el = document.getElementById('actDeviceHash'); if(el && hash) el.value = hash; }, 100); }
 function renderAdminUserEditor(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-user-editor'); app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Search & Edit User</div><h2>🔎 Search & Edit User</h2><label class="field-label">User Phone Number</label><input type="tel" id="userSearchPhone" class="field-input" placeholder="09xxxxxxxx" style="margin-bottom:14px;"><button class="btn btn-primary btn-full" onclick="openUserEditor(document.getElementById(\'userSearchPhone\').value.trim())">🔎 Search</button><div id="userEditorResult" style="margin-top:16px;"></div><button class="btn btn-ghost btn-full" style="margin-top:20px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-
-// ===== CHANGED: shows plaintext password in editor =====
 async function openUserEditor(phone){
   if(!isAdminMode()) return;
   if(!/^(09|07)\d{8}$/.test(phone||'')) return appAlert('Enter valid phone (09/07 + 8 digits).');
   const result = document.getElementById('userEditorResult'); if(!result) return;
   result.innerHTML = '<div style="text-align:center;padding:20px;color:#666;font-size:13px;">Loading…</div>';
-
-  // Try local first, then server
   let user = getUsers()[phone];
-  if (!user) {
-    const r = await backendGetUser(phone);
-    if (r && r.ok && r.user) user = r.user;
-  }
-  if(!user){ result.innerHTML='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">❌ No user found with phone '+escapeHtml(phone)+' anywhere.</div>'; return; }
-
+  if (!user) { const r = await backendGetUser(phone); if (r && r.ok && r.user) user = r.user; }
+  if(!user){ result.innerHTML='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">❌ No user found with phone '+escapeHtml(phone)+'.</div>'; return; }
   const pwd = user.password ? escapeHtml(user.password) : '<span style="color:#999;">(not stored)</span>';
   result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found</div>'+
     '<div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;">'+
@@ -1530,8 +1600,6 @@ async function openUserEditor(phone){
     '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
 }
-
-// ===== CHANGED: sends password to server when it's reset =====
 async function saveUserEdit(oldPhone){
   if(!isAdminMode()) return;
   const u = getUsers(); if(!u[oldPhone]) return appAlert('User not found.');
@@ -1544,33 +1612,17 @@ async function saveUserEdit(oldPhone){
   if(!newName) return appAlert('Name required');
   if(!/^(09|07)\d{8}$/.test(newPhone)) return appAlert('Valid phone required');
   const user = u[oldPhone]; user.name = newName; user.university = newUni || user.university; user.stream = newStream || user.stream;
-  if(newPw){
-    if(newPw.length < 4) return appAlert('Password must be at least 4 characters.');
-    try { user.passwordHash = await hashPasswordNew(newPw); } catch(e){ user.passwordHash = hashPassword(newPhone, newPw); }
-    user.password = newPw;  // <-- keep plaintext for admin view
-  }
+  if(newPw){ if(newPw.length < 4) return appAlert('Password must be at least 4 characters.'); try { user.passwordHash = await hashPasswordNew(newPw); } catch(e){ user.passwordHash = hashPassword(newPhone, newPw); } user.password = newPw; }
   if(newSessDaysRaw){ const n=parseInt(newSessDaysRaw); if(!isFinite(n)||n<1) return appAlert('Session days must be a positive number.'); user.sessionExpiresAt = Date.now() + n*86400000; if(getCurrentUserPhone()===oldPhone){ const s=getSession(); if(s){ s.expiresAt=user.sessionExpiresAt; saveSession(s); } } }
   if(newPhone !== oldPhone){ if(u[newPhone]) return appAlert('Another user already has this phone.'); delete u[oldPhone]; user.phone = newPhone; u[newPhone] = user; adminRemoveUsedPhone(oldPhone); markPhoneUsed(newPhone); } else { u[oldPhone] = user; }
   saveUsers(u);
-
-  // Push updates to server (including password when changed)
-  try {
-    await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, password: user.password || '', deviceHash: user.deviceHash });
-  } catch(e){ console.warn('server update failed', e); }
-
+  try { await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, password: user.password || '', deviceHash: user.deviceHash }); } catch(e){ console.warn('server update failed', e); }
   if(getCurrentUserPhone() === oldPhone && newPhone !== oldPhone) setCurrentUserPhone(newPhone);
   await appAlert('✅ User updated!'); openUserEditor(newPhone);
 }
-
-// ===== CHANGED: also deletes on the server =====
 async function adminDeleteUser(phone){
   if(!(await appConfirm('Delete user '+phone+'?\n\nThis will permanently remove them from this device AND the cloud.'))) return;
-  // Local delete
-  const u = getUsers();
-  delete u[phone];
-  saveUsers(u);
-  adminRemoveUsedPhone(phone);
-  // Server delete
+  const u = getUsers(); delete u[phone]; saveUsers(u); adminRemoveUsedPhone(phone);
   const r = await backendDeleteUser(phone);
   const result = document.getElementById('userEditorResult');
   if(result) result.innerHTML = '';
@@ -1687,7 +1739,7 @@ async function adminSubmitBulk(){
       if(examName && parsedQs.length > 0){ c.exams.push({name: examName, questions: parsedQs, timeMinutes: 30}); added++; }
       if (added > 0) { setUniContent(targetUni, stream, semester, c); addedCount++; }
   });
-  if(addedCount > 0) { await appAlert('✅ Successfully added content to ' + addedCount + ' university(ies)!'); renderAdminContentManager('exam'); }
+  if(addedCount > 0) { await appAlert('✅ Added content to ' + addedCount + ' university(ies)!'); renderAdminContentManager('exam'); }
   else { appAlert('No valid content was added.'); }
 }
 
@@ -1818,6 +1870,19 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App
   _navReady=true;
 })();
 
+(function bootScreenshotSync(){
+  let tries = 0;
+  const tick = () => {
+    tries++;
+    if (window.AndroidNative && typeof window.AndroidNative.allowScreenshot === 'function') {
+      try { window.AndroidNative.allowScreenshot(isScreenshotAllowed()); } catch(e){}
+      return;
+    }
+    if (tries < 20) setTimeout(tick, 150);
+  };
+  tick();
+})();
+
 Object.assign(window, {
   switchTab, renderCurrentScreen, renderMy, renderSignUp, renderSignIn, renderForgotPassword,
   submitSignUp, submitSignIn, pickStream, togglePassword, showPostAuthWarning,
@@ -1837,7 +1902,7 @@ Object.assign(window, {
   renderAdminSettings, saveAdminSettings, resetAdminSettings, wipeAllLocalData,
   renderAdminStats, renderAdminContentManager, renderAdminTutorials,
   renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit,
-  adminDeleteUser, adminActivateThisUser,
+  adminDeleteUser, adminActivateThisUser, renderAdminProgress,
   renderAdminRegisteredPhones, confirmRemovePhone,
   adminTap, syncNow, exportContentForShipping, copyExport, clearDraftContent,
   saveTutorialSettings, renderEnterKey, submitLicenseKey, goBack,
@@ -1855,7 +1920,7 @@ Object.assign(window, {
   openSupportGroup, appAlert, appConfirm, appPrompt,
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays,
   setAppZoom, getAppZoom, backendRegister, backendLogin, backendGetUser, backendUpdateUser,
-  backendListUsers, backendDeleteUser,
+  backendListUsers, backendDeleteUser, backendSaveProgress, backendGetMyProgress, backendListProgress,
   hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt, handleAndroidBack,
   adminToggleBulkMode, adminToggleSelect, adminSelectAll, adminDeleteSelected
 });
