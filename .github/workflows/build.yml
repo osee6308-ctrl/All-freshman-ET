@@ -70,48 +70,36 @@ jobs:
           for f in "www/icon-512.png" "icon-512.png" "www/logo.png" "logo.png"; do
             if [ -f "$f" ]; then ICON="$f"; break; fi
           done
-
           if [ -z "$ICON" ]; then
             echo "❌ ERROR: No icon file found!"
             exit 1
           fi
           echo "✅ Using icon: $ICON"
-
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-          
           convert "$ICON" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           convert "$ICON" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
           convert "$ICON" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           convert "$ICON" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           convert "$ICON" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          
           cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-
           MIPMAP_DIR="android/app/src/main/res/mipmap-anydpi-v26"
-          if [ -d "$MIPMAP_DIR" ]; then
-            rm -rf "$MIPMAP_DIR"
-            echo "🗑️ Deleted adaptive icon XML folder"
-          fi
-          
+          if [ -d "$MIPMAP_DIR" ]; then rm -rf "$MIPMAP_DIR"; fi
           find android/app/src/main/res -name "ic_launcher.xml" -exec rm -f {} \;
           find android/app/src/main/res -name "ic_launcher_round.xml" -exec rm -f {} \;
-          echo "✅ Icons forced successfully!"
+          echo "✅ Icons forced!"
 
       - name: Overwrite MainActivity with FLAG_SECURE and JS Bridge
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
-          if [ -z "$FILE" ]; then
-            echo "❌ MainActivity.java not found"
-            exit 1
-          fi
+          if [ -z "$FILE" ]; then echo "❌ MainActivity.java not found"; exit 1; fi
           PKG=$(grep '^package ' "$FILE" | sed 's/package //;s/;//')
           echo "📦 Package: $PKG"
           cat > "$FILE" <<EOF
@@ -126,14 +114,10 @@ jobs:
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
-                  // Block screenshots by default
                   getWindow().setFlags(
                       WindowManager.LayoutParams.FLAG_SECURE,
                       WindowManager.LayoutParams.FLAG_SECURE
                   );
-
-                  // Expose bridge so index.html can toggle blocking
                   if (this.bridge != null && this.bridge.getWebView() != null) {
                       this.bridge.getWebView().addJavascriptInterface(new AndroidBridge(), "AndroidNative");
                       this.bridge.getWebView().getSettings().setJavaScriptEnabled(true);
@@ -170,7 +154,6 @@ jobs:
           }
           EOF
           grep -q "AndroidBridge" "$FILE" && echo "OK: JS bridge added"
-          grep -q "allowScreenshot" "$FILE" && echo "OK: allowScreenshot method present"
 
       - name: Build signed AAB
         working-directory: android
