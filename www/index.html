@@ -14,7 +14,6 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
   body { min-height:100vh; background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#222; transition: background .3s, color .3s; }
@@ -171,76 +170,6 @@
   body.dark #appDialogOverlay > div { background:#16162a !important; }
   body.dark #appDialogOverlay div[style*="color:#333"] { color:#e0e0e0 !important; }
   @media (max-width:520px) { .app-header h1 { font-size:17px; } .subjects-grid { grid-template-columns:1fr 1fr; } .q-text { font-size:15.5px; } }
-
-  /* ============ IN-APP SCREENSHOT (Exam/COC) ============ */
-  .shot-fab {
-    position: fixed;
-    right: 16px;
-    bottom: 170px;
-    width: 54px;
-    height: 54px;
-    border-radius: 50%;
-    background: #fff;
-    color: #6a3093;
-    border: 3px solid #6a3093;
-    font-size: 22px;
-    box-shadow: 0 6px 20px rgba(0,0,0,.4);
-    z-index: 8500;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-  .shot-fab.show { display: flex; }
-  .shot-fab:active { transform: scale(.94); }
-  .shot-preview {
-    position: fixed;
-    top: 90px;
-    right: 12px;
-    width: 160px;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.5);
-    border: 3px solid #fff;
-    z-index: 2147483646;
-    background: #fff;
-    padding: 6px;
-    animation: shotIn .3s ease;
-  }
-  .shot-preview img { width: 100%; display: block; border-radius: 8px; }
-  .shot-preview .sp-cap {
-    text-align: center;
-    font-size: 10.5px;
-    font-weight: 800;
-    color: #6a3093;
-    margin-top: 6px;
-    letter-spacing: .5px;
-  }
-  .shot-preview .sp-actions {
-    display: flex;
-    gap: 4px;
-    margin-top: 6px;
-  }
-  .shot-preview .sp-actions button,
-  .shot-preview .sp-actions a {
-    flex: 1;
-    padding: 6px 4px;
-    font-size: 10px;
-    font-weight: 800;
-    border-radius: 6px;
-    text-decoration: none;
-    text-align: center;
-    border: none;
-    cursor: pointer;
-  }
-  .shot-preview .sp-save { background: #6a3093; color: #fff; }
-  .shot-preview .sp-close { background: #eee; color: #333; }
-  @keyframes shotIn {
-    from { transform: translateX(120%); opacity: 0; }
-    to   { transform: translateX(0);    opacity: 1; }
-  }
-  @media (max-width:520px) { .shot-preview { width: 130px; top: 80px; } }
-  /* ============ END IN-APP SCREENSHOT ============ */
 </style>
 </head>
 <body>
@@ -249,7 +178,6 @@
 <script>
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-/* ============ GLOBAL DISPLAY ZOOM ============ */
 (function(){
   function applyZoom(v){
     v = String(v);
@@ -328,7 +256,6 @@ function getSettings(){
 function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }
 let CONFIG = getSettings();
 
-/* ==================== BACKEND URL ==================== */
 const BACKEND_URL = 'https://all-freshman-db.osee6308.workers.dev';
 
 async function backendRegister(user) {
@@ -375,7 +302,6 @@ async function backendUpdateUser(user) {
     return data;
   } catch(e){ return { ok:false }; }
 }
-/* ==================================================== */
 
 function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
@@ -394,7 +320,6 @@ const escapeAttr = s => escapeHtml(s).replace(/"/g,'&quot;');
 const formatTime = sec => { const m=String(Math.floor(sec/60)).padStart(2,'0'); const s=String(sec%60).padStart(2,'0'); return m+':'+s; };
 function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0; } return Math.abs(h).toString(36).toUpperCase(); }
 
-/* ============ CRYPTO HELPERS ============ */
 function bytesToHex(bytes){ return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function hexToBytes(hex){ const out=new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(hex.substr(i*2,2),16); return out; }
 function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
@@ -526,7 +451,6 @@ function checkAccess(){
     const hoursLeft = Math.ceil((graceUntil - Date.now()) / (1000 * 60 * 60));
     return { status:'licensed', daysLeft: hoursLeft, grace: true };
   }
-
   if(isAdminMode()) return { status:'licensed', daysLeft:9999, master:true, admin:true };
   const curPhone = getCurrentUserPhone();
   const actPhone = localStorage.getItem(LS_ACT_PHONE) || '';
@@ -632,12 +556,8 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
-/* ============ SCREENSHOT-ALLOWED SCREENS ============ */
-const SS_ALLOWED_SCREENS = [
-  'payment','payment-proof','payment-upload',
-  'my','register','auth','chat',
-  'exam-home','coc-home','quiz'
-];
+/* ONLY EXAM IS ALLOWED — COC NOT INCLUDED */
+const SS_ALLOWED_SCREENS=['payment','payment-proof','payment-upload','my','register','auth','chat','exam-home','quiz'];
 
 function setScreen(name){
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
@@ -651,7 +571,6 @@ function setScreen(name){
   }
   currentScreen = name; updateScreenshotGuard();
   if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){ try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){} }
-  setTimeout(updateShotFab, 60);
 }
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
@@ -752,7 +671,6 @@ function _renderBookViewerDirect(){
   currentScreen = 'book-viewer'; updateScreenshotGuard();
   const z = getBookZoom();
   app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="bookZoomWrap" style="width:100%;"><iframe src="'+escapeAttr(p.url)+'" loading="lazy" referrerpolicy="no-referrer"></iframe></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
-  setTimeout(updateShotFab, 40);
 }
 
 function _renderNoteViewerDirect(){
@@ -763,10 +681,8 @@ function _renderNoteViewerDirect(){
   const attach = n.url?'<div style="margin-top:20px;"><button class="btn btn-primary btn-full" onclick="window.open(\''+escapeAttr(n.url)+'\',\'_blank\')">📎 Open Attachment</button></div>':'';
   const z = getNoteZoom();
   app.innerHTML = renderHeader('note')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(n.title)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()-0.25)" title="Zoom out">A−</button><span class="zoom-pct" id="noteZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setNoteZoom(getNoteZoom()+0.25)" title="Zoom in">A+</button><button class="zoom-btn" onclick="setNoteZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="noteZoomBody" class="viewer-note-body" style="font-size:'+(15*z)+'px;"><p style="color:#777; font-size:.85em; margin-bottom:14px;">'+escapeHtml(v.uni)+' · '+escapeHtml(v.stream)+' · Sem '+v.sem+'</p>'+(n.body||'')+'</div></div>'+(attach ? '<div style="margin-top:12px;">'+attach+'</div>' : '')+'<div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Use A+ / A− to change text size. Tap "⟲" to reset.</div>'+renderBottomNav('note')+renderChatFab();
-  setTimeout(updateShotFab, 40);
 }
 
-/* ============ UNIFIED ANDROID BACK HANDLER ============ */
 let _lastBackTime = 0;
 const _DOUBLE_BACK_DELAY = 2000;
 let _backToastEl = null;
@@ -781,14 +697,10 @@ function _isInputFocused() {
 function _dismissKeyboard() {
   try {
     const ae = document.activeElement;
-    if (ae && ae !== document.body && typeof ae.blur === 'function') {
-      ae.blur();
-    }
+    if (ae && ae !== document.body && typeof ae.blur === 'function') ae.blur();
     if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
       try { window.Capacitor.Plugins.Keyboard.hide(); } catch(e){}
     }
-    try { document.body.focus(); } catch(e){}
-    try { if (document.body && document.body.blur) document.body.blur(); } catch(e){}
   } catch(e){}
 }
 
@@ -818,7 +730,7 @@ function _exitApp() {
 
 async function handleAndroidBack() {
   if (_isInputFocused()) {
-    await _dismissKeyboard();
+    _dismissKeyboard();
     return;
   }
   if (_screenStack.length > 0) {
@@ -847,13 +759,6 @@ window.addEventListener('popstate', (e) => {
   try { history.pushState({ nav: true }, ''); } catch(err){}
   handleAndroidBack();
 });
-/* ============ END UNIFIED ANDROID BACK HANDLER ============ */
-
-/* ============ KEYBOARD DISMISS — ONLY blank tap + soft Next/Done ============ */
-/* Rules:
-   1. Tap on empty space (not on input, not on button/label/tab/link) → hide
-   2. Press Next/Done/Go/Enter on soft keyboard → hide
-   Nothing else. No scroll-hide. No button-tap-hide. No screen-change-hide. */
 
 function _onBlankTap(e){
   if (!_isInputFocused()) return;
@@ -878,10 +783,9 @@ document.addEventListener('mousedown', _onBlankTap);
 document.addEventListener('keydown', function(e){
   const code = e.keyCode || e.which || 0;
   const key  = e.key || '';
-  const isEnter   = code === 13 || key === 'Enter';
-  const isTab     = code === 9  || key === 'Tab';
-  const isNextIME = code === 229;
-  if (!(isEnter || isTab || isNextIME)) return;
+  const isEnter = code === 13 || key === 'Enter';
+  const isTab   = code === 9  || key === 'Tab';
+  if (!(isEnter || isTab)) return;
   const t = e.target;
   if (!t) return;
   if (t.tagName === 'TEXTAREA') return;
@@ -889,72 +793,6 @@ document.addEventListener('keydown', function(e){
   _dismissKeyboard();
   setTimeout(function(){ try { t.blur(); } catch(err){} }, 20);
 }, true);
-/* ============ END KEYBOARD DISMISS ============ */
-
-/* ============ IN-APP SCREENSHOT (Exam/COC only) ============ */
-function updateShotFab(){
-  let fab = document.getElementById('shotFab');
-  if (!fab) {
-    fab = document.createElement('button');
-    fab.id = 'shotFab';
-    fab.className = 'shot-fab';
-    fab.innerHTML = '📷';
-    fab.title = 'Take screenshot';
-    fab.onclick = captureInAppScreenshot;
-    document.body.appendChild(fab);
-  }
-  const allowed = ['quiz','exam-home','coc-home'].includes(currentScreen);
-  fab.classList.toggle('show', allowed);
-}
-window.updateShotFab = updateShotFab;
-
-async function captureInAppScreenshot(){
-  if (typeof html2canvas === 'undefined') {
-    appAlert('Screenshot library is still loading. Try again in a second.');
-    return;
-  }
-  try {
-    const fab = document.getElementById('shotFab');
-    const old = document.getElementById('shotPreview');
-    if (old) old.remove();
-    if (fab) fab.style.display = 'none';
-
-    const canvas = await html2canvas(document.body, {
-      backgroundColor: null,
-      useCORS: true,
-      scale: 1.5,
-      ignoreElements: function(el){
-        return el.id === 'shotFab' || el.id === 'shotPreview';
-      }
-    });
-
-    const dataUrl = canvas.toDataURL('image/png');
-
-    const box = document.createElement('div');
-    box.id = 'shotPreview';
-    box.className = 'shot-preview';
-    box.innerHTML =
-      '<img src="' + dataUrl + '" alt="screenshot">' +
-      '<div class="sp-cap">SCREENSHOT</div>' +
-      '<div class="sp-actions">' +
-        '<a class="sp-save" download="exam-' + Date.now() + '.png" href="' + dataUrl + '">SAVE</a>' +
-        '<button class="sp-close" type="button">CLOSE</button>' +
-      '</div>';
-    box.querySelector('.sp-close').onclick = function(){ box.remove(); };
-    document.body.appendChild(box);
-
-    setTimeout(function(){
-      if (box.parentNode) box.remove();
-    }, 8000);
-
-  } catch(e) {
-    appAlert('Screenshot failed: ' + (e && e.message ? e.message : e));
-  } finally {
-    if (typeof updateShotFab === 'function') updateShotFab();
-  }
-}
-window.captureInAppScreenshot = captureInAppScreenshot;
-/* ============ END IN-APP SCREENSHOT ============ */
 
 function goBack() {
   if (_screenStack.length > 0) { const prev = _screenStack.pop(); _goingBack = true; try { _renderScreenByName(prev); } finally { setTimeout(() => { _goingBack = false; }, 100); } return; }
@@ -1044,7 +882,6 @@ async function submitSignUp(){
     if (exists && exists.ok) { if(btn){ btn.disabled=false; btn.textContent='Create Account'; } return err('This phone is already registered. Tap Sign In — your account is on the server.'); }
     const pwHash = await hashPasswordNew(pw); const encPhone = await aesEncrypt(phone);
     const user = { name, phone, university:uni, stream, passwordHash:pwHash, phoneEnc:encPhone, deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
-    
     try {
       const backendRes = await backendRegister(user);
       if (!backendRes || !backendRes.ok) {
@@ -1057,7 +894,6 @@ async function submitSignUp(){
       if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
       return err('Network error: Could not connect to the server. Check your internet.');
     }
-
     markPhoneUsed(phone); saveUser(user); setCurrentUserPhone(phone);
     saveProfileData({ name, phone, university:uni, stream }); setUniversity(uni); setCheckedIn(); startSession(phone);
     if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
@@ -1091,7 +927,6 @@ async function submitSignIn(){
   try {
     let user = findLocalUser(phone); let fromServer = false;
     if (!user) { const remote = findRemoteUser(phone); if (remote) { saveUser(remote); user = remote; } }
-    
     let graceGranted = false;
     if (user) {
       const backendRes = await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, deviceHash: getDeviceHash() });
@@ -1100,18 +935,14 @@ async function submitSignIn(){
         localStorage.setItem(LS_GRACE_UNTIL, Date.now() + (12 * 60 * 60 * 1000));
       }
     }
-
     if (!user) { const resp = await backendGetUser(phone); if (resp && resp.ok && resp.user) { user = resp.user; user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); markPhoneUsed(phone); fromServer = true; } }
     if (!user) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('No account found for this phone. Please sign up first.'); }
     const valid = await verifyPasswordAsync(phone, pw, user);
     if (!valid) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('Wrong password. Please try again.'); }
-    
     user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); setCurrentUserPhone(phone);
     saveProfileData({ name:user.name, phone:user.phone, university:user.university, stream:user.stream });
     setUniversity(user.university); setCheckedIn(); startSession(phone); markPhoneUsed(phone);
-    
     if (fromServer) { backendUpdateUser({ phone:user.phone, passwordHash:user.passwordHash, deviceHash:user.deviceHash }).then(()=>console.log('✅ Cloud updated')).catch(()=>{}); }
-    
     ok('✓ Signed in!'); 
     setTimeout(()=>{ 
       showPostAuthWarning(()=>{ 
@@ -1251,7 +1082,6 @@ function renderExamHome(){
   app.innerHTML=renderHeader('exam')+semesterChanger(sem)+(isTrial?'<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>':'')+'<div class="panel"><h2>Exam Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="examUniSelect" onchange="renderExamList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="examList"></div><div style="color:#fff; font-size:14px; font-weight:700; margin:20px 4px 10px;">'+generalTitle+'</div>'+trialNote+generalSection+renderBottomNav('exam')+renderChatFab();
   if(preSelect) renderExamList(preSelect);
   restoreScroll('exam_exam-home');
-  setTimeout(updateShotFab, 40);
 }
 function sortExamsByYear(exams){ return [...exams].sort((a,b)=>{ const ay=parseInt((a.year||'').replace(/[^\d]/g,''))||0; const by=parseInt((b.year||'').replace(/[^\d]/g,''))||0; return by-ay; }); }
 function renderExamList(uni){
@@ -1286,7 +1116,6 @@ function renderCocHome(){
   app.innerHTML = renderHeader('coc')+'<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">1st Semester · Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
   if(preSelect) renderCocList(preSelect);
   restoreScroll('coc_coc-home');
-  setTimeout(updateShotFab, 40);
 }
 function renderCocList(uni){
   if (uni) _lastUniSelection.coc = uni;
@@ -1328,7 +1157,6 @@ function renderQuizScreen(){
   else nav='<button class="btn btn-ghost" onclick="prevQuestion()" '+(quizState.index===0?'disabled':'')+'>Back</button><button class="btn btn-primary" onclick="nextQuestion()">Next</button>';
   const timerInit = quizState.timeMinutes>0 ? formatTime(Math.max(0,quizState.examSecondsLeft)) : formatTime(quizState.examSecondsElapsed);
   app.innerHTML=renderHeader(currentTab)+'<div class="quiz-top"><span>'+escapeHtml(quizState.subjectName)+'</span><span class="timer" id="timerEl">'+timerInit+'</span></div><div class="progress-track"><div class="progress-fill" style="width:'+progress+'%"></div></div><div class="question-card"><div class="q-number" style="margin-bottom:10px;">QUESTION '+(quizState.index+1)+' OF '+total+skBadge+'</div><div class="q-text">'+escapeHtml(q.q)+'</div>'+optionsHTML+fb+'<div class="nav-row">'+nav+'</div></div>'+renderBottomNav(currentTab)+renderChatFab();
-  setTimeout(updateShotFab, 40);
 }
 function selectOption(i){ if(quizState.revealed[quizState.index]) return; quizState.answers[quizState.index]=i; quizState.revealed[quizState.index]=true; quizState.skipped.delete(quizState.index); renderQuizScreen(); }
 function nextQuestion(){ if(quizState.index<quizState.questions.length-1){ quizState.index++; renderQuizScreen(); } }
@@ -1344,7 +1172,6 @@ function finishExam(autoTimeout){
   const reviewHTML=quizState.questions.map((q,i)=>{ const ua=quizState.answers[i]; const ok=ua===q.answer; const to=ua===-1; return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Timed out':(ua!==undefined&&q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>'; }).join('');
   window._retakeName=quizState.subjectName; window._retakeQuestions=quizState.rawQuestions; window._retakeTime=quizState.timeMinutes;
   app.innerHTML=renderHeader(currentTab)+'<div class="result-card">'+(autoTimeout?'<div style="background:#ffebee; color:#c62828; padding:10px; border-radius:10px; margin-bottom:16px; font-weight:700;">Time up!</div>':'')+'<div class="score-circle" style="background:'+g.color+'"><div class="pct">'+pct+'%</div><div class="grade">Grade '+g.letter+'</div></div><h2>'+(pct>=60?'Well done!':'Keep studying!')+'</h2><p class="sub">'+score+'/'+total+' · Time: '+formatTime(quizState.seconds)+'</p><button class="btn btn-primary btn-full" onclick="retakeExam()">Retake</button><button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="switchTab(\''+currentTab+'\')">Back</button><div class="review"><h3>Review</h3>'+reviewHTML+'</div></div>'+renderBottomNav(currentTab)+renderChatFab();
-  setTimeout(updateShotFab, 40);
 }
 function retakeExam(){ startQuiz(window._retakeName, window._retakeQuestions, window._retakeTime); }
 
@@ -1639,21 +1466,15 @@ function renderAdminBulkAdd(){
   const uni = adminBulkState.uni; 
   const stream = adminBulkState.stream || 'Natural'; 
   const semester = adminBulkState.semester || 1;
-  
   const uniOpts = '<option value="__ALL__">🌟 ALL UNIVERSITIES</option>' + CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  
   app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Bulk Add</div><h2>📦 Bulk Add</h2>'+
-  
   '<label class="field-label">University</label><select id="bulkUni" onchange="adminBulkState.uni=this.value;renderAdminBulkAdd()" class="field-select" style="margin-bottom:12px;">'+uniOpts+'</select>'+
-  
   '<label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;">'+
   '<button onclick="adminBulkState.stream=\'Natural\';renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button>'+
   '<button onclick="adminBulkState.stream=\'Social\';renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div>'+
-  
   '<label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:14px;">'+
   '<button onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+'; background:'+(semester===1?'#6a3093':'#fff')+'; color:'+(semester===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button>'+
   '<button onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+'; background:'+(semester===2?'#6a3093':'#fff')+'; color:'+(semester===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div>'+
-  
   '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module</h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><input type="url" id="bulkBookUrl" placeholder="URL" class="field-input" style="margin-bottom:8px;"></div>'+
   '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note</h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body" class="field-textarea" style="margin-bottom:8px;"></textarea></div>'+
   '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam</h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><textarea id="bulkExamText" placeholder="Questions" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea></div>'+
@@ -1661,69 +1482,33 @@ function renderAdminBulkAdd(){
 }
 async function adminSubmitBulk(){
   if(!isAdminMode()) return;
-  
   const uni = (document.getElementById('bulkUni')||{}).value || adminBulkState.uni;
   const stream = adminBulkState.stream || 'Natural'; 
   const semester = adminBulkState.semester || 1;
-  
   const bookName = (document.getElementById('bulkBookName').value||'').trim(); 
   const bookUrl = (document.getElementById('bulkBookUrl').value||'').trim();
   const noteTitle = (document.getElementById('bulkNoteTitle').value||'').trim(); 
   const noteBody = (document.getElementById('bulkNoteBody').value||'').trim();
   const examName = (document.getElementById('bulkExamName').value||'').trim(); 
   const examText = (document.getElementById('bulkExamText').value||'').trim();
-
   let hasSomething = false;
   if(bookName && bookUrl) hasSomething = true;
   if(noteTitle && noteBody) hasSomething = true;
   if(examName && examText) hasSomething = true;
-  
-  if(!hasSomething) {
-      return appAlert('Fill at least one section with valid data (e.g., URL for Module, Body for Note, Questions for Exam).');
-  }
-
-  let targetUnis = [];
-  if (uni === '__ALL__') {
-      targetUnis = CONFIG.UNIVERSITIES; 
-  } else {
-      targetUnis = [uni]; 
-  }
-
+  if(!hasSomething) return appAlert('Fill at least one section with valid data.');
+  let targetUnis = uni === '__ALL__' ? CONFIG.UNIVERSITIES : [uni];
   let addedCount = 0;
-  let parsedQs = [];
-  if (examText) {
-      parsedQs = parseQuestions(examText);
-  }
-
+  let parsedQs = examText ? parseQuestions(examText) : [];
   targetUnis.forEach(targetUni => {
       let c = getUniContent(targetUni, stream, semester);
       let added = 0;
-
-      if(bookName && bookUrl){ 
-          c.pdfs.push({name: bookName, url: bookUrl}); 
-          added++; 
-      }
-      if(noteTitle && noteBody){ 
-          c.notes.push({title: noteTitle, body: noteBody}); 
-          added++; 
-      }
-      if(examName && parsedQs.length > 0){ 
-          c.exams.push({name: examName, questions: parsedQs, timeMinutes: 30}); 
-          added++; 
-      }
-
-      if (added > 0) {
-          setUniContent(targetUni, stream, semester, c);
-          addedCount++;
-      }
+      if(bookName && bookUrl){ c.pdfs.push({name: bookName, url: bookUrl}); added++; }
+      if(noteTitle && noteBody){ c.notes.push({title: noteTitle, body: noteBody}); added++; }
+      if(examName && parsedQs.length > 0){ c.exams.push({name: examName, questions: parsedQs, timeMinutes: 30}); added++; }
+      if (added > 0) { setUniContent(targetUni, stream, semester, c); addedCount++; }
   });
-
-  if(addedCount > 0) {
-      await appAlert('✅ Successfully added content to ' + addedCount + ' university(ies)!');
-      renderAdminContentManager('exam');
-  } else {
-      appAlert('No valid content was added. Please check your inputs.');
-  }
+  if(addedCount > 0) { await appAlert('✅ Successfully added content to ' + addedCount + ' university(ies)!'); renderAdminContentManager('exam'); }
+  else { appAlert('No valid content was added.'); }
 }
 
 let adminGeneralState = { editing:null };
@@ -1890,8 +1675,7 @@ Object.assign(window, {
   openSupportGroup, appAlert, appConfirm, appPrompt,
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays,
   setAppZoom, getAppZoom, backendRegister, backendLogin, backendGetUser, backendUpdateUser,
-  hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt, handleAndroidBack,
-  updateShotFab, captureInAppScreenshot
+  hashPasswordNew, verifyPasswordAsync, aesEncrypt, aesDecrypt, handleAndroidBack
 });
 </script>
 
