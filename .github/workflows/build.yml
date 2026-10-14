@@ -74,7 +74,6 @@ jobs:
             echo "❌ ERROR: No icon file found!"
             exit 1
           fi
-          echo "✅ Using icon: $ICON"
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
