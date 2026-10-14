@@ -105,22 +105,39 @@ jobs:
           find android/app/src/main/res -name "ic_launcher_round.xml" -exec rm -f {} \;
           echo "✅ Icons forced successfully!"
 
-      - name: Overwrite MainActivity with FLAG_SECURE and BackButton Fix
+      - name: Overwrite MainActivity with FLAG_SECURE and JS Bridge
         run: |
           FILE=$(find android -name MainActivity.java | head -1)
+          if [ -z "$FILE" ]; then
+            echo "❌ MainActivity.java not found"
+            exit 1
+          fi
           PKG=$(grep '^package ' "$FILE" | sed 's/package //;s/;//')
+          echo "📦 Package: $PKG"
           cat > "$FILE" <<EOF
           package $PKG;
 
           import android.os.Bundle;
           import android.view.WindowManager;
+          import android.webkit.JavascriptInterface;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+
+                  // Block screenshots by default
+                  getWindow().setFlags(
+                      WindowManager.LayoutParams.FLAG_SECURE,
+                      WindowManager.LayoutParams.FLAG_SECURE
+                  );
+
+                  // Expose bridge so index.html can toggle blocking
+                  if (this.bridge != null && this.bridge.getWebView() != null) {
+                      this.bridge.getWebView().addJavascriptInterface(new AndroidBridge(), "AndroidNative");
+                      this.bridge.getWebView().getSettings().setJavaScriptEnabled(true);
+                  }
               }
 
               @Override
@@ -131,9 +148,29 @@ jobs:
                       super.onBackPressed();
                   }
               }
+
+              public class AndroidBridge {
+                  @JavascriptInterface
+                  public void allowScreenshot(final boolean allow) {
+                      runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              if (allow) {
+                                  getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                              } else {
+                                  getWindow().setFlags(
+                                      WindowManager.LayoutParams.FLAG_SECURE,
+                                      WindowManager.LayoutParams.FLAG_SECURE
+                                  );
+                              }
+                          }
+                      });
+                  }
+              }
           }
           EOF
-          grep -q "onBackPressed" "$FILE" && echo "OK: Back button fix applied"
+          grep -q "AndroidBridge" "$FILE" && echo "OK: JS bridge added"
+          grep -q "allowScreenshot" "$FILE" && echo "OK: allowScreenshot method present"
 
       - name: Build signed AAB
         working-directory: android
