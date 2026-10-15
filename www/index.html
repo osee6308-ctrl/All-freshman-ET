@@ -1104,7 +1104,7 @@ function renderSignIn(){
     '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
-    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to allow multi-device.</div></div>'+
+    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to unbind your old device.</div></div>'+
     renderBottomNav('my')+renderChatFab();
 }
 async function submitSignIn(){
@@ -1124,7 +1124,7 @@ async function submitSignIn(){
     if (!res || !res.ok) {
       if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
       if (res && res.err === 'device_conflict') {
-        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to allow multi-device on your phone number.');
+        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to unbind your old device.');
         return err('Blocked: already logged in on another device.');
       }
       if (res && res.err === 'wrong-password') return err('Wrong password. Please try again.');
@@ -1929,17 +1929,18 @@ async function renderAdminUsers(){
     } else {
       statusBadge = '<span style="background:#eee;color:#666;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">' + escapeHtml(st.toUpperCase()) + '</span>';
     }
-    const multi = user.multiDeviceAllowed === 1 ? '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:4px;">📱 MULTI</span>' : '';
     const src = user._source === 'server'
       ? '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">SERVER</span>'
       : '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">LOCAL</span>';
     const bg = adminUserBulkMode && adminUserSelected.has(user.phone) ? '#e0f2fe' : '#f7f7fa';
+    // [EDIT 1] "Allow Multi" button REMOVED; new "Unbind" button added in its place.
+    // [EDIT 4] "Unbind" button added here, placed just before Delete.
     const action = adminUserBulkMode
       ? '<input type="checkbox" ' + (adminUserSelected.has(user.phone) ? 'checked' : '') + ' onchange="adminUserToggleSel(\'' + user.phone + '\')" style="width:22px;height:22px;cursor:pointer;flex-shrink:0;">'
       : '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
           '<button class="btn btn-ghost" style="flex:1;padding:8px;font-size:12px;" onclick="openUserEditor(\'' + user.phone + '\')">✎ Edit</button>' +
           '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#4caf50;" onclick="adminActivateThisUser(\'' + (user.deviceHash||'') + '\')">🔑 Activate</button>' +
-          '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#ff9800;" onclick="adminToggleMultiDevice(\'' + user.phone + '\', ' + (user.multiDeviceAllowed === 1 ? 'false' : 'true') + ')">' + (user.multiDeviceAllowed === 1 ? '🚫 Block Multi' : '📱 Allow Multi') + '</button>' +
+          '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#e91e63;" onclick="adminUnbindDevice(\'' + user.phone + '\')">🔓 Unbind</button>' +
           '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + user.phone + '\')">Delete</button>' +
         '</div>';
     return '<div style="background:'+bg+';border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;">' +
@@ -1948,7 +1949,7 @@ async function renderAdminUsers(){
       '<div><strong>University:</strong> ' + uni + '</div>' +
       '<div><strong>Stream:</strong> ' + stream + '</div>' +
       '<div><strong>Device Hash:</strong> <code>' + hash + '</code></div>' +
-      '<div style="margin:6px 0;"><strong>Status:</strong> ' + statusBadge + multi + '</div>' +
+      '<div style="margin:6px 0;"><strong>Status:</strong> ' + statusBadge + '</div>' +
       '<div><strong>Created:</strong> ' + created + '</div>' +
       '<div style="display:flex;justify-content:flex-end;">' + action + '</div>' +
     '</div>';
@@ -1964,17 +1965,19 @@ async function renderAdminUsers(){
     '</div>' + renderBottomNav('my') + renderChatFab();
 }
 
-async function adminToggleMultiDevice(phone, allow) {
+// [EDIT 2] adminToggleMultiDevice function REMOVED (no longer needed).
+// [EDIT 4] New adminUnbindDevice function added below.
+async function adminUnbindDevice(phone) {
   if (!isAdminMode()) return;
-  if (!(await appConfirm((allow ? 'Allow' : 'Block') + ' multi-device for ' + phone + '?'))) return;
+  if (!(await appConfirm('Unbind device for ' + phone + '?\n\nThe user will be able to log in on a new phone.'))) return;
   try {
-    const r = await fetch(BACKEND_URL + '/api/admin/allow-multi-device', {
+    const r = await fetch(BACKEND_URL + '/api/admin/unbind-device', {
       method: 'POST', headers: adminHeaders(),
-      body: JSON.stringify({ phone, allow: !!allow })
+      body: JSON.stringify({ phone })
     });
     const data = await r.json();
     if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
-    await appAlert('✅ ' + (allow ? 'Multi-device allowed' : 'Multi-device blocked') + ' for ' + phone);
+    await appAlert('✅ Device unbound for ' + phone);
     renderAdminUsers();
   } catch (e) { appAlert('Network error.'); }
 }
@@ -2044,10 +2047,10 @@ async function openUserEditor(phone){
     '<div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;">'+
       '<div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div>'+
       '<div><strong>Role:</strong> '+escapeHtml(user.role||'user')+'</div>'+
-      '<div><strong>Multi-device:</strong> '+(user.multiDeviceAllowed===1?'YES':'NO')+'</div>'+
       '<div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div>'+
     '</div>'+
     '<button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#e91e63;" onclick="adminUnbindDevice(\''+escapeAttr(phone)+'\')">🔓 Unbind Device</button>'+
     '<label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'">'+
     '<label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select>'+
     '<label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select>'+
@@ -2595,10 +2598,9 @@ Object.assign(window, {
   adminUserToggleBulk, adminUserToggleSel, adminUserDeleteSelected,
   adminNotifToggleBulk, adminNotifToggleSel, adminNotifDeleteSelected,
   adminToggleAddToUni, adminToggleAllAddToUnis,
-  // NEW
   renderForceChangePassword, submitForceChangePassword,
   adminGenerateResetCode, renderResetWithCode, submitResetWithCode,
-  adminToggleMultiDevice,
+  adminUnbindDevice,
   setSessionToken, getSessionToken, setAdminToken, getAdminToken
 });
 </script>
