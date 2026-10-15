@@ -262,8 +262,28 @@ function getSettings(){
 function saveSettings(s){ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }
 let CONFIG = getSettings();
 
+/* ============================================================
+   BACKEND + SESSION TOKENS
+   ============================================================ */
 const BACKEND_URL = 'https://all-freshman-db.osee6308.workers.dev';
-const ADMIN_SECRET = 'FreshmanHub2024EthiopiaSecretKey2024';
+
+// ============ session + admin token storage ============
+const LS_SESSION_TOKEN = 'fh_session_token';
+const SS_ADMIN_TOKEN   = 'fh_admin_token';
+function getSessionToken() { return localStorage.getItem(LS_SESSION_TOKEN) || ''; }
+function setSessionToken(t) { if (t) localStorage.setItem(LS_SESSION_TOKEN, t); else localStorage.removeItem(LS_SESSION_TOKEN); }
+function getAdminToken() { try { return sessionStorage.getItem(SS_ADMIN_TOKEN) || ''; } catch (e) { return ''; } }
+function setAdminToken(t) { try { if (t) sessionStorage.setItem(SS_ADMIN_TOKEN, t); else sessionStorage.removeItem(SS_ADMIN_TOKEN); } catch (e) {} }
+function authHeaders(extra) {
+  const h = { 'Content-Type': 'application/json' };
+  const s = getSessionToken(); if (s) h['Authorization'] = 'Bearer ' + s;
+  return Object.assign(h, extra || {});
+}
+function adminHeaders(extra) {
+  const h = { 'Content-Type': 'application/json' };
+  const a = getAdminToken(); if (a) h['Authorization'] = 'Bearer ' + a;
+  return Object.assign(h, extra || {});
+}
 
 async function backendRegister(user) {
   try {
@@ -271,24 +291,31 @@ async function backendRegister(user) {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ phone: user.phone, name: user.name, university: user.university,
         stream: user.stream, passwordHash: user.passwordHash,
-        password: user.password || '',
-        deviceHash: user.deviceHash, createdAt: user.createdAt })
+        deviceId: getDeviceId(), deviceHash: user.deviceHash, createdAt: user.createdAt })
     });
     let data;
     try { data = await r.json(); } catch(e) { data = { ok:false, err:'bad-json', status:r.status }; }
     return data;
   } catch(e){ return { ok:false, err:'network' }; }
 }
+
 async function backendLogin(phone, password) {
   try {
     const r = await fetch(BACKEND_URL + '/api/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ phone, password })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone,
+        deviceId: getDeviceId(),
+        deviceHash: getDeviceHash(),
+        password
+      })
     });
-    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    let data; try { data = await r.json(); } catch (e) { data = { ok: false, err: 'bad-json' }; }
+    if (data && data.ok && data.token) setSessionToken(data.token);
     return data;
-  } catch(e){ return { ok:false, err:'network' }; }
+  } catch (e) { return { ok: false, err: 'network' }; }
 }
+
 async function backendGetUser(phone) {
   try {
     const r = await fetch(BACKEND_URL + '/api/get-user', {
@@ -299,76 +326,83 @@ async function backendGetUser(phone) {
     return data;
   } catch(e){ return { ok:false, err:'network' }; }
 }
+
 async function backendUpdateUser(user) {
   try {
     const r = await fetch(BACKEND_URL + '/api/update-user', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ phone: user.phone, passwordHash: user.passwordHash,
-        password: user.password || '',
-        deviceHash: user.deviceHash })
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({
+        phone: user.phone,
+        deviceHash: getDeviceHash(),
+        passwordHash: user.passwordHash || null
+      })
     });
-    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    let data; try { data = await r.json(); } catch (e) { data = { ok: false }; }
     return data;
-  } catch(e){ return { ok:false }; }
+  } catch (e) { return { ok: false }; }
 }
+
 async function backendListUsers() {
   try {
     const r = await fetch(BACKEND_URL + '/api/list-users', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ adminSecret: ADMIN_SECRET })
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({})
     });
-    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    let data; try { data = await r.json(); } catch (e) { data = { ok: false, err: 'bad-json' }; }
     return data;
-  } catch(e){ return { ok:false, err:'network' }; }
+  } catch (e) { return { ok: false, err: 'network' }; }
 }
+
 async function backendDeleteUser(phone) {
   try {
     const r = await fetch(BACKEND_URL + '/api/admin-delete-user', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ phone, adminSecret: ADMIN_SECRET })
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({ phone })
     });
-    let data; try { data = await r.json(); } catch(e){ data = { ok:false, err:'bad-json' }; }
+    let data; try { data = await r.json(); } catch (e) { data = { ok: false }; }
     return data;
-  } catch(e){ return { ok:false, err:'network' }; }
+  } catch (e) { return { ok: false, err: 'network' }; }
 }
+
 async function backendSaveProgress(entry) {
   try {
     const phone = getCurrentUserPhone();
     if (!phone) return { ok:false };
     const r = await fetch(BACKEND_URL + '/api/save-progress', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers: authHeaders(),
       body: JSON.stringify({ phone, subject: entry.subject, score: entry.score, total: entry.total, at: entry.date || Date.now() })
     });
     return await r.json();
   } catch(e){ return { ok:false, err:'network' }; }
 }
+
 async function backendGetMyProgress() {
   try {
     const phone = getCurrentUserPhone();
     if (!phone) return { ok:false };
     const r = await fetch(BACKEND_URL + '/api/get-progress', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers: authHeaders(),
       body: JSON.stringify({ phone })
     });
     return await r.json();
   } catch(e){ return { ok:false, err:'network' }; }
 }
+
 async function backendListProgress() {
   try {
     const r = await fetch(BACKEND_URL + '/api/list-progress', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ adminSecret: ADMIN_SECRET })
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({})
     });
-    return await r.json();
-  } catch(e){ return { ok:false, err:'network' }; }
+    let data; try { data = await r.json(); } catch (e) { data = { ok: false, err: 'bad-json' }; }
+    return data;
+  } catch (e) { return { ok: false, err: 'network' }; }
 }
+
 async function pushStatusToServer() {
   try {
     const phone = getCurrentUserPhone();
     if (!phone) return;
     const a = checkAccess();
     await fetch(BACKEND_URL + '/api/update-status', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers: authHeaders(),
       body: JSON.stringify({
         phone,
         status: a.status || 'trial',
@@ -409,7 +443,6 @@ async function pbkdf2Hash(password, saltHex, iterations){
   const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', salt: hexToBytes(saltHex), iterations, hash:'SHA-256' }, keyMat, 256);
   return bytesToHex(new Uint8Array(bits));
 }
-// FIX 2a: iterations 50000 → 20000 (faster on mobile)
 async function hashPasswordNew(pw){ const salt = genSalt(16); const iter = 20000; const hash = await pbkdf2Hash(pw, salt, iter); return 'pbkdf2$'+iter+'$'+salt+'$'+hash; }
 function timingSafeEqual(a, b){ if (a.length !== b.length) return false; let diff = 0; for (let i=0;i<a.length;i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i); return diff === 0; }
 let _aesKeyCache = null;
@@ -417,7 +450,6 @@ async function getDeviceAesKey(){
   if (_aesKeyCache) return _aesKeyCache;
   const enc = new TextEncoder();
   const keyMat = await crypto.subtle.importKey('raw', enc.encode(getDeviceId()), 'PBKDF2', false, ['deriveKey']);
-  // FIX 2b: iterations 30000 → 15000
   _aesKeyCache = await crypto.subtle.deriveKey({ name:'PBKDF2', salt: enc.encode('fh-aes-salt-v1'), iterations: 15000, hash:'SHA-256' }, keyMat, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
   return _aesKeyCache;
 }
@@ -465,20 +497,30 @@ const clearPaymentReq=()=>localStorage.removeItem(LS_PAYMENT_REQ);
 const getUniversity=()=>localStorage.getItem(LS_UNIVERSITY)||'';
 const setUniversity=u=>localStorage.setItem(LS_UNIVERSITY,u);
 
-const isAdminMode=()=>{
-  if(localStorage.getItem(LS_ADMIN)!=='1') return false;
-  const owner=localStorage.getItem(LS_ADMIN_PHONE)||'';
-  const current=getCurrentUserPhone();
-  if(!owner||!current) return false;
-  return String(owner).replace(/[^\d]/g,'')===String(current).replace(/[^\d]/g,'');
+/* ============ ADMIN MODE — SERVER TOKEN BASED ============ */
+const isAdminMode = () => {
+  const t = getAdminToken();
+  if (!t) return false;
+  const owner = localStorage.getItem(LS_ADMIN_PHONE) || '';
+  const current = getCurrentUserPhone();
+  if (!owner || !current) return false;
+  return String(owner).replace(/[^\d]/g, '') === String(current).replace(/[^\d]/g, '');
 };
-const setAdminMode=v=>{
-  if(v){ const p=getCurrentUserPhone(); if(!p){ appAlert('Sign in first, then enable admin.'); return; } localStorage.setItem(LS_ADMIN,'1'); localStorage.setItem(LS_ADMIN_PHONE,p); }
-  else { localStorage.removeItem(LS_ADMIN); localStorage.removeItem(LS_ADMIN_PHONE); }
+const setAdminMode = (v) => {
+  if (v) {
+    const p = getCurrentUserPhone();
+    if (!p) { appAlert('Sign in first, then enable admin.'); return; }
+    localStorage.setItem(LS_ADMIN, '1');
+    localStorage.setItem(LS_ADMIN_PHONE, p);
+  } else {
+    localStorage.removeItem(LS_ADMIN);
+    localStorage.removeItem(LS_ADMIN_PHONE);
+    setAdminToken('');
+  }
   applyAdminModeClass();
   updateScreenshotGuard();
-  if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){
-    try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){}
+  if (window.AndroidNative && typeof window.AndroidNative.allowScreenshot === 'function') {
+    try { window.AndroidNative.allowScreenshot(isScreenshotAllowed()); } catch (e) {}
   }
 };
 
@@ -1029,13 +1071,14 @@ async function submitSignUp(){
   await new Promise(r => setTimeout(r, 50));
   try {
     const pwHash = await hashPasswordNew(pw);
-    const user = { name, phone, university:uni, stream, passwordHash:pwHash, password:pw,
+    const user = { name, phone, university:uni, stream, passwordHash:pwHash,
                    deviceId:getDeviceId(), deviceHash:getDeviceHash(), createdAt:Date.now() };
     try {
       const backendRes = await backendRegister(user);
       if (!backendRes || !backendRes.ok) {
         if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
         const errText = (backendRes && backendRes.err) ? String(backendRes.err) : 'unknown';
+        if (errText === 'exists') return err('This phone is already registered. Please use Sign In.');
         return err('Server error: Couldn\'t save your account. ('+errText+') Please check your internet and try again.');
       }
     } catch(e) {
@@ -1061,50 +1104,81 @@ function renderSignIn(){
     '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
-    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">Reinstalled the app? Sign in here — your account is saved on the server.</div></div>'+
+    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to allow multi-device.</div></div>'+
     renderBottomNav('my')+renderChatFab();
 }
 async function submitSignIn(){
-  const phone=(document.getElementById('siPhone').value||'').trim(); const pw=document.getElementById('siPw').value;
-  const msg=document.getElementById('siMsg'); const btn=document.getElementById('siSubmitBtn');
-  const err = t => { msg.innerHTML='<div style="color:#c62828; font-weight:600;">'+t+'</div>'; };
-  const ok  = t => { msg.innerHTML='<div style="color:#2e7d32; font-weight:600;">'+t+'</div>'; };
-  if(!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
-  if(!isValidPassword(pw)) return err('Password must be at least 4 characters.');
-  if(isPhoneBlacklisted(phone)){ err('Account blocked.'); setTimeout(()=>renderBlockedScreen(),1200); return; }
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Verifying…'; }
-  await new Promise(r => setTimeout(r, 50));
+  const phone = (document.getElementById('siPhone').value || '').trim();
+  const pw = document.getElementById('siPw').value;
+  const msg = document.getElementById('siMsg');
+  const btn = document.getElementById('siSubmitBtn');
+  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
+  const ok  = t => { msg.innerHTML = '<div style="color:#2e7d32; font-weight:600;">' + t + '</div>'; };
+  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
+  if (!isValidPassword(pw)) return err('Password must be at least 4 characters.');
+  if (isPhoneBlacklisted(phone)) { err('Account blocked.'); setTimeout(() => renderBlockedScreen(), 1200); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Verifying…'; }
+
   try {
-    let user = findLocalUser(phone); let fromServer = false;
-    if (!user) { const remote = findRemoteUser(phone); if (remote) { saveUser(remote); user = remote; } }
-    let graceGranted = false;
-    if (user) {
-      const backendRes = await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, deviceHash: getDeviceHash() });
-      if (backendRes && backendRes.gracePeriod) { graceGranted = true; localStorage.setItem(LS_GRACE_UNTIL, Date.now() + (12 * 60 * 60 * 1000)); }
+    const res = await backendLogin(phone, pw);
+    if (!res || !res.ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      if (res && res.err === 'device_conflict') {
+        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to allow multi-device on your phone number.');
+        return err('Blocked: already logged in on another device.');
+      }
+      if (res && res.err === 'wrong-password') return err('Wrong password. Please try again.');
+      if (res && res.err === 'not-found') return err('No account found for this phone. Please sign up first.');
+      return err('Sign-in failed: ' + ((res && res.err) || 'unknown'));
     }
-    if (!user) { const resp = await backendGetUser(phone); if (resp && resp.ok && resp.user) { user = resp.user; user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); markPhoneUsed(phone); fromServer = true; } }
-    if (!user) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('No account found for this phone. Please sign up first.'); }
-    const valid = await verifyPasswordAsync(phone, pw, user);
-    if (!valid) { if(btn){ btn.disabled=false; btn.textContent='Sign In'; } return err('Wrong password. Please try again.'); }
-    user.deviceId = getDeviceId(); user.deviceHash = getDeviceHash(); saveUser(user); setCurrentUserPhone(phone);
-    saveProfileData({ name:user.name, phone:user.phone, university:user.university, stream:user.stream });
-    setUniversity(user.university); setCheckedIn(); startSession(phone); markPhoneUsed(phone);
-    ok('✓ Signed in!'); 
+
+    const user = res.user;
+    user.deviceId = getDeviceId();
+    user.deviceHash = getDeviceHash();
+    saveUser(user);
+    setCurrentUserPhone(phone);
+    saveProfileData({ name: user.name, phone: user.phone, university: user.university, stream: user.stream });
+    setUniversity(user.university);
+    setCheckedIn();
+    startSession(phone);
+    markPhoneUsed(phone);
+
+    ok('✓ Signed in!');
     pushStatusToServer();
-    setTimeout(()=>{ 
-      showPostAuthWarning(()=>{ 
-        _clearNavStack(); 
-        if (graceGranted) { appAlert('Welcome back! You have been granted a 12-hour grace period. Please contact Admin after 12 hours to renew your license.'); }
-        switchTab('book'); 
-      }); 
+
+    if (res.mustChangePassword) {
+      setTimeout(() => { _clearNavStack(); renderForceChangePassword(); }, 400);
+      return;
+    }
+
+    setTimeout(() => {
+      showPostAuthWarning(() => {
+        _clearNavStack();
+        switchTab('book');
+      });
     }, 400);
-  } catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='Sign In'; } err('Sign-in failed. Please try again.');
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+    err('Sign-in failed. Please try again.');
   }
 }
-function renderForgotPassword(){
+
+function renderForgotPassword() {
   setScreen('auth');
-  app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Forgot Password</h2><p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Only admin can reset your password/PIN. Contact admin on Telegram with your phone number and device hash.</p><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;"><div><strong>Device Hash:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Your phone:</strong> <code>'+(getCurrentUserPhone()||'-')+'</code></div></div><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'?text='+encodeURIComponent('FORGOT PASSWORD — Phone: '+getCurrentUserPhone()+' | Hash: '+getDeviceHash())+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 Message Admin on Telegram</a>'+((CONFIG.CONTACT_PHONE||'').trim()?'<a href="tel:'+escapeAttr((CONFIG.CONTACT_PHONE||'').trim())+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call '+escapeHtml(CONFIG.CONTACT_PHONE)+'</a>':'')+'<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>'+renderBottomNav('my')+renderChatFab();
+  const phone = getCurrentUserPhone() || '';
+  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | Hash: ' + getDeviceHash();
+  app.innerHTML = renderHeader('my') +
+    '<div class="panel"><h2>Forgot Password</h2>' +
+    '<p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Two ways to recover:</p>' +
+    '<div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;">' +
+      '<div><strong>Device Hash:</strong> <code>' + getDeviceHash() + '</code></div>' +
+      '<div><strong>Your phone:</strong> <code>' + (phone || '-') + '</code></div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-full" onclick="renderResetWithCode()">🔐 I Have a Reset Code</button>' +
+    '<a href="https://t.me/' + escapeAttr(CONFIG.TELEGRAM_USERNAME) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📨 Ask Admin on Telegram</a>' +
+    (CONFIG.CONTACT_PHONE ? '<a href="tel:' + escapeAttr(CONFIG.CONTACT_PHONE) + '" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call ' + escapeHtml(CONFIG.CONTACT_PHONE) + '</a>' : '') +
+    '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>' +
+    renderBottomNav('my') + renderChatFab();
 }
 
 function switchTab(tab){
@@ -1484,7 +1558,106 @@ async function renderProgress(){
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
     renderBottomNav('my') + renderChatFab();
 }
- function renderMy(introMsg){
+
+/* ============ FORCE CHANGE PASSWORD ============ */
+function renderForceChangePassword() {
+  setScreen('force-change-pw');
+  app.innerHTML = renderHeader('my') +
+    '<div class="panel"><h2>Change Your Password</h2>' +
+    '<p style="color:#666; font-size:13px; margin-bottom:14px;">Your password was reset by admin. Choose a new one to continue.</p>' +
+    '<label class="field-label">New Password</label><div class="pw-wrap"><input type="password" id="fcPw1" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'fcPw1\', this)">👁️</button></div>' +
+    '<label class="field-label">Confirm</label><div class="pw-wrap"><input type="password" id="fcPw2" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'fcPw2\', this)">👁️</button></div>' +
+    '<div id="fcMsg" style="margin-top:10px; font-size:13px;"></div>' +
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitForceChangePassword()">Save New Password</button>' +
+    '</div>' + renderBottomNav('my') + renderChatFab();
+}
+
+async function submitForceChangePassword() {
+  const pw1 = document.getElementById('fcPw1').value;
+  const pw2 = document.getElementById('fcPw2').value;
+  const msg = document.getElementById('fcMsg');
+  if (!isValidPassword(pw1)) { msg.innerHTML = '<div style="color:#c62828;">Minimum 4 characters.</div>'; return; }
+  if (pw1 !== pw2) { msg.innerHTML = '<div style="color:#c62828;">Passwords do not match.</div>'; return; }
+  const newHash = await hashPasswordNew(pw1);
+  const phone = getCurrentUserPhone();
+  try {
+    const r = await fetch(BACKEND_URL + '/api/update-user', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ phone, deviceHash: getDeviceHash(), passwordHash: newHash })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) { msg.innerHTML = '<div style="color:#c62828;">Failed: ' + ((data && data.err) || 'unknown') + '</div>'; return; }
+    const u = findLocalUser(phone); if (u) { u.passwordHash = newHash; u.mustChangePassword = 0; saveUser(u); }
+    await appAlert('✅ Password updated.');
+    _clearNavStack(); switchTab('book');
+  } catch (e) {
+    msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
+  }
+}
+
+/* ============ ADMIN: GENERATE RESET CODE ============ */
+async function adminGenerateResetCode() {
+  if (!isAdminMode()) return;
+  const phone = await appPrompt('Enter phone number to generate reset code for:');
+  if (!phone) return;
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/generate-reset-code', {
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({ phone: phone.trim() })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
+    const mins = Math.round((data.expiresAt - Date.now()) / 60000);
+    await appAlert('✅ Reset code for ' + phone + ':\n\n' + data.code + '\n\nGive this to the user. Expires in ' + mins + ' minutes.');
+  } catch (e) { appAlert('Network error.'); }
+}
+
+/* ============ USER: RESET WITH CODE ============ */
+function renderResetWithCode() {
+  setScreen('reset-code');
+  app.innerHTML = renderHeader('my') +
+    '<div class="panel"><h2>Reset Password</h2>' +
+    '<p style="color:#666; font-size:13px; margin-bottom:14px;">Enter the 6-digit code you received from admin, then choose a new password.</p>' +
+    '<label class="field-label">Phone</label><input type="tel" id="rcPhone" class="field-input" value="' + escapeAttr(getCurrentUserPhone() || '') + '">' +
+    '<label class="field-label">6-Digit Code</label><input type="text" id="rcCode" class="field-input" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:4px;font-size:18px;text-align:center;">' +
+    '<label class="field-label">New Password</label><div class="pw-wrap"><input type="password" id="rcPw1" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw1\', this)">👁️</button></div>' +
+    '<label class="field-label">Confirm</label><div class="pw-wrap"><input type="password" id="rcPw2" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw2\', this)">👁️</button></div>' +
+    '<div id="rcMsg" style="margin-top:10px; font-size:13px;"></div>' +
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitResetWithCode()">Reset Password</button>' +
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
+    renderBottomNav('my') + renderChatFab();
+}
+
+async function submitResetWithCode() {
+  const phone = (document.getElementById('rcPhone').value || '').trim();
+  const code = (document.getElementById('rcCode').value || '').trim();
+  const pw1 = document.getElementById('rcPw1').value;
+  const pw2 = document.getElementById('rcPw2').value;
+  const msg = document.getElementById('rcMsg');
+  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
+  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone.');
+  if (!/^\d{6}$/.test(code)) return err('Code must be 6 digits.');
+  if (!isValidPassword(pw1)) return err('Min 4 characters.');
+  if (pw1 !== pw2) return err('Passwords do not match.');
+
+  const newHash = await hashPasswordNew(pw1);
+  try {
+    const r = await fetch(BACKEND_URL + '/api/reset-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code, newPasswordHash: newHash })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) {
+      if (data && data.err === 'code-expired') return err('Code expired. Ask admin for a new one.');
+      if (data && data.err === 'wrong-code') return err('Wrong code.');
+      if (data && data.err === 'no-code') return err('No reset code found. Contact admin.');
+      return err('Failed: ' + ((data && data.err) || 'unknown'));
+    }
+    await appAlert('✅ Password reset! Please sign in with your new password.');
+    renderSignIn();
+  } catch (e) { err('Network error.'); }
+}
+
+function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
   if(!isSignedIn()){
     setScreen('my');
@@ -1523,6 +1696,7 @@ async function renderProgress(){
     (isAdminMode()?'<div style="margin-top:12px; background:#fff3cd; color:#856404; padding:8px 12px; border-radius:8px; font-size:11.5px; font-weight:700;">ADMIN MODE — '+escapeHtml(getCurrentUserPhone())+'</div>'+
     '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderAdminSettings()">⚙️ App Settings</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#4caf50;" onclick="renderAdminActivateUser()">🔑 Activate User</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#ff9800;" onclick="adminGenerateResetCode()">🔐 Generate Reset Code</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#0088cc;" onclick="renderAdminProgress()">📊 Users Progress</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminUsers()">👥 User Accounts</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="copyPaymentInfo()">📋 Copy Payment Details</button>'+
@@ -1541,19 +1715,18 @@ async function renderProgress(){
     renderBottomNav('my')+renderChatFab();
 }
 function showActivationStatus(){ const a=checkAccess(); if(a.status==='licensed'){ appAlert('You already active'); } else { appAlert('Contact admin on Telegram to unlock full access.'); } }
-// FIX 1: signout screen flips instantly, alert shows after
-async function doLogout(){ 
-  if(!(await appConfirm('Do you want to logout?'))) return; 
-  if(isAdminMode()) setAdminMode(false); 
-  clearSession(); 
-  setCurrentUserPhone(''); 
-  localStorage.removeItem(LS_GRACE_UNTIL); 
-  _clearNavStack(); 
-  _viewerState=null; 
-  adminResetBulkSelection(); 
-  setScreen('my'); 
-  renderMy(); 
-  setTimeout(()=>appAlert('Logged out.'), 50);
+async function doLogout() {
+  if (!(await appConfirm('Do you want to logout?'))) return;
+  try { await fetch(BACKEND_URL + '/api/logout', { method: 'POST', headers: authHeaders() }); } catch (e) {}
+  if (isAdminMode()) setAdminMode(false);
+  setSessionToken(''); setAdminToken('');
+  clearSession();
+  setCurrentUserPhone('');
+  localStorage.removeItem(LS_GRACE_UNTIL);
+  _clearNavStack(); _viewerState = null;
+  adminResetBulkSelection();
+  setScreen('my'); renderMy();
+  setTimeout(() => appAlert('Logged out.'), 50);
 }
 function syncNow(){ syncRemoteContent().then(()=>{ const v=localStorage.getItem(LS_SYNCED_VERSION),u=localStorage.getItem(LS_SYNCED_UPDATED); pushStatusToServer(); appAlert('Synced!\nVersion: '+(v||'-')+'\nUpdated: '+(u||'-')); renderMy(); }); }
 
@@ -1739,33 +1912,34 @@ async function renderAdminUsers(){
     const uni = escapeHtml(user.university || '-');
     const stream = escapeHtml(user.stream || '-');
     const hash = escapeHtml(user.deviceHash || '-');
-    const pwd = user.password ? escapeHtml(user.password) : '<span style="color:#999;">(not stored)</span>';
     const created = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
     let statusBadge = '';
     const st = String(user.status || 'trial').toLowerCase();
     const dl = parseInt(user.daysLeft) || 0;
-    if (user.master === 1) {
-      statusBadge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">👑 ADMIN / MASTER</span>';
+    if (user.role === 'admin' || user.master === 1) {
+      statusBadge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">👑 ADMIN</span>';
     } else if (user.grace === 1) {
       statusBadge = '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">⏳ GRACE · ' + dl + 'h</span>';
     } else if (st === 'licensed') {
-      statusBadge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟢 LICENSED · ' + dl + 'd left</span>';
+      statusBadge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟢 LICENSED · ' + dl + 'd</span>';
     } else if (st === 'trial') {
-      statusBadge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟡 TRIAL · ' + dl + 'd left</span>';
+      statusBadge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟡 TRIAL · ' + dl + 'd</span>';
     } else if (st === 'expired') {
       statusBadge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🔴 EXPIRED</span>';
     } else {
       statusBadge = '<span style="background:#eee;color:#666;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">' + escapeHtml(st.toUpperCase()) + '</span>';
     }
+    const multi = user.multiDeviceAllowed === 1 ? '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:4px;">📱 MULTI</span>' : '';
     const src = user._source === 'server'
       ? '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">SERVER</span>'
       : '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">LOCAL</span>';
     const bg = adminUserBulkMode && adminUserSelected.has(user.phone) ? '#e0f2fe' : '#f7f7fa';
     const action = adminUserBulkMode
       ? '<input type="checkbox" ' + (adminUserSelected.has(user.phone) ? 'checked' : '') + ' onchange="adminUserToggleSel(\'' + user.phone + '\')" style="width:22px;height:22px;cursor:pointer;flex-shrink:0;">'
-      : '<div style="margin-top:8px;display:flex;gap:6px;">' +
+      : '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
           '<button class="btn btn-ghost" style="flex:1;padding:8px;font-size:12px;" onclick="openUserEditor(\'' + user.phone + '\')">✎ Edit</button>' +
           '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#4caf50;" onclick="adminActivateThisUser(\'' + (user.deviceHash||'') + '\')">🔑 Activate</button>' +
+          '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#ff9800;" onclick="adminToggleMultiDevice(\'' + user.phone + '\', ' + (user.multiDeviceAllowed === 1 ? 'false' : 'true') + ')">' + (user.multiDeviceAllowed === 1 ? '🚫 Block Multi' : '📱 Allow Multi') + '</button>' +
           '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + user.phone + '\')">Delete</button>' +
         '</div>';
     return '<div style="background:'+bg+';border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;">' +
@@ -1774,8 +1948,7 @@ async function renderAdminUsers(){
       '<div><strong>University:</strong> ' + uni + '</div>' +
       '<div><strong>Stream:</strong> ' + stream + '</div>' +
       '<div><strong>Device Hash:</strong> <code>' + hash + '</code></div>' +
-      '<div><strong>Password:</strong> <code style="background:#ffe5e5;color:#c62828;font-weight:800;">' + pwd + '</code></div>' +
-      '<div style="margin:6px 0;"><strong>Status:</strong> ' + statusBadge + '</div>' +
+      '<div style="margin:6px 0;"><strong>Status:</strong> ' + statusBadge + multi + '</div>' +
       '<div><strong>Created:</strong> ' + created + '</div>' +
       '<div style="display:flex;justify-content:flex-end;">' + action + '</div>' +
     '</div>';
@@ -1789,6 +1962,21 @@ async function renderAdminUsers(){
       bulkBar + rows +
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
     '</div>' + renderBottomNav('my') + renderChatFab();
+}
+
+async function adminToggleMultiDevice(phone, allow) {
+  if (!isAdminMode()) return;
+  if (!(await appConfirm((allow ? 'Allow' : 'Block') + ' multi-device for ' + phone + '?'))) return;
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/allow-multi-device', {
+      method: 'POST', headers: adminHeaders(),
+      body: JSON.stringify({ phone, allow: !!allow })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
+    await appAlert('✅ ' + (allow ? 'Multi-device allowed' : 'Multi-device blocked') + ' for ' + phone);
+    renderAdminUsers();
+  } catch (e) { appAlert('Network error.'); }
 }
 
 async function renderAdminProgress(){
@@ -1852,20 +2040,18 @@ async function openUserEditor(phone){
   let user = getUsers()[phone];
   if (!user) { const r = await backendGetUser(phone); if (r && r.ok && r.user) user = r.user; }
   if(!user){ result.innerHTML='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">❌ No user found with phone '+escapeHtml(phone)+'.</div>'; return; }
-  const pwd = user.password ? escapeHtml(user.password) : '<span style="color:#999;">(not stored)</span>';
   result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found</div>'+
     '<div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;">'+
       '<div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div>'+
-      '<div><strong>Password:</strong> <code style="background:#ffe5e5;color:#c62828;font-weight:800;">'+pwd+'</code></div>'+
+      '<div><strong>Role:</strong> '+escapeHtml(user.role||'user')+'</div>'+
+      '<div><strong>Multi-device:</strong> '+(user.multiDeviceAllowed===1?'YES':'NO')+'</div>'+
       '<div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div>'+
     '</div>'+
     '<button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button>'+
     '<label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'">'+
-    '<label class="field-label">Phone</label><input type="tel" id="editUserPhone" class="field-input" value="'+escapeAttr(user.phone||'')+'">'+
     '<label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select>'+
     '<label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select>'+
     '<label class="field-label">Reset Password (leave blank to keep)</label><input type="text" id="editUserPw" class="field-input" placeholder="min 4 characters">'+
-    '<label class="field-label">Reset Session Days (leave blank to keep)</label><input type="number" id="editUserSessionDays" class="field-input" placeholder="e.g. 365" min="1" max="3650">'+
     '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
 }
@@ -1873,21 +2059,16 @@ async function saveUserEdit(oldPhone){
   if(!isAdminMode()) return;
   const u = getUsers(); if(!u[oldPhone]) return appAlert('User not found.');
   const newName=(document.getElementById('editUserName').value||'').trim();
-  const newPhone=(document.getElementById('editUserPhone').value||'').trim();
   const newUni=document.getElementById('editUserUni').value;
   const newStream=document.getElementById('editUserStream').value;
   const newPw=(document.getElementById('editUserPw').value||'').trim();
-  const newSessDaysRaw=(document.getElementById('editUserSessionDays').value||'').trim();
   if(!newName) return appAlert('Name required');
-  if(!/^(09|07)\d{8}$/.test(newPhone)) return appAlert('Valid phone required');
   const user = u[oldPhone]; user.name = newName; user.university = newUni || user.university; user.stream = newStream || user.stream;
-  if(newPw){ if(newPw.length < 4) return appAlert('Password must be at least 4 characters.'); try { user.passwordHash = await hashPasswordNew(newPw); } catch(e){ user.passwordHash = hashPassword(newPhone, newPw); } user.password = newPw; }
-  if(newSessDaysRaw){ const n=parseInt(newSessDaysRaw); if(!isFinite(n)||n<1) return appAlert('Session days must be a positive number.'); user.sessionExpiresAt = Date.now() + n*86400000; if(getCurrentUserPhone()===oldPhone){ const s=getSession(); if(s){ s.expiresAt=user.sessionExpiresAt; saveSession(s); } } }
-  if(newPhone !== oldPhone){ if(u[newPhone]) return appAlert('Another user already has this phone.'); delete u[oldPhone]; user.phone = newPhone; u[newPhone] = user; adminRemoveUsedPhone(oldPhone); markPhoneUsed(newPhone); } else { u[oldPhone] = user; }
+  if(newPw){ if(newPw.length < 4) return appAlert('Password must be at least 4 characters.'); try { user.passwordHash = await hashPasswordNew(newPw); } catch(e){ user.passwordHash = hashPassword(oldPhone, newPw); } }
+  u[oldPhone] = user;
   saveUsers(u);
-  try { await backendUpdateUser({ phone: user.phone, passwordHash: user.passwordHash, password: user.password || '', deviceHash: user.deviceHash }); } catch(e){ console.warn('server update failed', e); }
-  if(getCurrentUserPhone() === oldPhone && newPhone !== oldPhone) setCurrentUserPhone(newPhone);
-  await appAlert('✅ User updated!'); openUserEditor(newPhone);
+  try { await backendUpdateUser({ phone: oldPhone, passwordHash: user.passwordHash, deviceHash: user.deviceHash }); } catch(e){ console.warn('server update failed', e); }
+  await appAlert('✅ User updated!'); openUserEditor(oldPhone);
 }
 async function adminDeleteUser(phone){
   if(!(await appConfirm('Delete user '+phone+'?\n\nThis will permanently remove them from this device AND the cloud.'))) return;
@@ -2210,18 +2391,69 @@ function renderAdminNotifications(){
 async function sendAdminNotif(){ const target=document.getElementById('notifTarget').value; const msg=document.getElementById('notifMsg').value.trim(); if(!msg) return appAlert('Enter message'); const list=getNotifications(); list.push({id:'n_'+Date.now(),target:target,message:msg,at:Date.now()}); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} await appAlert('Added!'); renderAdminNotifications(); }
 function deleteAdminNotif(idx){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const list=getNotifications(); if(idx<0||idx>=list.length) return; list.splice(idx,1); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} renderAdminNotifications(); }); }
 
-let adminTapCount=0, adminTapTimer=null;
-async function adminTap(){
-  adminTapCount++; clearTimeout(adminTapTimer); adminTapTimer=setTimeout(()=>{ adminTapCount=0; },2000);
-  if(adminTapCount>=CONFIG.ADMIN_TAPS_REQUIRED){
-    adminTapCount=0;
-    if(isAdminMode()){ if(await appConfirm('Turn OFF admin mode?')){ setAdminMode(false); renderMy(); } return; }
-    if(!getCurrentUserPhone()){ await appAlert('Sign in first.'); return; }
-    const pw = await appPrompt('Admin password:');
-    if(pw === null) return;
-    if(pw === CONFIG.ADMIN_PASSWORD){ setAdminMode(true); await appAlert('Admin ON'); renderMy(); }
-    else await appAlert('Wrong password');
+/* ============ ADMIN TAP — PASSWORD + OTP ============ */
+let adminTapCount = 0, adminTapTimer = null;
+async function adminTap() {
+  adminTapCount++;
+  clearTimeout(adminTapTimer);
+  adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 2000);
+  if (adminTapCount < CONFIG.ADMIN_TAPS_REQUIRED) return;
+  adminTapCount = 0;
+
+  if (isAdminMode()) {
+    if (await appConfirm('Turn OFF admin mode?')) { setAdminMode(false); renderMy(); }
+    return;
   }
+  if (!getCurrentUserPhone()) { await appAlert('Sign in first.'); return; }
+
+  const pw = await appPrompt('Admin password:');
+  if (pw === null) return;
+
+  let step1;
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: getCurrentUserPhone(), password: pw })
+    });
+    step1 = await r.json();
+  } catch (e) { return appAlert('Network error.'); }
+
+  if (!step1 || !step1.ok) {
+    if (step1 && step1.err === 'locked') {
+      const mins = Math.ceil((step1.until - Date.now()) / 60000);
+      return appAlert('Admin OTP locked for ' + mins + ' minute(s).');
+    }
+    return appAlert('Wrong admin password.');
+  }
+
+  const otp = await appPrompt('Enter admin OTP (10+ chars, mixed):');
+  if (otp === null) return;
+  if (otp.length < 10) return appAlert('OTP must be at least 10 characters.');
+
+  let step2;
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin-verify-otp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challengeToken: step1.challengeToken, otp })
+    });
+    step2 = await r.json();
+  } catch (e) { return appAlert('Network error.'); }
+
+  if (!step2 || !step2.ok) {
+    if (step2 && step2.err === 'locked') {
+      const mins = Math.ceil((step2.until - Date.now()) / 60000);
+      return appAlert('Too many wrong OTPs. Locked for ' + mins + ' minute(s).');
+    }
+    if (step2 && step2.err === 'wrong-otp') {
+      return appAlert('Wrong OTP. Attempts remaining: ' + (step2.remaining || 0));
+    }
+    return appAlert('OTP verification failed.');
+  }
+
+  setAdminToken(step2.adminToken);
+  setAdminMode(true);
+  await appAlert('✅ Admin mode ON (expires in 30 min).');
+  renderMy();
 }
 
 function renderBlockedScreen(){ setScreen('my'); app.innerHTML=renderHeader('my')+'<div class="panel" style="text-align:center;"><h2 style="color:#c62828;">Access Blocked</h2><p>Contact admin.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" class="btn btn-telegram btn-full">Contact Admin</a></div>'+renderBottomNav('my')+renderChatFab(); }
@@ -2362,7 +2594,12 @@ Object.assign(window, {
   adminGenToggleBulk, adminGenToggleSel, adminGenDeleteSelected,
   adminUserToggleBulk, adminUserToggleSel, adminUserDeleteSelected,
   adminNotifToggleBulk, adminNotifToggleSel, adminNotifDeleteSelected,
-  adminToggleAddToUni, adminToggleAllAddToUnis
+  adminToggleAddToUni, adminToggleAllAddToUnis,
+  // NEW
+  renderForceChangePassword, submitForceChangePassword,
+  adminGenerateResetCode, renderResetWithCode, submitResetWithCode,
+  adminToggleMultiDevice,
+  setSessionToken, getSessionToken, setAdminToken, getAdminToken
 });
 </script>
 
@@ -2372,4 +2609,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
-</html>
+ </html>
