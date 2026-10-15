@@ -362,8 +362,6 @@ async function backendListProgress() {
     return await r.json();
   } catch(e){ return { ok:false, err:'network' }; }
 }
-
-// === PUSH STATUS TO SERVER ===
 async function pushStatusToServer() {
   try {
     const phone = getCurrentUserPhone();
@@ -556,6 +554,20 @@ function isTrialCocAllowed(name){ const kws = Array.isArray(CONFIG.TRIAL_COC_KEY
 function trialSubjectRx(){ const list = (Array.isArray(CONFIG.TRIAL_SUBJECTS) && CONFIG.TRIAL_SUBJECTS.length) ? CONFIG.TRIAL_SUBJECTS : ['english']; const patterns = list.map(k => String(k||'').toLowerCase().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean); if (!patterns.length) return /english/i; try { return new RegExp(patterns.join('|'), 'i'); } catch(e){ return /english/i; } }
 function renderTrialContentLocked(kind){ const names = { book:'Modules Library', note:'Notes', exam:'Exams', coc:'COC', info:'University Info' }; const nm = names[kind] || 'This content'; const accessNow = checkAccess(); const daysTxt = accessNow.daysLeft ? (accessNow.daysLeft + ' day' + (accessNow.daysLeft===1?'':'s') + ' left') : ''; return '<div class="locked-box"><div class="icon">🔒</div><h2>'+nm+' Not in Trial</h2><p>Trial gives access to limited content only.<br>'+escapeHtml(daysTxt)+'<br>Contact admin to unlock full access.</p><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+kind+'\')">Unlock Full Access</button></div>'; }
 function renderTrialLockedUniversity(kind){ return '<div style="background:#fff; border-radius:12px; padding:40px 20px; text-align:center;"><div style="font-size:40px; margin-bottom:10px;">🔒</div><div style="font-weight:800; font-size:15px; color:#c62828; margin-bottom:8px;">Locked — Trial limitation</div><div style="color:#666; font-size:13px; line-height:1.7; margin-bottom:16px;">Trial gives access to <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only.<br>Pick one from the dropdown above, or unlock full access.</div><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+(kind||'book')+'\')">Unlock Full Access</button></div>'; }
+
+// Trial premium CTA — shown when items are hidden
+function trialPremiumCTA(hiddenCount, kind){
+  const a = checkAccess();
+  if (a.status !== 'trial') return '';
+  if (!hiddenCount || hiddenCount <= 0) return '';
+  const kindLabel = kind || 'items';
+  return '<div style="background:linear-gradient(135deg,#fff3cd,#ffe082);border:2px dashed #ff9800;border-radius:14px;padding:20px;text-align:center;margin-top:16px;">'+
+    '<div style="font-size:34px;margin-bottom:8px;">🔒</div>'+
+    '<div style="font-weight:800;font-size:15px;color:#e65100;margin-bottom:6px;">'+hiddenCount+' more '+kindLabel+' locked</div>'+
+    '<div style="font-size:13px;color:#856404;line-height:1.7;margin-bottom:14px;">You are on <strong>Trial ('+a.daysLeft+' day'+(a.daysLeft===1?'':'s')+' left)</strong>.<br>To access all content, get Premium.</div>'+
+    '<button class="btn btn-full" style="background:#ff9800;color:#fff;font-weight:800;padding:14px;font-size:15px;" onclick="renderPaymentFlow(\'premium\')">💎 Get Premium — Unlock Everything</button>'+
+  '</div>';
+}
 
 const DEFAULT_TUTORIALS = { register: { title: "How to register", url: "" }, pay: { title: "How to pay", url: "" } };
 function getTutorials(){ try{ return {...DEFAULT_TUTORIALS,...(JSON.parse(localStorage.getItem(LS_TUTORIALS)||'{}'))}; }catch(e){ return DEFAULT_TUTORIALS; } }
@@ -1148,16 +1160,42 @@ function renderBookList(uni){
   if(!uni){ el.innerHTML=''; return; }
   if(!isSignedIn() || !hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see modules</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
-  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem); const pdfs=c.pdfs||[];
-  if(!pdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
-  el.innerHTML=pdfs.map((p,i)=>{
+  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
+  const allPdfs = c.pdfs || [];
+  if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  const indexed = allPdfs.map((p,i)=>({p, i}));
+  const visible = isTrialNow ? indexed.filter(({p}) => isTrialSubjectKey('', p.name)) : indexed;
+  const hiddenCount = indexed.length - visible.length;
+  if(!visible.length && isTrialNow){
+    el.innerHTML = '<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;">'+
+      '<div style="font-size:34px;margin-bottom:10px;">🔒</div>'+
+      '<div style="font-weight:700;color:#333;">No trial modules available</div>'+
+      '<div style="font-size:12.5px;color:#888;margin-top:6px;line-height:1.7;">Your trial doesn\'t include modules from this university.<br>Get Premium to unlock everything.</div>'+
+      '</div>' + trialPremiumCTA(hiddenCount, 'modules');
+    return;
+  }
+  const listHtml = visible.map(({p, i}) => {
     const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
     const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
     const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
     return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid #6a3093;"><div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+'</div>'+desc+'</div>';
   }).join('');
+  el.innerHTML = listHtml + trialPremiumCTA(hiddenCount, 'modules');
 }
-function openBook(uni,stream,sem,i){ if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; } const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i]; if(!p) return; if(!p.url) return; _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i }; _screenStack.push('book'); _renderBookViewerDirect(); }
+function openBook(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
+  if(!p) return;
+  if(checkAccess().status === 'trial' && !isTrialSubjectKey('', p.name)){
+    appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+    return;
+  }
+  if(!p.url) return;
+  _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i };
+  _screenStack.push('book'); _renderBookViewerDirect();
+}
 
 function renderNotesHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('note'); app.innerHTML=renderHeader('note')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Notes</h2><p>Sign up or sign in to browse Notes.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
@@ -1179,13 +1217,43 @@ function renderNoteList(uni){
   if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see notes</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
-  let notes=c.notes||[];
+  const allNotes = c.notes || [];
+  if(!allNotes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; return; }
   const isTrialNow = checkAccess().status === 'trial';
-  if (isTrialNow) { const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0; if (kwSet) notes = notes.filter(n => isTrialNoteAllowed(n.title || '') === true); else notes = notes.filter(n => isTrialSubjectKey('', n.title || '')); }
-  if(!notes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">'+(isTrialNow ? 'Trial: only selected notes available.' : 'No notes yet.')+'</div>'; return; }
-  el.innerHTML=notes.map((n,i)=>'<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid #2196f3;"><div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div></div>').join('');
+  const indexed = allNotes.map((n,i)=>({n, i}));
+  let visible = indexed;
+  if (isTrialNow) {
+    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
+    visible = indexed.filter(({n}) => kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || ''));
+  }
+  const hiddenCount = indexed.length - visible.length;
+  if(!visible.length && isTrialNow){
+    el.innerHTML = '<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;">'+
+      '<div style="font-size:34px;margin-bottom:10px;">🔒</div>'+
+      '<div style="font-weight:700;color:#333;">No trial notes available</div>'+
+      '<div style="font-size:12.5px;color:#888;margin-top:6px;line-height:1.7;">Your trial doesn\'t include notes from this university.<br>Get Premium to unlock everything.</div>'+
+      '</div>' + trialPremiumCTA(hiddenCount, 'notes');
+    return;
+  }
+  const listHtml = visible.map(({n, i}) => '<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid #2196f3;"><div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div></div>').join('');
+  el.innerHTML = listHtml + trialPremiumCTA(hiddenCount, 'notes');
 }
-function openNote(uni,stream,sem,i){ if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; } const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i]; if(!n) return; _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i }; _screenStack.push('note'); _renderNoteViewerDirect(); }
+function openNote(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i];
+  if(!n) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
+    if(!allowed){
+      appAlert('🔒 This note is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
+  _screenStack.push('note'); _renderNoteViewerDirect();
+}
 
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1198,8 +1266,14 @@ function renderExamHome(){
     const isTrialSubject = isTrialSubjectKey(k, s.name || ''); const trialOk = !isTrial || isTrialSubject;
     return subSem === sem && streamOk && trialOk;
   });
+  const totalPractice = Object.entries(generalSubjects).filter(([k,s])=>{
+    const subSem = (s.semester === 2) ? 2 : 1; const subStream = s.stream || 'Natural';
+    const streamOk = (subStream === 'Both') || (subStream === myStreamForGeneral);
+    return subSem === sem && streamOk;
+  }).length;
+  const hiddenPractice = totalPractice - filtered.length;
   const generalCards = filtered.map(([k,s])=>'<div class="subject-card" onclick="startBuiltInExam(\''+k+'\')"><div class="badge">'+((s.questions||[]).length)+'Q</div><div class="name">'+escapeHtml(s.name||k)+'</div><div class="meta">Practice exam</div></div>').join('');
-  const generalSection = filtered.length ? '<div class="subjects-grid">'+generalCards+'</div>' : (isTrial ? '<div style="background:rgba(255,255,255,.1); border:2px dashed rgba(255,255,255,.35); border-radius:14px; padding:30px 20px; text-align:center; color:#fff;"><div style="font-size:34px; margin-bottom:10px; opacity:.75;">🔒</div><div style="font-weight:800; font-size:14px; margin-bottom:6px;">Only "'+escapeHtml(trialSubjectsDisplay())+'" practice exam in trial</div></div>' : '<div style="background:rgba(255,255,255,.1); border:2px dashed rgba(255,255,255,.35); border-radius:14px; padding:34px 20px; text-align:center; color:#fff;"><div style="font-size:38px; margin-bottom:10px; opacity:.75;">📥</div><div style="font-weight:800; font-size:14px; margin-bottom:6px;">No practice exams yet</div></div>');
+  const generalSection = filtered.length ? '<div class="subjects-grid">'+generalCards+'</div>' + (isTrial && hiddenPractice > 0 ? trialPremiumCTA(hiddenPractice, 'practice subjects') : '') : (isTrial ? '<div style="background:rgba(255,255,255,.1); border:2px dashed rgba(255,255,255,.35); border-radius:14px; padding:30px 20px; text-align:center; color:#fff;"><div style="font-size:34px; margin-bottom:10px; opacity:.75;">🔒</div><div style="font-weight:800; font-size:14px; margin-bottom:6px;">Only "'+escapeHtml(trialSubjectsDisplay())+'" practice exam in trial</div></div>' + trialPremiumCTA(hiddenPractice, 'practice subjects') : '<div style="background:rgba(255,255,255,.1); border:2px dashed rgba(255,255,255,.35); border-radius:14px; padding:34px 20px; text-align:center; color:#fff;"><div style="font-size:38px; margin-bottom:10px; opacity:.75;">📥</div><div style="font-weight:800; font-size:14px; margin-bottom:6px;">No practice exams yet</div></div>');
   const generalTitle = 'General Practice — Semester '+sem+' ('+myStreamForGeneral+')';
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
   const hasKw = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) && CONFIG.TRIAL_EXAM_KEYWORDS.length > 0;
@@ -1221,15 +1295,54 @@ function renderExamList(uni){
   if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see exams</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('exam'); return; }
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
-  let exams=c.exams||[]; const isTrialNow = checkAccess().status === 'trial';
-  if(isTrialNow){ const kwSet = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) && CONFIG.TRIAL_EXAM_KEYWORDS.length > 0; if (kwSet) exams = exams.filter(ex => isTrialExamAllowed(ex.name || '') === true); else exams = exams.filter(ex => isTrialSubjectKey('', ex.name || '')); }
-  if(!exams.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">'+(isTrialNow ? 'Trial: only selected exams available.' : 'No exams yet.')+'</div>'; return; }
-  const byChapter={}; sortExamsByYear(exams).forEach(ex=>{ const ch=ex.chapter||'General'; if(!byChapter[ch]) byChapter[ch]=[]; byChapter[ch].push(ex); });
+  const allExams = c.exams || [];
+  if(!allExams.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No exams yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  let visible = allExams;
+  if (isTrialNow) {
+    const kwSet = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) && CONFIG.TRIAL_EXAM_KEYWORDS.length > 0;
+    visible = allExams.filter(ex => kwSet ? isTrialExamAllowed(ex.name || '') === true : isTrialSubjectKey('', ex.name || ''));
+  }
+  const hiddenCount = allExams.length - visible.length;
+  if(!visible.length && isTrialNow){
+    el.innerHTML = '<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;">'+
+      '<div style="font-size:34px;margin-bottom:10px;">🔒</div>'+
+      '<div style="font-weight:700;color:#333;">No trial exams available</div>'+
+      '<div style="font-size:12.5px;color:#888;margin-top:6px;line-height:1.7;">Your trial doesn\'t include exams from this university.<br>Get Premium to unlock everything.</div>'+
+      '</div>' + trialPremiumCTA(hiddenCount, 'exams');
+    return;
+  }
+  const byChapter={}; sortExamsByYear(visible).forEach(ex=>{ const ch=ex.chapter||'General'; if(!byChapter[ch]) byChapter[ch]=[]; byChapter[ch].push(ex); });
   let html='';
-  Object.keys(byChapter).forEach(ch=>{ html += '<div style="margin:14px 4px 8px;"><span style="background:rgba(255,255,255,.2); padding:5px 12px; border-radius:20px; color:#fff; font-size:12px; font-weight:800;">Chapter: '+escapeHtml(ch)+' — '+byChapter[ch].length+'</span></div>'; byChapter[ch].forEach(ex=>{ const oi=c.exams.indexOf(ex); const attachTag=ex.url?' 📎':''; const qTag=ex.questions&&ex.questions.length?ex.questions.length+'Q':'File'; html += '<div onclick="startUniExam(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+oi+')" class="subject-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9); margin-bottom:10px;"><div class="badge">'+qTag+'</div><div class="name">'+escapeHtml(ex.name)+attachTag+'</div><div class="meta">'+(ex.year?'Year '+escapeHtml(ex.year)+' · ':'')+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div>'; }); });
-  el.innerHTML=html;
+  Object.keys(byChapter).forEach(ch=>{
+    html += '<div style="margin:14px 4px 8px;"><span style="background:rgba(255,255,255,.2); padding:5px 12px; border-radius:20px; color:#fff; font-size:12px; font-weight:800;">Chapter: '+escapeHtml(ch)+' — '+byChapter[ch].length+'</span></div>';
+    byChapter[ch].forEach(ex=>{
+      const oi = c.exams.indexOf(ex);
+      const attachTag=ex.url?' 📎':'';
+      const qTag=ex.questions&&ex.questions.length?ex.questions.length+'Q':'File';
+      html += '<div onclick="startUniExam(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+oi+')" class="subject-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9); margin-bottom:10px;"><div class="badge">'+qTag+'</div><div class="name">'+escapeHtml(ex.name)+attachTag+'</div><div class="meta">'+(ex.year?'Year '+escapeHtml(ex.year)+' · ':'')+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div>';
+    });
+  });
+  el.innerHTML = html + trialPremiumCTA(hiddenCount, 'exams');
 }
-function startUniExam(uni,stream,sem,i){ if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; } const c=getUniContent(uni,stream,sem); const ex=c.exams[i]; if(!ex) return; const hasQ=ex.questions&&ex.questions.length; const hasFile=!!ex.url; if(hasQ&&!hasFile){ const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); return; } if(!hasQ&&hasFile){ window.open(ex.url,'_blank'); return; } if(hasQ&&hasFile){ appConfirm('This exam has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(ex.url,'_blank'); return; } const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); }); } }
+function startUniExam(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const ex=c.exams[i];
+  if(!ex) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) && CONFIG.TRIAL_EXAM_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialExamAllowed(ex.name || '') === true : isTrialSubjectKey('', ex.name || '');
+    if(!allowed){
+      appAlert('🔒 This exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  const hasQ=ex.questions&&ex.questions.length; const hasFile=!!ex.url;
+  if(hasQ&&!hasFile){ const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); return; }
+  if(!hasQ&&hasFile){ window.open(ex.url,'_blank'); return; }
+  if(hasQ&&hasFile){ appConfirm('This exam has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(ex.url,'_blank'); return; } const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); }); }
+}
 function startBuiltInExam(key){ if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } const s=getGeneralSubjects()[key]; if(!s) return; startQuiz(s.name, s.questions||[], CONFIG.DEFAULT_EXAM_TIME_MINUTES); }
 
 function renderCocHome(){
@@ -1253,15 +1366,55 @@ function renderCocList(uni){
   if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see COC</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('coc'); return; }
   const myStream=getUserStream(); const c=getUniContent(uni,myStream,1);
-  let cocs=c.cocs||[]; const isTrialNow = checkAccess().status === 'trial';
-  if(isTrialNow){ const kwSet = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) && CONFIG.TRIAL_COC_KEYWORDS.length > 0; if (kwSet) cocs = cocs.filter(cx => isTrialCocAllowed(cx.name || '') === true); else cocs = cocs.filter(cx => isTrialSubjectKey('', cx.name || '')); }
-  if(!cocs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">'+(isTrialNow ? 'Trial: only selected COC available.' : 'No COC materials yet.')+'</div>'; return; }
-  const byChapter={}; sortExamsByYear(cocs).forEach(cx=>{ const ch=cx.chapter||'General'; if(!byChapter[ch]) byChapter[ch]=[]; byChapter[ch].push(cx); });
+  const allCocs = c.cocs || [];
+  if(!allCocs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No COC materials yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  let visible = allCocs;
+  if (isTrialNow) {
+    const kwSet = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) && CONFIG.TRIAL_COC_KEYWORDS.length > 0;
+    visible = allCocs.filter(cx => kwSet ? isTrialCocAllowed(cx.name || '') === true : isTrialSubjectKey('', cx.name || ''));
+  }
+  const hiddenCount = allCocs.length - visible.length;
+  if(!visible.length && isTrialNow){
+    el.innerHTML = '<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;">'+
+      '<div style="font-size:34px;margin-bottom:10px;">🔒</div>'+
+      '<div style="font-weight:700;color:#333;">No trial COC available</div>'+
+      '<div style="font-size:12.5px;color:#888;margin-top:6px;line-height:1.7;">Your trial doesn\'t include COC from this university.<br>Get Premium to unlock everything.</div>'+
+      '</div>' + trialPremiumCTA(hiddenCount, 'COC materials');
+    return;
+  }
+  const byChapter={}; sortExamsByYear(visible).forEach(cx=>{ const ch=cx.chapter||'General'; if(!byChapter[ch]) byChapter[ch]=[]; byChapter[ch].push(cx); });
   let html='';
-  Object.keys(byChapter).forEach(ch=>{ html += '<div style="margin:14px 4px 8px;"><span style="background:rgba(255,255,255,.2); padding:5px 12px; border-radius:20px; color:#fff; font-size:12px; font-weight:800;">Chapter: '+escapeHtml(ch)+' — '+byChapter[ch].length+'</span></div>'; byChapter[ch].forEach(cx=>{ const oi=c.cocs.indexOf(cx); const attachTag=cx.url?' 📎':''; const qTag=cx.questions&&cx.questions.length?cx.questions.length+'Q':'File'; html += '<div onclick="startUniCoc(\''+escapeAttr(uni)+'\',\''+myStream+'\','+1+','+oi+')" class="subject-card" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2); margin-bottom:10px;"><div class="badge">'+qTag+'</div><div class="name">'+escapeHtml(cx.name)+attachTag+'</div><div class="meta">'+(cx.year?'Year '+escapeHtml(cx.year)+' · ':'')+(cx.timeMinutes>0?cx.timeMinutes+' min':'no limit')+'</div></div>'; }); });
-  el.innerHTML=html;
+  Object.keys(byChapter).forEach(ch=>{
+    html += '<div style="margin:14px 4px 8px;"><span style="background:rgba(255,255,255,.2); padding:5px 12px; border-radius:20px; color:#fff; font-size:12px; font-weight:800;">Chapter: '+escapeHtml(ch)+' — '+byChapter[ch].length+'</span></div>';
+    byChapter[ch].forEach(cx=>{
+      const oi = c.cocs.indexOf(cx);
+      const attachTag=cx.url?' 📎':'';
+      const qTag=cx.questions&&cx.questions.length?cx.questions.length+'Q':'File';
+      html += '<div onclick="startUniCoc(\''+escapeAttr(uni)+'\',\''+myStream+'\','+1+','+oi+')" class="subject-card" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2); margin-bottom:10px;"><div class="badge">'+qTag+'</div><div class="name">'+escapeHtml(cx.name)+attachTag+'</div><div class="meta">'+(cx.year?'Year '+escapeHtml(cx.year)+' · ':'')+(cx.timeMinutes>0?cx.timeMinutes+' min':'no limit')+'</div></div>';
+    });
+  });
+  el.innerHTML = html + trialPremiumCTA(hiddenCount, 'COC materials');
 }
-function startUniCoc(uni,stream,sem,i){ if(getCurrentSemester() !== 1){ appAlert('COC is only available in 1st semester.'); return; } if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; } if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; } const c=getUniContent(uni,stream,1); const cx=c.cocs[i]; if(!cx) return; const hasQ=cx.questions&&cx.questions.length; const hasFile=!!cx.url; if(hasQ&&!hasFile){ const t=typeof cx.timeMinutes==='number'?cx.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(cx.name,cx.questions,t); return; } if(!hasQ&&hasFile){ window.open(cx.url,'_blank'); return; } if(hasQ&&hasFile){ appConfirm('This COC has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(cx.url,'_blank'); return; } const t=typeof cx.timeMinutes==='number'?cx.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(cx.name,cx.questions,t); }); } }
+function startUniCoc(uni,stream,sem,i){
+  if(getCurrentSemester() !== 1){ appAlert('COC is only available in 1st semester.'); return; }
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,1); const cx=c.cocs[i];
+  if(!cx) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) && CONFIG.TRIAL_COC_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialCocAllowed(cx.name || '') === true : isTrialSubjectKey('', cx.name || '');
+    if(!allowed){
+      appAlert('🔒 This COC is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  const hasQ=cx.questions&&cx.questions.length; const hasFile=!!cx.url;
+  if(hasQ&&!hasFile){ const t=typeof cx.timeMinutes==='number'?cx.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(cx.name,cx.questions,t); return; }
+  if(!hasQ&&hasFile){ window.open(cx.url,'_blank'); return; }
+  if(hasQ&&hasFile){ appConfirm('This COC has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(cx.url,'_blank'); return; } const t=typeof cx.timeMinutes==='number'?cx.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(cx.name,cx.questions,t); }); }
+}
 
 function prepareQuestions(qs){ return shuffle(qs).map(q=>{ const ct=q.options[q.answer]; const opts=shuffle(q.options); return {q:q.q,options:opts,answer:opts.indexOf(ct),explanation:q.explanation}; }); }
 function startQuiz(name,rawQuestions,timeMinutes){
@@ -1575,7 +1728,6 @@ async function renderAdminUsers(){
     const hash = escapeHtml(user.deviceHash || '-');
     const pwd = user.password ? escapeHtml(user.password) : '<span style="color:#999;">(not stored)</span>';
     const created = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
-    // === STATUS BADGE ===
     let statusBadge = '';
     const st = String(user.status || 'trial').toLowerCase();
     const dl = parseInt(user.daysLeft) || 0;
@@ -2068,7 +2220,7 @@ function renderPlayStoreContact(){
   const tg = (CONFIG.TELEGRAM_USERNAME || '').replace(/^@/,''); const phone = (CONFIG.CONTACT_PHONE || '').trim();
   const msg = 'Unlock All Freshman ET\nHash: ' + getDeviceHash() + '\nPhone: ' + (getCurrentUserPhone() || '');
   const link = tg ? 'https://t.me/' + tg + '?text=' + encodeURIComponent(msg) : '#';
-  app.innerHTML = renderHeader(currentTab) + '<div class="locked-box"><div class="icon">🔓</div><h2>Unlock Full Access</h2><p>Contact admin on Telegram.</p><a href="'+escapeAttr(link)+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📨 Contact Admin</a>'+(phone ? '<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block;text-align:center;text-decoration:none;">📞 Call</a>' : '')+'<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderEnterKey()">I Have a Key</button></div>' + renderBottomNav(currentTab) + renderChatFab();
+  app.innerHTML = renderHeader(currentTab) + '<div class="locked-box"><div class="icon">💎</div><h2>Get Premium — Unlock Everything</h2><p>Contact admin on Telegram to pay and get a license key.</p><a href="'+escapeAttr(link)+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📨 Contact Admin on Telegram</a>'+(phone ? '<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block;text-align:center;text-decoration:none;">📞 Call '+escapeHtml(phone)+'</a>' : '')+'<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderEnterKey()">I Have a Key</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav(currentTab) + renderChatFab();
 }
 async function copyPaymentInfo(){
   const methods = (Array.isArray(CONFIG.PAYMENT_METHODS) && CONFIG.PAYMENT_METHODS.length) ? CONFIG.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
@@ -2180,6 +2332,7 @@ Object.assign(window, {
   adminDeleteGeneralSubject, adminSaveGeneralSubject,
   getGeneralSubjects, saveGeneralSubjects, getUniInfoForStream,
   isTrialContentAllowed, isTrialLockedUniversity, trialSubjectRx, renderTrialContentLocked, renderTrialLockedUniversity,
+  trialPremiumCTA,
   adminAddBook, adminDeleteBook, adminSaveBook, adminAddNote, adminDeleteNote, adminSaveNote,
   adminAddExam, adminDeleteExam, adminSaveExam, formatQuestionsForEdit,
   adminAddCoc, adminDeleteCoc, adminSaveCoc,
