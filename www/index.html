@@ -413,7 +413,7 @@ async function pushStatusToServer() {
     });
   } catch(e){}
 }
-
+ 
 function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
 function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
@@ -2394,7 +2394,7 @@ function renderAdminNotifications(){
 async function sendAdminNotif(){ const target=document.getElementById('notifTarget').value; const msg=document.getElementById('notifMsg').value.trim(); if(!msg) return appAlert('Enter message'); const list=getNotifications(); list.push({id:'n_'+Date.now(),target:target,message:msg,at:Date.now()}); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} await appAlert('Added!'); renderAdminNotifications(); }
 function deleteAdminNotif(idx){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const list=getNotifications(); if(idx<0||idx>=list.length) return; list.splice(idx,1); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} renderAdminNotifications(); }); }
 
-/* ============ ADMIN TAP — PASSWORD + OTP ============ */
+/* ============ ADMIN TAP — PASSWORD + EMAIL OTP (5 min, session 24h) ============ */
 let adminTapCount = 0, adminTapTimer = null;
 async function adminTap() {
   adminTapCount++;
@@ -2424,20 +2424,24 @@ async function adminTap() {
   if (!step1 || !step1.ok) {
     if (step1 && step1.err === 'locked') {
       const mins = Math.ceil((step1.until - Date.now()) / 60000);
-      return appAlert('Admin OTP locked for ' + mins + ' minute(s).');
+      return appAlert('Locked for ' + mins + ' minute(s).');
+    }
+    if (step1 && step1.err === 'email-failed') {
+      return appAlert('Password correct, but email could not be sent.\n\nDetail: ' + (step1.detail || 'unknown') + '\n\nCheck RESEND_API_KEY and admin_email.');
     }
     return appAlert('Wrong admin password.');
   }
 
-  const otp = await appPrompt('Enter admin OTP (10+ chars, mixed):');
-  if (otp === null) return;
-  if (otp.length < 10) return appAlert('OTP must be at least 10 characters.');
+  await appAlert('📧 A code was sent to:\n\n' + (step1.sentTo || 'your admin email') + '\n\nCheck your inbox and spam. The code expires in 5 minutes.');
+
+  const typed = await appPrompt('Enter the code from your email:');
+  if (typed === null) return;
 
   let step2;
   try {
     const r = await fetch(BACKEND_URL + '/api/admin-verify-otp', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challengeToken: step1.challengeToken, otp })
+      body: JSON.stringify({ challengeToken: step1.challengeToken, otp: String(typed).trim().toUpperCase() })
     });
     step2 = await r.json();
   } catch (e) { return appAlert('Network error.'); }
@@ -2445,17 +2449,26 @@ async function adminTap() {
   if (!step2 || !step2.ok) {
     if (step2 && step2.err === 'locked') {
       const mins = Math.ceil((step2.until - Date.now()) / 60000);
-      return appAlert('Too many wrong OTPs. Locked for ' + mins + ' minute(s).');
+      return appAlert('Too many wrong attempts. Locked for ' + mins + ' minute(s).');
+    }
+    if (step2 && step2.err === 'otp-expired') {
+      return appAlert('⏱ The 5-minute code has expired. Tap the footer 7 times to start over.');
+    }
+    if (step2 && step2.err === 'challenge-expired') {
+      return appAlert('Session expired. Tap the footer 7 times to start over.');
     }
     if (step2 && step2.err === 'wrong-otp') {
-      return appAlert('Wrong OTP. Attempts remaining: ' + (step2.remaining || 0));
+      return appAlert('Wrong code. Attempts remaining: ' + (step2.remaining || 0));
     }
-    return appAlert('OTP verification failed.');
+    if (step2 && step2.err === 'no-otp') {
+      return appAlert('No pending code. Tap the footer 7 times to start over.');
+    }
+    return appAlert('Verification failed.');
   }
 
   setAdminToken(step2.adminToken);
   setAdminMode(true);
-  await appAlert('✅ Admin mode ON (expires in 30 min).');
+  await appAlert('✅ Admin mode ON (expires in 24 hours).');
   renderMy();
 }
 
