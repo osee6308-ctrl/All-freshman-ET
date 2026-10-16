@@ -1,4 +1,4 @@
-const CACHE_NAME = 'all-freshman-v3';   // bumped from v1
+const CACHE_NAME = 'all-freshman-v3';
 const ASSETS = [
   './manifest.json',
   './logo.png',
@@ -6,7 +6,6 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png'
 ];
-// Note: index.html is NOT precached — we always fetch it fresh.
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -29,14 +28,20 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
 
-  // HTML: network-first (so updates arrive)
-  if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/')) {
+  // HTML: network-first, fall back to cached index.html
+  const isHTML = req.mode === 'navigate'
+    || url.pathname.endsWith('/index.html')
+    || url.pathname.endsWith('/');
+
+  if (isHTML) {
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
         caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
         return res;
-      }).catch(() => caches.match(req))
+      }).catch(() =>
+        caches.match(req).then((c) => c || caches.match('./index.html'))
+      )
     );
     return;
   }
