@@ -1,4 +1,4 @@
-const CACHE_NAME = 'all-freshman-v3';
+const CACHE_NAME = 'all-freshman-v9';
 const ASSETS = [
   './manifest.json',
   './logo.png',
@@ -28,25 +28,17 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
 
-  // HTML: network-first, fall back to cached index.html
-  const isHTML = req.mode === 'navigate'
-    || url.pathname.endsWith('/index.html')
-    || url.pathname.endsWith('/');
-
-  if (isHTML) {
+  if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/')) {
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
         caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
         return res;
-      }).catch(() =>
-        caches.match(req).then((c) => c || caches.match('./index.html'))
-      )
+      }).catch(() => caches.match(req))
     );
     return;
   }
 
-  // Other assets: cache-first
   e.respondWith(
     caches.match(req).then((res) => res || fetch(req).then((r) => {
       if (r && r.ok && url.origin === self.location.origin) {
