@@ -496,7 +496,7 @@ const savePaymentReq=p=>localStorage.setItem(LS_PAYMENT_REQ,JSON.stringify(p));
 const clearPaymentReq=()=>localStorage.removeItem(LS_PAYMENT_REQ);
 const getUniversity=()=>localStorage.getItem(LS_UNIVERSITY)||'';
 const setUniversity=u=>localStorage.setItem(LS_UNIVERSITY,u);
-
+ 
 /* ============ ADMIN MODE — SERVER TOKEN BASED ============ */
 const isAdminMode = () => {
   const t = getAdminToken();
@@ -591,7 +591,19 @@ function isTrialContentAllowed(kind){ const a = checkAccess(); if(a.status !== '
 function isTrialLockedUniversity(uni){ const a = checkAccess(); if(a.status !== 'trial') return false; const list = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : []; return list.indexOf(uni) === -1; }
 function trialUnisDisplay(){ const list = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : []; if (!list.length) return 'your university'; if (list.length === 1) return list[0]; return list.slice(0,2).join(', ') + (list.length > 2 ? ' +'+(list.length-2)+' more' : ''); }
 function trialSubjectsDisplay(){ const list = Array.isArray(CONFIG.TRIAL_SUBJECTS) ? CONFIG.TRIAL_SUBJECTS : []; if (!list.length) return 'limited'; if (list.length === 1) return list[0]; return list.slice(0,2).join(', ') + (list.length > 2 ? ' +'+(list.length-2)+' more' : ''); }
-function isTrialSubjectKey(key, name){ const list = (Array.isArray(CONFIG.TRIAL_SUBJECTS) && CONFIG.TRIAL_SUBJECTS.length) ? CONFIG.TRIAL_SUBJECTS : ['english']; const kLower = String(key||'').toLowerCase().trim(); const nLower = String(name||'').toLowerCase(); return list.some(item => { const il = String(item||'').toLowerCase().trim(); return il && (il === kLower || nLower.indexOf(il) !== -1); }); }
+/* [FILTER EDIT 1] isTrialSubjectKey now uses both TRIAL_SUBJECTS and TRIAL_EXAM_KEYWORDS */
+function isTrialSubjectKey(key, name){
+  const subj = (Array.isArray(CONFIG.TRIAL_SUBJECTS) && CONFIG.TRIAL_SUBJECTS.length) ? CONFIG.TRIAL_SUBJECTS : [];
+  const kws = (Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) && CONFIG.TRIAL_EXAM_KEYWORDS.length) ? CONFIG.TRIAL_EXAM_KEYWORDS : [];
+  const all = subj.concat(kws).filter(Boolean);
+  if (!all.length) return false;
+  const kLower = String(key||'').toLowerCase().trim();
+  const nLower = String(name||'').toLowerCase();
+  return all.some(item => {
+    const il = String(item||'').toLowerCase().trim();
+    return il && (il === kLower || nLower.indexOf(il) !== -1);
+  });
+}
 function isTrialExamAllowed(examName){ const kws = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) ? CONFIG.TRIAL_EXAM_KEYWORDS : []; if (!kws.length) return null; const n = String(examName || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
 function isTrialNoteAllowed(title){ const kws = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) ? CONFIG.TRIAL_NOTE_KEYWORDS : []; if (!kws.length) return null; const n = String(title || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
 function isTrialCocAllowed(name){ const kws = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) ? CONFIG.TRIAL_COC_KEYWORDS : []; if (!kws.length) return null; const n = String(name || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
@@ -774,7 +786,7 @@ function appDialog(type, message, defaultValue){
     if(type === 'alert') inner = '<div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><button id="appDlgOk" class="btn btn-primary btn-full">OK</button>';
     else if(type === 'confirm') inner = '<div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
     else if(type === 'prompt') inner = '<div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><input type="text" id="appDlgInput" class="field-input" value="'+escapeAttr(defaultValue||'')+'" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" inputmode="text" style="margin-bottom:16px;"><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
-   overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'+inner+'</div>';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'+inner+'</div>';
     document.body.appendChild(overlay);
     const okBtn = document.getElementById('appDlgOk'); const cancelBtn = document.getElementById('appDlgCancel'); const inputEl = document.getElementById('appDlgInput');
     const cleanup = () => { overlay.remove(); };
@@ -1327,8 +1339,8 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-}
-
+ }
+ 
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   if(!isTrialContentAllowed('exam')){ setScreen('exam-home'); app.innerHTML=renderHeader('exam')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('exam')+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1655,8 +1667,8 @@ async function submitResetWithCode() {
     await appAlert('✅ Password reset! Please sign in with your new password.');
     renderSignIn();
   } catch (e) { err('Network error.'); }
-}
-
+   }
+ 
 function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
   if(!isSignedIn()){
@@ -1747,8 +1759,19 @@ function renderSelectedUniInfo(uni){
   const el=document.getElementById('uniInfoContent'); if(!el) return;
   if(!uni){ el.innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;">Select a university</div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('university'); return; }
-  const myStream=getUserStream(); const items=getUniInfoForStream(uni,myStream);
-  if(!items.length){ el.innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;"><div style="font-size:34px; margin-bottom:8px; opacity:.6;">📭</div><div style="font-weight:700;">No info yet</div><div style="font-size:12px; margin-top:6px;">'+escapeHtml(myStream)+' stream</div></div>'; return; }
+  /* [FILTER EDIT 2] filter info items in trial */
+  const myStream=getUserStream();
+  let items=getUniInfoForStream(uni,myStream);
+  if(checkAccess().status === 'trial'){ items = items.filter(it => isTrialSubjectKey('', (it && it.title) || '')); }
+  /* [FILTER EDIT 3] show premium CTA when empty in trial */
+  if(!items.length){
+    if(checkAccess().status === 'trial'){
+      el.innerHTML = trialPremiumCTA(1, 'info items');
+    } else {
+      el.innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;"><div style="font-size:34px; margin-bottom:8px; opacity:.6;">📭</div><div style="font-weight:700;">No info yet</div><div style="font-size:12px; margin-top:6px;">'+escapeHtml(myStream)+' stream</div></div>';
+    }
+    return;
+  }
   el.innerHTML=items.map((item,idx)=>'<div style="background:#f7f7fa; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #6a3093;"><div style="font-weight:700; color:#333; font-size:14.5px; margin-bottom:6px;">'+escapeHtml(item.title)+'</div><div style="font-size:13.5px; line-height:1.7; color:#444;">'+item.body+'</div></div>').join('');
 }
 
@@ -1933,8 +1956,6 @@ async function renderAdminUsers(){
       ? '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">SERVER</span>'
       : '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">LOCAL</span>';
     const bg = adminUserBulkMode && adminUserSelected.has(user.phone) ? '#e0f2fe' : '#f7f7fa';
-    // [EDIT 1] "Allow Multi" button REMOVED; new "Unbind" button added in its place.
-    // [EDIT 4] "Unbind" button added here, placed just before Delete.
     const action = adminUserBulkMode
       ? '<input type="checkbox" ' + (adminUserSelected.has(user.phone) ? 'checked' : '') + ' onchange="adminUserToggleSel(\'' + user.phone + '\')" style="width:22px;height:22px;cursor:pointer;flex-shrink:0;">'
       : '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
@@ -1963,8 +1984,7 @@ async function renderAdminUsers(){
       bulkBar + rows +
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
     '</div>' + renderBottomNav('my') + renderChatFab();
-}
-
+ }
 // [EDIT 2] adminToggleMultiDevice function REMOVED (no longer needed).
 // [EDIT 4] New adminUnbindDevice function added below.
 async function adminUnbindDevice(phone) {
@@ -2624,4 +2644,5 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
- </html>
+</html>
+ 
