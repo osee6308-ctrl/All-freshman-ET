@@ -6,7 +6,7 @@
 <meta name="android-disable-cache" content="true">
 <title>All Freshman ET</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6a3093">
+<meta name="theme-color" #6a3093">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -180,7 +180,6 @@
 </head>
 <body>
 <div class="container" id="app"></div>
-
 <script>
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -469,7 +468,6 @@ const clearPaymentReq=()=>localStorage.removeItem(LS_PAYMENT_REQ);
 const getUniversity=()=>localStorage.getItem(LS_UNIVERSITY)||'';
 const setUniversity=u=>localStorage.setItem(LS_UNIVERSITY,u);
 
- 
 /* ============ ADMIN MODE — SERVER TOKEN BASED ============ */
 const isAdminMode = () => {
   const t = getAdminToken();
@@ -966,7 +964,6 @@ function adminUniPickerHTML(){
 }
 window.adminToggleAddToUni = adminToggleAddToUni;
 window.adminToggleAllAddToUnis = adminToggleAllAddToUnis;
-
 /* ============ END BULK ============ */
 
 function goBack() {
@@ -1078,7 +1075,6 @@ async function submitSignUp(){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
 }
-
 function renderSignIn(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
@@ -1301,8 +1297,6 @@ function openNote(uni,stream,sem,i){
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
  }
-
- 
 /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1942,8 +1936,6 @@ async function renderAdminUsers(){
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
     '</div>' + renderBottomNav('my') + renderChatFab();
  }
-
- 
 // [EDIT 2] adminToggleMultiDevice function REMOVED (no longer needed).
 // [EDIT 4] New adminUnbindDevice function added below.
 async function adminUnbindDevice(phone) {
@@ -2408,7 +2400,8 @@ async function adminTap() {
     if (step1 && step1.err === 'email-failed') {
       return appAlert('Password correct, but email could not be sent.\n\nDetail: ' + (step1.detail || 'unknown') + '\n\nCheck RESEND_API_KEY and admin_email.');
     }
-    return appAlert('Wrong admin password.');
+    // 👇 UPDATED: Now shows the real reason from the Worker
+    return appAlert('Admin Login Failed.\nReason: ' + (step1 ? step1.err : 'Network Error') + (step1 && step1.receivedLen ? '\nPassword Length Received: ' + step1.receivedLen : ''));
   }
 
   await appAlert('📧 A code was sent to:\n\n' + (step1.sentTo || 'your admin email') + '\n\nCheck your inbox and spam. The code expires in 5 minutes.');
