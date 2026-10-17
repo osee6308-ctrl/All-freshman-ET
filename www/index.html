@@ -519,7 +519,20 @@ function getKeyAttempts(){ try{ return JSON.parse(localStorage.getItem(LS_KEY_AT
 function saveKeyAttempts(a){ localStorage.setItem(LS_KEY_ATTEMPTS,JSON.stringify(a)); }
 function isKeyLocked(){ const a=getKeyAttempts(); return a.blockedUntil>Date.now(); }
 function keyLockRemaining(){ const a=getKeyAttempts(); const ms=Math.max(0,a.blockedUntil-Date.now()); return { d:Math.floor(ms/86400000), h:Math.floor((ms%86400000)/3600000), m:Math.floor((ms%3600000)/60000), ms }; }
-function registerWrongKey(){ const a=getKeyAttempts(); a.count++; if(a.count>=CONFIG.KEY_MAX_ATTEMPTS){ a.blockCount=(a.blockCount||0)+1; a.blockedUntil=Date.now()+a.blockCount*CONFIG.BLOCK_BASE_WEEKS*7*86400000; a.count=0; saveKeyAttempts(a); return {blocked:true,blockCount:a.blockCount,until:a.blockedUntil}; } saveKeyAttempts(a); return {blocked:false,remaining:CONFIG.KEY_MAX_ATTEMPTS-a.count,count:a.count}; }
+function registerWrongKey(){ 
+  const a=getKeyAttempts(); a.count++; 
+  let lockUntil = 0;
+  if(a.count>=CONFIG.KEY_MAX_ATTEMPTS){ 
+    a.blockCount=(a.blockCount||0)+1; 
+    a.blockedUntil=Date.now()+a.blockCount*CONFIG.BLOCK_BASE_WEEKS*7*86400000; 
+    lockUntil = a.blockedUntil;
+    a.count=0; saveKeyAttempts(a); 
+    fetch(BACKEND_URL + '/api/report-lockout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: getCurrentUserPhone(), lockedUntil: lockUntil }) }).catch(()=>{});
+    return {blocked:true,blockCount:a.blockCount,until:a.blockedUntil}; 
+  } 
+  saveKeyAttempts(a); 
+  return {blocked:false,remaining:CONFIG.KEY_MAX_ATTEMPTS-a.count,count:a.count}; 
+}
 function resetKeyAttempts(){ saveKeyAttempts({count:0,blockedUntil:0,blockCount:0}); }
 
 function getRegisteredPhones(){ let local=[], remote=[]; try{ local=JSON.parse(localStorage.getItem(LS_REGISTERED_PHONES)||'[]'); }catch(e){} try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); if(Array.isArray(s.registeredPhones)) remote=s.registeredPhones; }catch(e){} const seen=new Set(); const out=[]; [...local,...remote].forEach(p=>{ const n=String(p).replace(/[^\d]/g,''); if(n&&!seen.has(n)){ seen.add(n); out.push(String(p)); } }); return out; }
@@ -621,7 +634,7 @@ async function syncRemoteContent(){
 function getClosureDate(y){ const ec=y-7; const l=(ec%4)===3; return new Date(y,8,l?6:5); }
 function isClosureDay(){ const n=new Date(), c=getClosureDate(n.getFullYear()); return n.getFullYear()===c.getFullYear()&&n.getMonth()===c.getMonth()&&n.getDate()===c.getDate(); }
 
-const DEFAULT_TUTORIALS = { register: { title: "How to register", url: "" }, pay: { title: "How to pay", url: "" } };
+const DEFAULT_TUTORIALS = { register: { title: "Guide Videos", url: "" }, pay: { title: "How to pay and get premium", url: "" } };
 function getTutorials(){ try{ return {...DEFAULT_TUTORIALS,...(JSON.parse(localStorage.getItem(LS_TUTORIALS)||'{}'))}; }catch(e){ return DEFAULT_TUTORIALS; } }
 function saveTutorials(t){ localStorage.setItem(LS_TUTORIALS,JSON.stringify(t)); }
 function embedUrl(u){ if(!u) return ''; u=u.trim(); let m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); if(m) return 'https://www.youtube.com/embed/'+m[1]; m=u.match(/vimeo\.com\/(\d+)/); if(m) return 'https://player.vimeo.com/video/'+m[1]; return u; }
@@ -662,7 +675,6 @@ const SUBJECTS = {
 
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
-
  document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
@@ -708,6 +720,7 @@ function _renderScreenByName(name){
     case 'admin-uni-info': renderAdminUniversityInfo(); break;
     case 'admin-tutorials': renderAdminTutorials(); break;
     case 'admin-notifications': renderAdminNotifications(); break;
+    case 'admin-locked-users': renderAdminLockedUsers(); break;
     case 'semester': renderSemesterPicker(_lastBaseTab); break;
     case 'book-viewer': if (_viewerState && _viewerState.type === 'book') _renderBookViewerDirect(); else renderBooksHome(); break;
     case 'note-viewer': if (_viewerState && _viewerState.type === 'note') _renderNoteViewerDirect(); else renderNotesHome(); break;
@@ -1043,7 +1056,7 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-   }
+ }
  function renderSignIn(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
@@ -1275,7 +1288,7 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-   }
+ }
  /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1536,7 +1549,7 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-  }    }
+   }
  /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
@@ -1652,7 +1665,7 @@ function renderMy(introMsg){
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminRegisteredPhones()">Registered Phones</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="syncNow()">Sync Now</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetKeyAttempts();appAlert(\'Key attempts reset\')">Reset Key Attempts</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminLockedUsers()">🔓 Reset Key Attempts</button>'+
     '<button class="btn btn-danger btn-full" style="margin-top:8px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button>':'')+'</div>'+
     renderBottomNav('my')+renderChatFab();
 }
@@ -1712,6 +1725,7 @@ async function adminGenerateActivationKey(){
     out.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
 }
+function adminCopyKey(key){ try { navigator.clipboard.writeText(key); appAlert('✅ Key copied:\n'+key); } catch(e){ const ta = document.createElement('textarea'); ta.value = key; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); appAlert('✅ Key copied:\n'+key); } }
 
 async function renderAdminUsers(){
   if(!isAdminMode()){ renderMy(); return; }
@@ -1721,9 +1735,22 @@ async function renderAdminUsers(){
   const r = await backendListUsers();
   if (r && r.ok && Array.isArray(r.users)) serverUsers = r.users;
   else serverErr = (r && r.err) ? r.err : 'failed';
+  
   const byPhone = {};
   serverUsers.forEach(u => { byPhone[u.phone] = { ...u, _source:'server' }; });
-  localPhones.forEach(p => { if (!byPhone[p]) byPhone[p] = { ...local[p], _source:'local' }; });
+  
+  // 🚨 SYNC LOGIC: Remove local users if they are deleted on the server
+  const newLocalStorageUsers = {};
+  let localChanged = false;
+  localPhones.forEach(p => { 
+      if (byPhone[p]) {
+          newLocalStorageUsers[p] = local[p]; 
+      } else {
+          localChanged = true; 
+      }
+  });
+  if (localChanged) saveUsers(newLocalStorageUsers); 
+
   const merged = Object.values(byPhone);
   
   // 📊 CALCULATE STATS
@@ -1862,6 +1889,61 @@ async function submitLicenseKey(){
   }
 }
 
+async function renderAdminLockedUsers() {
+  if (!isAdminMode()) return;
+  setScreen('admin-locked-users');
+  app.innerHTML = renderHeader('my') + '<div class="panel"><h2>Locked Users</h2><div class="empty-msg">Loading...</div></div>' + renderBottomNav('my') + renderChatFab();
+  
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/get-locked-users', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({}) });
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.err);
+    
+    const users = data.users || [];
+    if (!users.length) {
+      app.innerHTML = renderHeader('my') + '<div class="panel"><h2>Locked Users</h2><div class="empty-msg">No users are currently locked out.</div><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+      return;
+    }
+    
+    const rows = users.map(u => `
+      <div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" class="lock-chk" value="${escapeAttr(u.phone)}" style="width:22px; height:22px;">
+        <div style="flex:1;">
+          <div style="font-weight:700;">${escapeHtml(u.name)} (${escapeHtml(u.phone)})</div>
+          <div style="font-size:11px; color:#c62828;">Locked until: ${new Date(u.key_lock_until).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    app.innerHTML = renderHeader('my') + `
+      <div class="panel">
+        <h2>Locked Users (${users.length})</h2>
+        <div style="margin-bottom:14px;">${rows}</div>
+        <button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminUnlockSelected()">🔓 Unlock Selected</button>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>
+      </div>
+    ` + renderBottomNav('my') + renderChatFab();
+  } catch(e) {
+    app.innerHTML = renderHeader('my') + '<div class="panel"><h2>Error</h2><p style="color:red;">Failed to load locked users.</p><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+  }
+}
+
+async function adminUnlockSelected() {
+  const chks = document.querySelectorAll('.lock-chk:checked');
+  if (!chks.length) return appAlert('Select at least one user.');
+  const phones = Array.from(chks).map(c => c.value);
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/unlock-users', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ phones }) });
+    const data = await r.json();
+    if (data.ok) {
+      await appAlert('✅ Unlocked ' + phones.length + ' user(s).');
+      renderAdminLockedUsers();
+    } else {
+      appAlert('Failed: ' + data.err);
+    }
+  } catch(e) { appAlert('Network error.'); }
+}
+
 function renderAdminSettings(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-settings');
@@ -1900,6 +1982,15 @@ async function saveAdminSettings(){
   s.ADMIN_PASSWORD=document.getElementById('stAdminPw').value.trim()||DEFAULT_CONFIG.ADMIN_PASSWORD;
   s.CONTENT_URL=document.getElementById('stContentUrl').value.trim();
   s._adminEdited=Date.now(); saveSettings(s); reloadConfig();
+  
+  // 📡 PUSH TO CLOUD
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', {
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s })
+    });
+    console.log('Settings synced to cloud!');
+  } catch(e) { console.log('Could not sync settings to cloud', e); }
+
   await appAlert('✅ Settings saved.'); renderAdminSettings();
 }
 function resetAdminSettings(){ appConfirm('Reset ALL settings to factory defaults?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); appAlert('Settings reset.'); renderAdminSettings(); }); }
@@ -2165,7 +2256,7 @@ function exportContentForShipping(){
 async function copyExport(){ const ta=document.querySelector('textarea[readonly]'); ta.select(); document.execCommand('copy'); await appAlert('Copied!'); }
 function clearDraftContent(){ appConfirm('Clear ALL draft content?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_CONTENT_DRAFT); appAlert('Cleared'); renderAdminContentManager('exam'); }); }
 function renderAdminTutorials(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-tutorials'); const t=getTutorials(); app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Edit Tutorial Videos</h2><label class="field-label">Register Title</label><input type="text" id="tutRegTitle" class="field-input" value="'+escapeAttr(t.register.title)+'"><label class="field-label">Register URL</label><input type="url" id="tutRegUrl" class="field-input" value="'+escapeAttr(t.register.url)+'"><label class="field-label">Pay Title</label><input type="text" id="tutPayTitle" class="field-input" value="'+escapeAttr(t.pay.title)+'"><label class="field-label">Pay URL</label><input type="url" id="tutPayUrl" class="field-input" value="'+escapeAttr(t.pay.url)+'"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveTutorialSettings()">Save</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-async function saveTutorialSettings(){ saveTutorials({register:{title:document.getElementById('tutRegTitle').value.trim()||'How to register',url:document.getElementById('tutRegUrl').value.trim()},pay:{title:document.getElementById('tutPayTitle').value.trim()||'How to pay',url:document.getElementById('tutPayUrl').value.trim()}}); await appAlert('Saved!'); renderAdminTutorials(); }
+async function saveTutorialSettings(){ saveTutorials({register:{title:document.getElementById('tutRegTitle').value.trim()||'Guide Videos',url:document.getElementById('tutRegUrl').value.trim()},pay:{title:document.getElementById('tutPayTitle').value.trim()||'How to pay and get premium',url:document.getElementById('tutPayUrl').value.trim()}}); await appAlert('Saved!'); renderAdminTutorials(); }
 
 let adminNotifBulkMode = false;
 let adminNotifSelected = new Set();
@@ -2328,16 +2419,31 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App
   window.Capacitor.Plugins.App.addListener('backButton', () => { handleAndroidBack(); });
 }
 
-(function init(){
+(async function init(){
   applyTheme(); applyAdminModeClass(); reloadConfig();
   if(window._applySavedZoom) window._applySavedZoom();
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
+  
+  // 🚨 PULL SETTINGS FROM CLOUD 🚨
+  try {
+    const r = await fetch(BACKEND_URL + '/api/get-settings');
+    const data = await r.json();
+    if (data && data.ok && data.settings && Object.keys(data.settings).length > 0) {
+      const currentSettings = getSettings();
+      const merged = { ...currentSettings, ...data.settings };
+      saveSettings(merged);
+      reloadConfig(); 
+    }
+  } catch(e) { console.log('Offline mode: using saved local settings'); }
+
   syncRemoteContent().catch(()=>{});
   try { history.pushState({ nav: true }, ''); } catch(e){}
+  
   if(isBlocked()||isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); _navReady=true; return; }
   if(isKeyLocked()){ renderKeyBlockedScreen(); _navReady=true; return; }
   if(isClosureDay()){ renderClosureScreen(); _navReady=true; return; }
   if(!isSignedIn()||!hasActiveSession()){ setScreen('my'); renderMy(); _navReady=true; return; }
+  
   pushStatusToServer();
   switchTab('book');
   _navReady=true;
@@ -2405,7 +2511,7 @@ Object.assign(window, {
   adminToggleAddToUni, adminToggleAllAddToUnis,
   renderForceChangePassword, submitForceChangePassword,
   adminGenerateResetCode, renderResetWithCode, submitResetWithCode,
-  adminUnbindDevice,
+  adminUnbindDevice, renderAdminLockedUsers, adminUnlockSelected,
   setSessionToken, getSessionToken, setAdminToken, getAdminToken
 });
 </script>
