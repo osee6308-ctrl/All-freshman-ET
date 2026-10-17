@@ -1536,7 +1536,7 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-  }
+  }    }
  /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
@@ -1726,6 +1726,39 @@ async function renderAdminUsers(){
   localPhones.forEach(p => { if (!byPhone[p]) byPhone[p] = { ...local[p], _source:'local' }; });
   const merged = Object.values(byPhone);
   
+  // 📊 CALCULATE STATS
+  const totalUsers = merged.length;
+  const licensedUsers = merged.filter(u => u.status === 'licensed' || u.master === 1 || u.role === 'admin').length;
+  const trialUsers = merged.filter(u => u.status === 'trial' && u.master !== 1 && u.role !== 'admin').length;
+  
+  const today = new Date().toDateString();
+  const joinedToday = merged.filter(u => {
+      if (!u.createdAt) return false;
+      return new Date(u.createdAt).toDateString() === today;
+  }).length;
+
+  // 🖼️ CREATE THE STATS GRID
+  const statsHTML = `
+    <div class="stat-grid" style="margin-bottom: 16px; grid-template-columns: 1fr 1fr;">
+        <div class="stat-box" style="background:#e3f2fd; color:#1565c0; padding:12px;">
+            <div class="num" style="font-size:22px;">${totalUsers}</div>
+            <div class="label" style="font-size:10px; color:#1565c0;">Total Users</div>
+        </div>
+        <div class="stat-box" style="background:#f3e5f5; color:#6a3093; padding:12px;">
+            <div class="num" style="font-size:22px;">${joinedToday}</div>
+            <div class="label" style="font-size:10px; color:#6a3093;">Joined Today</div>
+        </div>
+        <div class="stat-box" style="background:#e8f5e9; color:#2e7d32; padding:12px;">
+            <div class="num" style="font-size:22px;">${licensedUsers}</div>
+            <div class="label" style="font-size:10px; color:#2e7d32;">Paid Users</div>
+        </div>
+        <div class="stat-box" style="background:#fff3cd; color:#856404; padding:12px;">
+            <div class="num" style="font-size:22px;">${trialUsers}</div>
+            <div class="label" style="font-size:10px; color:#856404;">Trial Users</div>
+        </div>
+    </div>
+  `;
+  
   const rows = merged.length ? merged.map(user => {
     const phone = escapeHtml(user.phone || '-');
     const name = escapeHtml(user.name || '-');
@@ -1763,7 +1796,7 @@ async function renderAdminUsers(){
   
   app.innerHTML = renderHeader('my') + '<div class="panel">' +
       '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — User Accounts</div>' +
-      '<h2>User Accounts (' + merged.length + ')</h2>' + 
+      '<h2>User Accounts (' + merged.length + ')</h2>' + statsHTML + 
       '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUsers()">🔄 Refresh from Server</button>' +
       rows +
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
