@@ -581,6 +581,88 @@ function setScreen(name){
 }
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
+
+const META_KEYS = new Set(['_blacklist','blacklist','notifications','tutorials','users','settings','registeredPhones','universityInfo','generalSubjects','version','updated']);
+function normalizeLibrary(lib){ if(!lib||typeof lib!=='object') return {}; const out={}; Object.keys(lib).forEach(uni=>{ if(META_KEYS.has(uni)) return; out[uni]={}; CONFIG.STREAMS.forEach(stream=>{ const s=(lib[uni]&&lib[uni][stream])||null; if(!s){ out[uni][stream]={"1":{pdfs:[],notes:[],exams:[],cocs:[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; return; } if(s.pdfs||s.notes||s.exams||s.cocs){ out[uni][stream]={"1":{pdfs:s.pdfs||[],notes:s.notes||[],exams:s.exams||[],cocs:s.cocs||[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; } else { const s1=s["1"]||{}; const s2=s["2"]||{}; out[uni][stream]={"1":{pdfs:s1.pdfs||[],notes:s1.notes||[],exams:s1.exams||[],cocs:s1.cocs||[]},"2":{pdfs:s2.pdfs||[],notes:s2.notes||[],exams:s2.exams||[],cocs:s2.cocs||[]}}; } }); }); return out; }
+function getContentLibrary(){ try{ const d = JSON.parse(localStorage.getItem(LS_CONTENT_DRAFT) || 'null'); if(d && Object.keys(d).length) return normalizeLibrary(d); }catch(e){} try{ const s = JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT) || 'null'); if(s){ const src = (s.universities && typeof s.universities === 'object') ? { ...s.universities } : { ...s }; META_KEYS.forEach(k => { delete src[k]; }); if(Object.keys(src).length) return normalizeLibrary(src); } }catch(e){} return normalizeLibrary({}); }
+function saveContentLibrary(l){ localStorage.setItem(LS_CONTENT_DRAFT,JSON.stringify(l)); }
+function getUniContent(u,stream,semester){ const lib=getContentLibrary(); const s=String(semester); if(!lib[u]||!lib[u][stream]) return {pdfs:[],notes:[],exams:[],cocs:[]}; const c=lib[u][stream][s]||{}; return { pdfs:c.pdfs||[], notes:c.notes||[], exams:c.exams||[], cocs:c.cocs||[] }; }
+function setUniContent(u,stream,semester,c){ const lib=getContentLibrary(); if(!lib[u]) lib[u]={}; if(!lib[u][stream]) lib[u][stream]={"1":{pdfs:[],notes:[],exams:[],cocs:[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; lib[u][stream][String(semester)]=c; saveContentLibrary(lib); }
+function getBlacklist(){ try{ const d=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'null'); if(d&&d._blacklist) return d._blacklist; }catch(e){} return []; }
+function isPhoneBlacklisted(p){ if(!p) return false; const n=String(p).replace(/[^\d]/g,''); return getBlacklist().some(x=>String(x).replace(/[^\d]/g,'')===n); }
+function isDeviceBlacklisted(){ return isPhoneBlacklisted(getProfile().phone); }
+
+function getNotifications(){ try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'null'); if(s&&Array.isArray(s.notifications)) return s.notifications; }catch(e){} return []; }
+function getMyNotifications(){ const h=getDeviceHash(); return getNotifications().filter(n=>n&&(n.target==='all'||(Array.isArray(n.target)&&n.target.includes(h)))); }
+function getSeenNotifs(){ try{ return JSON.parse(localStorage.getItem(LS_SEEN_NOTIFS)||'[]'); }catch(e){ return []; } }
+function markNotifSeen(id){ const s=getSeenNotifs(); if(!s.includes(id)){ s.push(id); localStorage.setItem(LS_SEEN_NOTIFS,JSON.stringify(s)); } }
+function unreadNotifCount(){ const seen=getSeenNotifs(); return getMyNotifications().filter(n=>!seen.includes(n.id)).length; }
+
+async function syncRemoteContent(){
+  if(!CONFIG.CONTENT_URL) return;
+  const base = CONFIG.CONTENT_URL.replace(/\/+$/,'');
+  const localVersion = localStorage.getItem(LS_SYNCED_VERSION) || '0';
+  let remoteVersion = null;
+  try { const vRes = await fetch(base + '/version.json?t=' + Date.now(), { cache:'no-store' }); if (vRes.ok) { const vData = await vRes.json(); remoteVersion = String(vData.version || '1'); if (remoteVersion === localVersion && localStorage.getItem(LS_SYNCED_CONTENT)) return; } } catch(e){}
+  try {
+    const res = await fetch(base + '/content.json?t=' + Date.now(), { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const remote = await res.json(); if (!remote) return;
+    localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(remote));
+    localStorage.setItem(LS_SYNCED_VERSION, remoteVersion || String(remote.version || '1'));
+    localStorage.setItem(LS_SYNCED_UPDATED, String(remote.updated || ''));
+    if (remote.tutorials) saveTutorials(remote.tutorials);
+    if (remote.universityInfo && typeof remote.universityInfo === 'object') localStorage.setItem(LS_UNI_INFO, JSON.stringify(remote.universityInfo));
+    if (remote.generalSubjects && typeof remote.generalSubjects === 'object') localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(remote.generalSubjects));
+    if (remote.settings){ const cur = getSettings(); const re = remote.settings._adminEdited || 0; const le = cur._adminEdited || 0; if (re > le){ saveSettings({...cur, ...remote.settings}); reloadConfig(); } }
+  } catch(e){}
+}
+
+function getClosureDate(y){ const ec=y-7; const l=(ec%4)===3; return new Date(y,8,l?6:5); }
+function isClosureDay(){ const n=new Date(), c=getClosureDate(n.getFullYear()); return n.getFullYear()===c.getFullYear()&&n.getMonth()===c.getMonth()&&n.getDate()===c.getDate(); }
+
+const DEFAULT_TUTORIALS = { register: { title: "How to register", url: "" }, pay: { title: "How to pay", url: "" } };
+function getTutorials(){ try{ return {...DEFAULT_TUTORIALS,...(JSON.parse(localStorage.getItem(LS_TUTORIALS)||'{}'))}; }catch(e){ return DEFAULT_TUTORIALS; } }
+function saveTutorials(t){ localStorage.setItem(LS_TUTORIALS,JSON.stringify(t)); }
+function embedUrl(u){ if(!u) return ''; u=u.trim(); let m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); if(m) return 'https://www.youtube.com/embed/'+m[1]; m=u.match(/vimeo\.com\/(\d+)/); if(m) return 'https://player.vimeo.com/video/'+m[1]; return u; }
+
+const SUBJECTS = {
+  psychology: { name:"General Psychology", semester:1, stream:"Natural", questions:[
+    {q:"Who founded first psychology lab in 1879?",options:["Freud","Wundt","James","Watson"],answer:1,explanation:"Wilhelm Wundt in Leipzig."},
+    {q:"Founder of psychoanalysis?",options:["Rogers","Skinner","Freud","Maslow"],answer:2,explanation:"Sigmund Freud."},
+    {q:"Behaviorism emphasizes:",options:["Unconscious","Observable behavior","Mental structure","Free will"],answer:1,explanation:"Watson's behaviorism."},
+    {q:"Focuses on self-actualization?",options:["Behavioral","Humanistic","Biological","Cognitive"],answer:1,explanation:"Humanistic."},
+    {q:"Pavlov demonstrated:",options:["Operant","Classical","Observational","Latent"],answer:1,explanation:"Classical conditioning."},
+    {q:"Big Five acronym:",options:["SMART","OCEAN","BASIC","GROWTH"],answer:1,explanation:"OCEAN."}
+  ], notes:[{title:"Definition",body:"Greek psyche + logos. Study of behavior and mental processes."}]},
+  math: { name:"Mathematics", semester:1, stream:"Natural", questions:[
+    {q:"Subsets of 4-element set:",options:["4","8","16","32"],answer:2,explanation:"2^4 = 16."},
+    {q:"i squared =",options:["1","-1","i","0"],answer:1,explanation:"By definition."},
+    {q:"Modus Ponens is:",options:["p→q; p; therefore q","p→q; ¬q; therefore ¬p","p∨q; ¬p; therefore q","p∧q; therefore p"],answer:0,explanation:"Standard inference rule."}
+  ], notes:[{title:"Set Theory",body:"2^n subsets rule."}]},
+  logic: { name:"Logic & Critical Thinking", semester:1, stream:"Natural", questions:[
+    {q:"Premise indicator:",options:["Therefore","Because","Thus","Hence"],answer:1,explanation:"Because."},
+    {q:"Attacking person:",options:["Ad Hominem","Ad Populum","Ad Misericordiam","Ad Baculum"],answer:0,explanation:"Ad hominem."},
+    {q:"All S are P is:",options:["A","E","I","O"],answer:0,explanation:"Universal Affirmative."}
+  ], notes:[{title:"Fields",body:"Metaphysics, Epistemology, Axiology, Logic."}]},
+  english: { name:"Communicative English", semester:1, stream:"Natural", questions:[
+    {q:"Correct spelling:",options:["Recieve","Receive","Receeve","Receve"],answer:1,explanation:"i before e except after c."},
+    {q:"If I ___ rich...",options:["am","was","were","will be"],answer:2,explanation:"Type 2 uses were."}
+  ], notes:[{title:"Conditionals",body:"Type 1, Type 2, Type 3."}]},
+  geography: { name:"Geography of Ethiopia", semester:1, stream:"Natural", questions:[
+    {q:"Ethiopia location:",options:["3N-15N, 33E-48E","0-10N, 20-40E","5S-10N, 30-50E","10-20N, 40-60E"],answer:0,explanation:"Astronomical position."},
+    {q:"Largest lake:",options:["Abaya","Tana","Chamo","Ziway"],answer:1,explanation:"Lake Tana."},
+    {q:"Highest mountain:",options:["Batu","Ras Dashen","Guna","Kaka"],answer:1,explanation:"4,620m."}
+  ], notes:[{title:"Location",body:"3N-15N, 33E-48E."}]},
+  physics: { name:"General Physics", semester:1, stream:"Natural", questions:[
+    {q:"SI unit of force:",options:["Joule","Newton","Pascal","Watt"],answer:1,explanation:"N = kg·m/s²."},
+    {q:"Ohm's law:",options:["V = I/R","V = I x R","I = V x R","R = V x I"],answer:1,explanation:"V = IR."}
+  ], notes:[{title:"SI Units",body:"Base: m, kg, s, K, A, mol, cd."}]}
+};
+
+function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
+function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
+
  document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
@@ -1454,7 +1536,7 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-}
+  }
  /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
