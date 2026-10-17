@@ -6,7 +6,7 @@
 <meta name="android-disable-cache" content="true">
 <title>All Freshman ET</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" #6a3093">
+<meta name="theme-color" content="#6a3093">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -205,7 +205,7 @@ const DEFAULT_CONFIG = {
   TRIAL_UNIVERSITIES: ["Arsi University"],
   TRIAL_CONTENT: ["book", "exam"],
   TRIAL_SUBJECTS: ["english"],
-  TRIAL_EXAM_KEYWORDS: [], TRIAL_NOTE_KEYWORDS: [], TRIAL_COC_KEYWORDS: [],
+  TRIAL_EXAM_KEYWORDS: [], TRIAL_NOTE_KEYWORDS: [], TRIAL_COC_KEYWORDS: [], TRIAL_BOOK_KEYWORDS: [],
   PAYMENT_METHODS: [
     { name: "Telebirr", number: "0924956308" },
     { name: "CBE Birr", number: "1000637777274" },
@@ -247,6 +247,7 @@ function getSettings(){
     if (!Array.isArray(merged.TRIAL_EXAM_KEYWORDS)) merged.TRIAL_EXAM_KEYWORDS = [];
     if (!Array.isArray(merged.TRIAL_NOTE_KEYWORDS)) merged.TRIAL_NOTE_KEYWORDS = [];
     if (!Array.isArray(merged.TRIAL_COC_KEYWORDS)) merged.TRIAL_COC_KEYWORDS = [];
+    if (!Array.isArray(merged.TRIAL_BOOK_KEYWORDS)) merged.TRIAL_BOOK_KEYWORDS = [];
     if (!Array.isArray(merged.PAYMENT_METHODS) || merged.PAYMENT_METHODS.length === 0) {
       const m = [];
       if (stored.TELEBIRR) m.push({name:'Telebirr', number:stored.TELEBIRR});
@@ -391,8 +392,7 @@ function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
 function applyTheme(){ document.body.classList.toggle('dark', getTheme() === 'dark'); }
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
-
-const app = document.getElementById('app');
+ const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
 const scrollMemory = {};
 
@@ -462,9 +462,6 @@ function isSignedIn(){ return !!getCurrentUser(); }
 
 const getProfile=()=>JSON.parse(localStorage.getItem(LS_PROFILE)||'{}');
 const saveProfileData=p=>localStorage.setItem(LS_PROFILE,JSON.stringify(p));
-const getPaymentReq=()=>JSON.parse(localStorage.getItem(LS_PAYMENT_REQ)||'null');
-const savePaymentReq=p=>localStorage.setItem(LS_PAYMENT_REQ,JSON.stringify(p));
-const clearPaymentReq=()=>localStorage.removeItem(LS_PAYMENT_REQ);
 const getUniversity=()=>localStorage.getItem(LS_UNIVERSITY)||'';
 const setUniversity=u=>localStorage.setItem(LS_UNIVERSITY,u);
 
@@ -514,7 +511,7 @@ function startSession(phone){ saveSession({ phone, deviceId:getDeviceId(), devic
 function sessionDaysLeft(){ const s=getSession(); if(!s) return 0; return Math.max(0, Math.ceil((s.expiresAt-Date.now())/86400000)); }
 function generateDeviceId(){ const seed=[navigator.userAgent||'',screen.width+'x'+screen.height,navigator.language||'',new Date().getTimezoneOffset(),navigator.platform||'',Math.random().toString(36).slice(2,10),Date.now().toString(36)].join('|'); return simpleHash(seed)+simpleHash(seed+'salt').slice(0,4); }
 function getDeviceId(){ let id=localStorage.getItem(LS_DEVICE_ID); if(!id){ id=generateDeviceId(); localStorage.setItem(LS_DEVICE_ID,id); } return id; }
-function getDeviceHash(){ return simpleHash('DEV'+getDeviceId()).slice(0,4).toUpperCase().padStart(4,'0'); }
+function getDeviceHash(){ return simpleHash('DEV'+getDeviceId()).slice(0, 6).toUpperCase().padStart(6, '0'); }
 function isBlocked(){ return localStorage.getItem(LS_BLOCKED)==='1'; }
 function setBlocked(v){ if(v) localStorage.setItem(LS_BLOCKED,'1'); else localStorage.removeItem(LS_BLOCKED); }
 
@@ -530,17 +527,6 @@ function isPhoneUsed(phone){ if(!phone) return false; const n=String(phone).repl
 function markPhoneUsed(phone){ if(!phone) return; const list=JSON.parse(localStorage.getItem(LS_REGISTERED_PHONES)||'[]'); const n=String(phone).replace(/[^\d]/g,''); if(!list.some(p=>String(p).replace(/[^\d]/g,'')===n)){ list.push(String(phone)); localStorage.setItem(LS_REGISTERED_PHONES,JSON.stringify(list)); } }
 function adminRemoveUsedPhone(phone){ const n=String(phone).replace(/[^\d]/g,''); const list=JSON.parse(localStorage.getItem(LS_REGISTERED_PHONES)||'[]'); const filtered=list.filter(p=>String(p).replace(/[^\d]/g,'')!==n); localStorage.setItem(LS_REGISTERED_PHONES,JSON.stringify(filtered)); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); if(Array.isArray(s.registeredPhones)){ s.registeredPhones=s.registeredPhones.filter(p=>String(p).replace(/[^\d]/g,'')!==n); localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); } }catch(e){} }
 
-function isValidLicenseKey(key){ if(!key||typeof key!=='string') return false; const c=key.trim().toUpperCase(); if(!/^FH-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(c)) return false; const p=c.split('-'); const expected=simpleHash(CONFIG.SECRET+p[1]+p[3]).slice(0,4).toUpperCase().padStart(4,'0'); return p[2]===expected; }
-function isMasterKey(key){ return (key||'').trim().toUpperCase()==='MASTER-UNBLOCK-ALL'; }
-function isLicenseForThisDevice(key){ try{ return key.split('-')[1]===getDeviceHash(); }catch(e){ return false; } }
-function tryActivateLicense(key){
-  const c=(key||'').trim().toUpperCase(); if(!c) return {ok:false,reason:'empty'}; const curPhone=getCurrentUserPhone()||'';
-  if(isMasterKey(c)){ setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); if(curPhone) localStorage.setItem(LS_ACT_PHONE,curPhone); resetKeyAttempts(); return {ok:true,master:true}; }
-  if(!isValidLicenseKey(c)) return {ok:false,reason:'invalid'};
-  if(!isLicenseForThisDevice(c)){ const r=registerWrongKey(); if(r.blocked) return {ok:false,reason:'blocked',blockCount:r.blockCount}; return {ok:false,reason:'wrong-device',remaining:r.remaining}; }
-  setBlocked(false); localStorage.setItem(LS_LICENSE,c); localStorage.setItem(LS_LICENSE_ACTIVATED,Date.now().toString()); if(curPhone) localStorage.setItem(LS_ACT_PHONE,curPhone); resetKeyAttempts(); return {ok:true};
-}
-
 function checkAccess(){
   const graceUntil = parseInt(localStorage.getItem(LS_GRACE_UNTIL) || '0');
   if (graceUntil > Date.now()) {
@@ -549,12 +535,8 @@ function checkAccess(){
   }
   if(isAdminMode()) return { status:'licensed', daysLeft:9999, master:true, admin:true };
   const curPhone = getCurrentUserPhone();
-  const actPhone = localStorage.getItem(LS_ACT_PHONE) || '';
-  const samePhone = !!curPhone && String(curPhone).replace(/[^\d]/g,'') === String(actPhone).replace(/[^\d]/g,'');
-  if(samePhone && localStorage.getItem(LS_ADMIN_ACTIVATED)==='1'){ const act = parseInt(localStorage.getItem(LS_ADMIN_ACTIVATED_AT)||'0'); if(act){ const end = act + CONFIG.LICENSE_DAYS*86400000; if(Date.now() < end) return { status:'licensed', daysLeft: Math.ceil((end-Date.now())/86400000), source:'admin' }; } }
-  const l = samePhone ? localStorage.getItem(LS_LICENSE) : null;
-  if(l && isMasterKey(l)) return {status:'licensed',daysLeft:9999,master:true};
-  if(l && isValidLicenseKey(l)){ let activated=parseInt(localStorage.getItem(LS_LICENSE_ACTIVATED)||'0'); if(!activated){ activated=Date.now(); localStorage.setItem(LS_LICENSE_ACTIVATED,String(activated)); } const end=activated+CONFIG.LICENSE_DAYS*86400000; const now=Date.now(); if(now>=end) return {status:'expired',reason:'license-expired'}; return {status:'licensed',daysLeft:Math.ceil((end-now)/86400000)}; }
+  const l = localStorage.getItem(LS_LICENSE);
+  if(l) return { status:'licensed', daysLeft:365 };
   const u=getCurrentUser(); let fr=u&&u.createdAt?u.createdAt:parseInt(localStorage.getItem(LS_FIRST_RUN)||'0'); if(!fr){ fr=Date.now(); localStorage.setItem(LS_FIRST_RUN,fr.toString()); } const end=fr+CONFIG.TRIAL_DAYS*86400000; const now=Date.now(); if(now>=end) return {status:'expired',reason:'trial-ended'}; return {status:'trial',daysLeft:Math.ceil((end-now)/86400000)};
 }
 
@@ -576,106 +558,13 @@ function isTrialSubjectKey(key, name){
 }
 function isTrialExamAllowed(examName){ const kws = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) ? CONFIG.TRIAL_EXAM_KEYWORDS : []; if (!kws.length) return null; const n = String(examName || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
 function isTrialNoteAllowed(title){ const kws = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) ? CONFIG.TRIAL_NOTE_KEYWORDS : []; if (!kws.length) return null; const n = String(title || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
+function isTrialBookAllowed(title){ const kws = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) ? CONFIG.TRIAL_BOOK_KEYWORDS : []; if (!kws.length) return null; const n = String(title || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
 function isTrialCocAllowed(name){ const kws = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) ? CONFIG.TRIAL_COC_KEYWORDS : []; if (!kws.length) return null; const n = String(name || '').toLowerCase(); return kws.some(k => n.indexOf(String(k||'').toLowerCase().trim()) !== -1); }
-function trialSubjectRx(){ const list = (Array.isArray(CONFIG.TRIAL_SUBJECTS) && CONFIG.TRIAL_SUBJECTS.length) ? CONFIG.TRIAL_SUBJECTS : ['english']; const patterns = list.map(k => String(k||'').toLowerCase().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean); if (!patterns.length) return /english/i; try { return new RegExp(patterns.join('|'), 'i'); } catch(e){ return /english/i; } }
+
 function renderTrialContentLocked(kind){ const names = { book:'Modules Library', note:'Notes', exam:'Exams', coc:'COC', info:'University Info' }; const nm = names[kind] || 'This content'; const accessNow = checkAccess(); const daysTxt = accessNow.daysLeft ? (accessNow.daysLeft + ' day' + (accessNow.daysLeft===1?'':'s') + ' left') : ''; return '<div class="locked-box"><div class="icon">🔒</div><h2>'+nm+' Not in Trial</h2><p>Trial gives access to limited content only.<br>'+escapeHtml(daysTxt)+'<br>Contact admin to unlock full access.</p><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+kind+'\')">Unlock Full Access</button></div>'; }
 function renderTrialLockedUniversity(kind){ return '<div style="background:#fff; border-radius:12px; padding:40px 20px; text-align:center;"><div style="font-size:40px; margin-bottom:10px;">🔒</div><div style="font-weight:800; font-size:15px; color:#c62828; margin-bottom:8px;">Locked — Trial limitation</div><div style="color:#666; font-size:13px; line-height:1.7; margin-bottom:16px;">Trial gives access to <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only.<br>Pick one from the dropdown above, or unlock full access.</div><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+(kind||'book')+'\')">Unlock Full Access</button></div>'; }
-function trialPremiumCTA(hiddenCount, kind){
-  const a = checkAccess();
-  if (a.status !== 'trial') return '';
-  if (!hiddenCount || hiddenCount <= 0) return '';
-  const kindLabel = kind || 'items';
-  return '<div style="background:linear-gradient(135deg,#fff3cd,#ffe082);border:2px dashed #ff9800;border-radius:14px;padding:20px;text-align:center;margin-top:16px;">'+
-    '<div style="font-size:34px;margin-bottom:8px;">🔒</div>'+
-    '<div style="font-weight:800;font-size:15px;color:#e65100;margin-bottom:6px;">'+hiddenCount+' more '+kindLabel+' locked</div>'+
-    '<div style="font-size:13px;color:#856404;line-height:1.7;margin-bottom:14px;">You are on <strong>Trial ('+a.daysLeft+' day'+(a.daysLeft===1?'':'s')+' left)</strong>.<br>To access all content, get Premium.</div>'+
-    '<button class="btn btn-full" style="background:#ff9800;color:#fff;font-weight:800;padding:14px;font-size:15px;" onclick="renderPaymentFlow(\'premium\')">💎 Get Premium — Unlock Everything</button>'+
-  '</div>';
-}
 
-const DEFAULT_TUTORIALS = { register: { title: "How to register", url: "" }, pay: { title: "How to pay", url: "" } };
-function getTutorials(){ try{ return {...DEFAULT_TUTORIALS,...(JSON.parse(localStorage.getItem(LS_TUTORIALS)||'{}'))}; }catch(e){ return DEFAULT_TUTORIALS; } }
-function saveTutorials(t){ localStorage.setItem(LS_TUTORIALS,JSON.stringify(t)); }
-function embedUrl(u){ if(!u) return ''; u=u.trim(); let m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); if(m) return 'https://www.youtube.com/embed/'+m[1]; m=u.match(/vimeo\.com\/(\d+)/); if(m) return 'https://player.vimeo.com/video/'+m[1]; return u; }
-
-const EMBEDDED_CONTENT = {};
-const META_KEYS = new Set(['_blacklist','blacklist','notifications','tutorials','users','settings','registeredPhones','universityInfo','generalSubjects','version','updated']);
-function normalizeLibrary(lib){ if(!lib||typeof lib!=='object') return {}; const out={}; Object.keys(lib).forEach(uni=>{ if(META_KEYS.has(uni)) return; out[uni]={}; CONFIG.STREAMS.forEach(stream=>{ const s=(lib[uni]&&lib[uni][stream])||null; if(!s){ out[uni][stream]={"1":{pdfs:[],notes:[],exams:[],cocs:[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; return; } if(s.pdfs||s.notes||s.exams||s.cocs){ out[uni][stream]={"1":{pdfs:s.pdfs||[],notes:s.notes||[],exams:s.exams||[],cocs:s.cocs||[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; } else { const s1=s["1"]||{}; const s2=s["2"]||{}; out[uni][stream]={"1":{pdfs:s1.pdfs||[],notes:s1.notes||[],exams:s1.exams||[],cocs:s1.cocs||[]},"2":{pdfs:s2.pdfs||[],notes:s2.notes||[],exams:s2.exams||[],cocs:s2.cocs||[]}}; } }); }); return out; }
-function getContentLibrary(){ try{ const d = JSON.parse(localStorage.getItem(LS_CONTENT_DRAFT) || 'null'); if(d && Object.keys(d).length) return normalizeLibrary(d); }catch(e){} try{ const s = JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT) || 'null'); if(s){ const src = (s.universities && typeof s.universities === 'object') ? { ...s.universities } : { ...s }; META_KEYS.forEach(k => { delete src[k]; }); if(Object.keys(src).length) return normalizeLibrary(src); } }catch(e){} return normalizeLibrary(EMBEDDED_CONTENT); }
-function saveContentLibrary(l){ localStorage.setItem(LS_CONTENT_DRAFT,JSON.stringify(l)); }
-function getUniContent(u,stream,semester){ const lib=getContentLibrary(); const s=String(semester); if(!lib[u]||!lib[u][stream]) return {pdfs:[],notes:[],exams:[],cocs:[]}; const c=lib[u][stream][s]||{}; return { pdfs:c.pdfs||[], notes:c.notes||[], exams:c.exams||[], cocs:c.cocs||[] }; }
-function setUniContent(u,stream,semester,c){ const lib=getContentLibrary(); if(!lib[u]) lib[u]={}; if(!lib[u][stream]) lib[u][stream]={"1":{pdfs:[],notes:[],exams:[],cocs:[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; lib[u][stream][String(semester)]=c; saveContentLibrary(lib); }
-function getBlacklist(){ try{ const d=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'null'); if(d&&d._blacklist) return d._blacklist; }catch(e){} return []; }
-function isPhoneBlacklisted(p){ if(!p) return false; const n=String(p).replace(/[^\d]/g,''); return getBlacklist().some(x=>String(x).replace(/[^\d]/g,'')===n); }
-function isDeviceBlacklisted(){ return isPhoneBlacklisted(getProfile().phone); }
-
-function getNotifications(){ try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'null'); if(s&&Array.isArray(s.notifications)) return s.notifications; }catch(e){} return []; }
-function getMyNotifications(){ const h=getDeviceHash(); return getNotifications().filter(n=>n&&(n.target==='all'||(Array.isArray(n.target)&&n.target.includes(h)))); }
-function getSeenNotifs(){ try{ return JSON.parse(localStorage.getItem(LS_SEEN_NOTIFS)||'[]'); }catch(e){ return []; } }
-function markNotifSeen(id){ const s=getSeenNotifs(); if(!s.includes(id)){ s.push(id); localStorage.setItem(LS_SEEN_NOTIFS,JSON.stringify(s)); } }
-function unreadNotifCount(){ const seen=getSeenNotifs(); return getMyNotifications().filter(n=>!seen.includes(n.id)).length; }
-
-async function syncRemoteContent(){
-  if(!CONFIG.CONTENT_URL) return;
-  const base = CONFIG.CONTENT_URL.replace(/\/+$/,'');
-  const localVersion = localStorage.getItem(LS_SYNCED_VERSION) || '0';
-  let remoteVersion = null;
-  try { const vRes = await fetch(base + '/version.json?t=' + Date.now(), { cache:'no-store' }); if (vRes.ok) { const vData = await vRes.json(); remoteVersion = String(vData.version || '1'); if (remoteVersion === localVersion && localStorage.getItem(LS_SYNCED_CONTENT)) return; } } catch(e){}
-  try {
-    const res = await fetch(base + '/content.json?t=' + Date.now(), { cache:'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const remote = await res.json(); if (!remote) return;
-    localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(remote));
-    localStorage.setItem(LS_SYNCED_VERSION, remoteVersion || String(remote.version || '1'));
-    localStorage.setItem(LS_SYNCED_UPDATED, String(remote.updated || ''));
-    if (remote.tutorials) saveTutorials(remote.tutorials);
-    if (remote.universityInfo && typeof remote.universityInfo === 'object') localStorage.setItem(LS_UNI_INFO, JSON.stringify(remote.universityInfo));
-    if (remote.generalSubjects && typeof remote.generalSubjects === 'object') localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(remote.generalSubjects));
-    if (remote.settings){ const cur = getSettings(); const re = remote.settings._adminEdited || 0; const le = cur._adminEdited || 0; if (re > le){ saveSettings({...cur, ...remote.settings}); reloadConfig(); } }
-  } catch(e){}
-}
-
-function getClosureDate(y){ const ec=y-7; const l=(ec%4)===3; return new Date(y,8,l?6:5); }
-function isClosureDay(){ const n=new Date(), c=getClosureDate(n.getFullYear()); return n.getFullYear()===c.getFullYear()&&n.getMonth()===c.getMonth()&&n.getDate()===c.getDate(); }
-
-const SUBJECTS = {
-  psychology: { name:"General Psychology", semester:1, stream:"Natural", questions:[
-    {q:"Who founded first psychology lab in 1879?",options:["Freud","Wundt","James","Watson"],answer:1,explanation:"Wilhelm Wundt in Leipzig."},
-    {q:"Founder of psychoanalysis?",options:["Rogers","Skinner","Freud","Maslow"],answer:2,explanation:"Sigmund Freud."},
-    {q:"Behaviorism emphasizes:",options:["Unconscious","Observable behavior","Mental structure","Free will"],answer:1,explanation:"Watson's behaviorism."},
-    {q:"Focuses on self-actualization?",options:["Behavioral","Humanistic","Biological","Cognitive"],answer:1,explanation:"Humanistic."},
-    {q:"Pavlov demonstrated:",options:["Operant","Classical","Observational","Latent"],answer:1,explanation:"Classical conditioning."},
-    {q:"Big Five acronym:",options:["SMART","OCEAN","BASIC","GROWTH"],answer:1,explanation:"OCEAN."}
-  ], notes:[{title:"Definition",body:"Greek psyche + logos. Study of behavior and mental processes."}]},
-  math: { name:"Mathematics", semester:1, stream:"Natural", questions:[
-    {q:"Subsets of 4-element set:",options:["4","8","16","32"],answer:2,explanation:"2^4 = 16."},
-    {q:"i squared =",options:["1","-1","i","0"],answer:1,explanation:"By definition."},
-    {q:"Modus Ponens is:",options:["p→q; p; therefore q","p→q; ¬q; therefore ¬p","p∨q; ¬p; therefore q","p∧q; therefore p"],answer:0,explanation:"Standard inference rule."}
-  ], notes:[{title:"Set Theory",body:"2^n subsets rule."}]},
-  logic: { name:"Logic & Critical Thinking", semester:1, stream:"Natural", questions:[
-    {q:"Premise indicator:",options:["Therefore","Because","Thus","Hence"],answer:1,explanation:"Because."},
-    {q:"Attacking person:",options:["Ad Hominem","Ad Populum","Ad Misericordiam","Ad Baculum"],answer:0,explanation:"Ad hominem."},
-    {q:"All S are P is:",options:["A","E","I","O"],answer:0,explanation:"Universal Affirmative."}
-  ], notes:[{title:"Fields",body:"Metaphysics, Epistemology, Axiology, Logic."}]},
-  english: { name:"Communicative English", semester:1, stream:"Natural", questions:[
-    {q:"Correct spelling:",options:["Recieve","Receive","Receeve","Receve"],answer:1,explanation:"i before e except after c."},
-    {q:"If I ___ rich...",options:["am","was","were","will be"],answer:2,explanation:"Type 2 uses were."}
-  ], notes:[{title:"Conditionals",body:"Type 1, Type 2, Type 3."}]},
-  geography: { name:"Geography of Ethiopia", semester:1, stream:"Natural", questions:[
-    {q:"Ethiopia location:",options:["3N-15N, 33E-48E","0-10N, 20-40E","5S-10N, 30-50E","10-20N, 40-60E"],answer:0,explanation:"Astronomical position."},
-    {q:"Largest lake:",options:["Abaya","Tana","Chamo","Ziway"],answer:1,explanation:"Lake Tana."},
-    {q:"Highest mountain:",options:["Batu","Ras Dashen","Guna","Kaka"],answer:1,explanation:"4,620m."}
-  ], notes:[{title:"Location",body:"3N-15N, 33E-48E."}]},
-  physics: { name:"General Physics", semester:1, stream:"Natural", questions:[
-    {q:"SI unit of force:",options:["Joule","Newton","Pascal","Watt"],answer:1,explanation:"N = kg·m/s²."},
-    {q:"Ohm's law:",options:["V = I/R","V = I x R","I = V x R","R = V x I"],answer:1,explanation:"V = IR."}
-  ], notes:[{title:"SI Units",body:"Base: m, kg, s, K, A, mol, cd."}]}
-};
-
-function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
-function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
-
-const SS_ALLOWED_SCREENS = ['my','exam-home','quiz'];
+const SS_ALLOWED_SCREENS = ['my','exam-home','quiz','auth'];
 
 function setScreen(name){
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
@@ -692,8 +581,7 @@ function setScreen(name){
 }
 function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
-
-document.addEventListener('visibilitychange', () => {
+ document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
   } else {
@@ -994,9 +882,8 @@ function renderHeader(activeTab, opts){
   return '<div class="app-header"><div class="ht"><h1>'+CONFIG.APP_NAME+'</h1><p>'+escapeHtml(subtitle)+'</p></div><div class="hdr-actions">'+themeBtn+bell+'</div></div>';
 }
 function renderBottomNav(activeTab){
-  const sem = getCurrentSemester();
   const tabs = [{ id:'book', label:'Modules', ico:'📚' }, { id:'note', label:'Note', ico:'📝' }, { id:'exam', label:'Exam', ico:'📋' }];
-  if (sem === 1) tabs.push({ id:'coc', label:'COC', ico:'🎯' });
+  if (getCurrentSemester() === 1) tabs.push({ id:'coc', label:'COC', ico:'🎯' });
   tabs.push({ id:'university', label:'Info', ico:'🏛️' }); tabs.push({ id:'my', label:'My', ico:'👤' });
   return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.ico+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
 }
@@ -1074,8 +961,8 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-}
-function renderSignIn(){
+   }
+ function renderSignIn(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
     '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
@@ -1146,12 +1033,12 @@ async function submitSignIn(){
 function renderForgotPassword() {
   setScreen('auth');
   const phone = getCurrentUserPhone() || '';
-  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | Hash: ' + getDeviceHash();
+  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | ID: ' + getDeviceHash();
   app.innerHTML = renderHeader('my') +
     '<div class="panel"><h2>Forgot Password</h2>' +
     '<p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Two ways to recover:</p>' +
     '<div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;">' +
-      '<div><strong>Device Hash:</strong> <code>' + getDeviceHash() + '</code></div>' +
+      '<div><strong>Device ID:</strong> <code>' + getDeviceHash() + '</code></div>' +
       '<div><strong>Your phone:</strong> <code>' + (phone || '-') + '</code></div>' +
     '</div>' +
     '<button class="btn btn-primary btn-full" onclick="renderResetWithCode()">🔐 I Have a Reset Code</button>' +
@@ -1176,15 +1063,20 @@ function switchTab(tab){
   if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
   else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
   else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
-  else if(tab === 'coc'){ if(getCurrentSemester() !== 1){ appAlert('COC is only available in 1st semester.'); return; } if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('coc'); return; } setScreen('coc-home'); renderCocHome(); }
+  else if(tab === 'coc'){ if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('coc'); return; } setScreen('coc-home'); renderCocHome(); }
 }
 function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
 function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
 function setCurrentSemester(s){ localStorage.setItem(LS_SEMESTER,String(s)); }
-function renderSemesterPicker(targetTab){ setScreen('semester'); app.innerHTML=renderHeader(targetTab)+'<div class="panel"><h2>Choose Semester</h2><p style="color:#777; font-size:13px; margin-bottom:16px;">Content differs by semester. You can change it later. COC is available only in 1st semester.</p><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(1,\''+targetTab+'\')">1st Semester</button><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(2,\''+targetTab+'\')">2nd Semester</button></div></div>'+renderBottomNav(targetTab)+renderChatFab(); }
+function renderSemesterPicker(targetTab){ setScreen('semester'); app.innerHTML=renderHeader(targetTab)+'<div class="panel"><h2>Choose Semester</h2><p style="color:#777; font-size:13px; margin-bottom:16px;">Content differs by semester. You can change it later.</p><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(1,\''+targetTab+'\')">1st Semester</button><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(2,\''+targetTab+'\')">2nd Semester</button></div></div>'+renderBottomNav(targetTab)+renderChatFab(); }
 function chooseSemester(s,tab){ setCurrentSemester(s); switchTab(tab); }
 function semesterChanger(current){ return '<div class="semester-pick">'+CONFIG.SEMESTERS.map(s=>'<button class="'+(current===s?'active':'')+'" onclick="changeSemester('+s+')">'+(s===1?'1st':'2nd')+' Semester</button>').join('')+'</div>'; }
-function changeSemester(s){ setCurrentSemester(s); if(s !== 1 && currentTab === 'coc'){ currentTab = 'book'; } switchTab(currentTab); }
+
+function changeSemester(s){ 
+  setCurrentSemester(s); 
+  if(s !== 1 && currentTab === 'coc'){ currentTab = 'book'; } 
+  switchTab(currentTab); 
+}
 
 function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
 function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
@@ -1220,7 +1112,8 @@ function renderBookList(uni){
   if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
   const isTrialNow = checkAccess().status === 'trial';
   const listHtml = allPdfs.map((p, i) => {
-    const allowed = isTrialSubjectKey('', p.name);
+    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
     const locked = isTrialNow && !allowed;
     const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
     const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
@@ -1237,9 +1130,13 @@ function openBook(uni,stream,sem,i){
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
   if(!p) return;
-  if(checkAccess().status === 'trial' && !isTrialSubjectKey('', p.name)){
-    appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
-    return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
+    if(!allowed){
+      appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
   }
   if(!p.url) return;
   _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i };
@@ -1296,8 +1193,8 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
- }
-/* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
+   }
+ /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   if(!isTrialContentAllowed('exam')){ setScreen('exam-home'); app.innerHTML=renderHeader('exam')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('exam')+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1385,18 +1282,22 @@ function startBuiltInExam(key){
   startQuiz(s.name, s.questions||[], CONFIG.DEFAULT_EXAM_TIME_MINUTES);
 }
 
-/* ============ COC — SHOW ALL, LOCK NON-TRIAL ============ */
+/* ============ COC — SHOW ALL, LOCK NON-TRIAL, BOTH SEMESTERS ============ */
 function renderCocHome(){
-  if(getCurrentSemester() !== 1){ setScreen('coc-home'); app.innerHTML = renderHeader('coc')+'<div class="locked-box"><div class="icon">🎯</div><h2>COC — 1st Semester Only</h2><p>Switch the semester above to continue.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'book\')">Back to Modules</button></div>'+renderBottomNav('book')+renderChatFab(); return; }
+  if(getCurrentSemester() !== 1){ 
+    appAlert('COC is only available in 1st semester.'); 
+    switchTab('book'); 
+    return; 
+  }
   if(!isSignedIn() || !hasActiveSession()){ setScreen('coc-home'); app.innerHTML = renderHeader('coc')+'<div class="locked-box"><div class="icon">🎯</div><h2>Register to View COC</h2><p>Sign up or sign in to browse COC materials.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; }
   if(!isTrialContentAllowed('coc')){ setScreen('coc-home'); app.innerHTML=renderHeader('coc')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('coc')+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; }
-  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=1;
+  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem = getCurrentSemester();
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
   let preSelect = _lastUniSelection.coc || '';
   if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
   const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{cocs:[]}; const has=c.cocs&&c.cocs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
   const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
-  app.innerHTML = renderHeader('coc')+'<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">1st Semester · Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
+  app.innerHTML = renderHeader('coc')+semesterChanger(sem)+'<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+' · Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
   if(preSelect) renderCocList(preSelect);
   restoreScroll('coc_coc-home');
 }
@@ -1406,7 +1307,7 @@ function renderCocList(uni){
   if(!uni){ el.innerHTML=''; return; }
   if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see COC</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('coc'); return; }
-  const myStream=getUserStream(); const c=getUniContent(uni,myStream,1);
+  const myStream=getUserStream(); const sem = getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allCocs = c.cocs || [];
   if(!allCocs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No COC materials yet.</div>'; return; }
   const isTrialNow = checkAccess().status === 'trial';
@@ -1424,16 +1325,15 @@ function renderCocList(uni){
       const qTag=cx.questions&&cx.questions.length?cx.questions.length+'Q':'File';
       const lockIcon = locked ? '<div style="position:absolute; top:12px; left:12px; font-size:20px;">🔒</div>' : '';
       const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-      html += '<div onclick="startUniCoc(\''+escapeAttr(uni)+'\',\''+myStream+'\','+1+','+oi+')" class="subject-card" style="background:'+bg+'; margin-bottom:10px;">'+lockIcon+'<div class="badge">'+qTag+'</div><div class="name">'+escapeHtml(cx.name)+attachTag+lockBadge+'</div><div class="meta">'+(cx.year?'Year '+escapeHtml(cx.year)+' · ':'')+(cx.timeMinutes>0?cx.timeMinutes+' min':'no limit')+'</div></div>';
+      html += '<div onclick="startUniCoc(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+oi+')" class="subject-card" style="background:'+bg+'; margin-bottom:10px;">'+lockIcon+'<div class="badge">'+qTag+'</div><div class="name">'+escapeHtml(cx.name)+attachTag+lockBadge+'</div><div class="meta">'+(cx.year?'Year '+escapeHtml(cx.year)+' · ':'')+(cx.timeMinutes>0?cx.timeMinutes+' min':'no limit')+'</div></div>';
     });
   });
   el.innerHTML = html;
 }
 function startUniCoc(uni,stream,sem,i){
-  if(getCurrentSemester() !== 1){ appAlert('COC is only available in 1st semester.'); return; }
   if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
-  const c=getUniContent(uni,stream,1); const cx=c.cocs[i];
+  const c=getUniContent(uni,stream,sem); const cx=c.cocs[i];
   if(!cx) return;
   if(checkAccess().status === 'trial'){
     const kwSet = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) && CONFIG.TRIAL_COC_KEYWORDS.length > 0;
@@ -1555,8 +1455,7 @@ async function submitForceChangePassword() {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
 }
-
-/* ============ ADMIN: GENERATE RESET CODE ============ */
+ /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
   const phone = await appPrompt('Enter phone number to generate reset code for:');
@@ -1568,7 +1467,7 @@ async function adminGenerateResetCode() {
     const data = await r.json();
     if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
     const mins = Math.round((data.expiresAt - Date.now()) / 60000);
-    await appAlert('✅ Reset code for ' + phone + ':\n\n' + data.code + '\n\nGive this to the user. Expires in ' + mins + ' minutes.');
+    await appAlert('✅ Reset code for ' + phone + ':\n\n' + data.code + '\n\nGive this to the user. It works only once.');
   } catch (e) { appAlert('Network error.'); }
 }
 
@@ -1577,7 +1476,7 @@ function renderResetWithCode() {
   setScreen('reset-code');
   app.innerHTML = renderHeader('my') +
     '<div class="panel"><h2>Reset Password</h2>' +
-    '<p style="color:#666; font-size:13px; margin-bottom:14px;">Enter the 6-digit code you received from admin, then choose a new password.</p>' +
+    '<p style="color:#666; font-size:13px; margin-bottom:14px;">Enter the code you received from admin, then choose a new password.</p>' +
     '<label class="field-label">Phone</label><input type="tel" id="rcPhone" class="field-input" value="' + escapeAttr(getCurrentUserPhone() || '') + '">' +
     '<label class="field-label">6-Digit Code</label><input type="text" id="rcCode" class="field-input" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:4px;font-size:18px;text-align:center;">' +
     '<label class="field-label">New Password</label><div class="pw-wrap"><input type="password" id="rcPw1" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw1\', this)">👁️</button></div>' +
@@ -1616,9 +1515,8 @@ async function submitResetWithCode() {
     await appAlert('✅ Password reset! Please sign in with your new password.');
     renderSignIn();
   } catch (e) { err('Network error.'); }
-   }
+}
 
- 
 function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
   if(!isSignedIn()){
@@ -1631,7 +1529,7 @@ function renderMy(introMsg){
   let licenseBox;
   if(access.status==='licensed'){ 
     if(access.grace) {
-      licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Grace Period — '+access.daysLeft+' hour(s) left<br><span style="font-weight:600; font-size:12px;">Contact Admin to get a permanent key for your new Device Hash: <code>'+getDeviceHash()+'</code></span></div>';
+      licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Grace Period — '+access.daysLeft+' hour(s) left<br><span style="font-weight:600; font-size:12px;">Contact Admin to get a permanent key for your new ID: <code>'+getDeviceHash()+'</code></span></div>';
     }
     else if(access.master||access.admin){ licenseBox='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:14px; color:#2e7d32; font-weight:700;">Unlocked — unlimited</div>'; } 
     else { licenseBox='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:14px; color:#2e7d32; font-weight:700;">Unlocked — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</div>'; } 
@@ -1640,7 +1538,7 @@ function renderMy(introMsg){
   else { const tSub = escapeHtml(trialSubjectsDisplay()); const tUni = escapeHtml(trialUnisDisplay()); const tContent = (CONFIG.TRIAL_CONTENT||[]).map(k=>({book:'Modules',note:'Note',exam:'Exam',coc:'COC',info:'Info'})[k]||k).join(' + '); licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Trial — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left<br><span style="font-weight:600; font-size:12px;">Includes: '+escapeHtml(tContent)+'<br>Universities: '+tUni+'<br>Practice subjects: '+tSub+'</span></div>'; }
   const sessLeft = sessionDaysLeft(); const phone = (CONFIG.CONTACT_PHONE || '').trim();
   app.innerHTML=renderHeader('my')+intro+
-    '<div class="panel"><h2>My Profile</h2><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:12px;"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Device Hash:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
+    '<div class="panel"><h2>My Profile</h2><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:12px;"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Your ID:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
     '<div class="panel"><h2>Contact Admin</h2><p style="color:#666; font-size:13px; margin-bottom:12px;">Reach admin on Telegram'+(phone?' or call':'')+'.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a>'+(phone?'<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none;margin-top:8px;">📞 '+escapeHtml(phone)+'</a>':'')+'</div>'+
     '<div class="panel"><h2>Theme</h2><div style="display:flex; gap:8px;"><button onclick="setTheme(\'light\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='light'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='light'?'#6a3093':'#fff')+'; color:'+(theme==='light'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">☀️ Light</button><button onclick="setTheme(\'dark\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='dark'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='dark'?'#6a3093':'#fff')+'; color:'+(theme==='dark'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">🌙 Dark</button></div></div>'+
     '<div class="panel"><h2>Display Size</h2><div style="display:flex; gap:8px; flex-wrap:wrap;">'+
@@ -1692,121 +1590,162 @@ async function doLogout() {
 }
 function syncNow(){ syncRemoteContent().then(()=>{ const v=localStorage.getItem(LS_SYNCED_VERSION),u=localStorage.getItem(LS_SYNCED_UPDATED); pushStatusToServer(); appAlert('Synced!\nVersion: '+(v||'-')+'\nUpdated: '+(u||'-')); renderMy(); }); }
 
-/* ============ UNIVERSITY INFO — SHOW ALL, LOCK NON-TRIAL ============ */
-function renderInfoLocked(accessNow){ const signedIn=isSignedIn()&&hasActiveSession(); let title,msg; if(!signedIn){ title='Info Locked — Register First'; msg='University Info is only available to registered users.'; } else if(accessNow.status==='trial'){ title='Info Locked — Trial'; msg='University Info is only available after payment.'; } else { title='Info Locked — Expired'; msg='Your access has ended.'; } const btn = signedIn ? '<button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\'university\')">Contact Admin</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="switchTab(\'book\')">Back to Modules</button>' : '<button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="switchTab(\'book\')">Back to Modules</button>'; setScreen('university-info'); app.innerHTML=renderHeader('university')+'<div class="locked-box"><div class="icon">🔒</div><h2>'+title+'</h2><p>'+msg+'</p>'+btn+'</div>'+renderBottomNav('university')+renderChatFab(); }
-function renderUniversityInfo(){
-  if(!isSignedIn() || !hasActiveSession()){ renderInfoLocked(checkAccess()); return; }
-  if(!isTrialContentAllowed('info')){ setScreen('university-info'); app.innerHTML=renderHeader('university')+renderTrialContentLocked('info')+renderBottomNav('university')+renderChatFab(); return; }
-  const userUni=getUserUniversity(); const myStream=getUserStream(); const isTrial=checkAccess().status==='trial';
-  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
-  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(userUni===u?'selected':'')+'>'+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only</div>' : '';
-  setScreen('university-info');
-  app.innerHTML=renderHeader('university')+'<div class="panel">'+trialNote+'<h2>University Info <span class="stream-badge">'+myStream+'</span></h2><label class="field-label">Choose University</label><select id="uniInfoSelect" onchange="renderSelectedUniInfo(this.value)" class="field-select"><option value="">- Select university -</option>'+uniOptions+'</select><div id="uniInfoContent"></div></div>'+renderBottomNav('university')+renderChatFab();
-  if(userUni) renderSelectedUniInfo(userUni); else document.getElementById('uniInfoContent').innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;">Select a university</div>';
-}
-function renderSelectedUniInfo(uni){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
-  const el=document.getElementById('uniInfoContent'); if(!el) return;
-  if(!uni){ el.innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;">Select a university</div>'; return; }
-  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('university'); return; }
-  const myStream=getUserStream();
-  const items=getUniInfoForStream(uni,myStream);
-  const isTrialNow = checkAccess().status === 'trial';
-  if(!items.length){
-    el.innerHTML='<div style="text-align:center; padding:40px 20px; color:#999;"><div style="font-size:34px; margin-bottom:8px; opacity:.6;">📭</div><div style="font-weight:700;">No info yet</div><div style="font-size:12px; margin-top:6px;">'+escapeHtml(myStream)+' stream</div></div>';
-    return;
-  }
-  el.innerHTML = items.map((item) => {
-    const locked = isTrialNow && !isTrialSubjectKey('', item.title || '');
-    if (locked) {
-      return '<div onclick="renderPaymentFlow(\'premium\')" style="background:#fff3cd; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid #ff9800; position:relative;"><div style="position:absolute; right:14px; top:14px; font-size:22px;">🔒</div><div style="font-weight:700; color:#e65100; font-size:14.5px; margin-bottom:6px;">'+escapeHtml(item.title)+' <span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span></div><div style="font-size:13px; color:#856404;">Tap to unlock full access to this item.</div></div>';
-    }
-    return '<div style="background:#f7f7fa; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #6a3093;"><div style="font-weight:700; color:#333; font-size:14.5px; margin-bottom:6px;">'+escapeHtml(item.title)+'</div><div style="font-size:13.5px; line-height:1.7; color:#444;">'+item.body+'</div></div>';
-  }).join('');
-}
-
-let adminUniInfoState={ uni:'', editing:null };
-let adminUniInfoBulkMode = false;
-let adminUniInfoSelected = new Set();
-function adminUniInfoToggleBulk(){ adminUniInfoBulkMode = !adminUniInfoBulkMode; adminUniInfoSelected.clear(); renderAdminUniversityInfo(); }
-function adminUniInfoToggleSel(idx){ if(adminUniInfoSelected.has(idx)) adminUniInfoSelected.delete(idx); else adminUniInfoSelected.add(idx); renderAdminUniversityInfo(); }
-async function adminUniInfoDeleteSelected(){
-  if (!adminUniInfoSelected.size) return appAlert('Nothing selected.');
-  if (!(await appConfirm('Delete ' + adminUniInfoSelected.size + ' item(s)?'))) return;
-  const uni = adminUniInfoState.uni;
-  const items = getUniInfoFor(uni);
-  Array.from(adminUniInfoSelected).sort((a,b)=>b-a).forEach(i => { if(i>=0 && i<items.length) items.splice(i,1); });
-  saveUniInfoFor(uni, items);
-  adminUniInfoSelected.clear(); adminUniInfoBulkMode = false;
-  await appAlert('✅ Deleted.');
-  renderAdminUniversityInfo();
-}
-function renderAdminUniversityInfo(){
-  if(!isAdminMode()){ renderMy(); return; }
-  setScreen('admin-uni-info');
-  const uni=adminUniInfoState.uni||getUserUniversity()||CONFIG.UNIVERSITIES[0]; adminUniInfoState.uni=uni;
-  const items=getUniInfoFor(uni); const editing=adminUniInfoState.editing;
-  const uniOpts=CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  let body='';
-  if(editing !== null && editing !== undefined){
-    const it=items[editing]; if(!it){ adminUniInfoState.editing=null; renderAdminUniversityInfo(); return; }
-    const currentStream = it.stream || 'Natural';
-    body='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#2e7d32; margin-bottom:14px; font-weight:700;">Editing item #'+(editing+1)+'</div><label class="field-label">Title</label><input type="text" id="uniInfoTitle" class="field-input" value="'+escapeAttr(it.title)+'" style="margin-bottom:8px;"><label class="field-label">Body (HTML allowed)</label><textarea id="uniInfoBody" class="field-textarea" style="min-height:160px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(it.body||'')+'</textarea><label class="field-label">Stream</label><select id="uniInfoStream" class="field-select" style="margin-bottom:10px;"><option value="Natural" '+(currentStream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(currentStream==='Social'?'selected':'')+'>Social</option><option value="Both" '+(currentStream==='Both'?'selected':'')+'>Both streams</option></select><button class="btn btn-primary btn-full" onclick="adminSaveUniInfo(\''+escapeAttr(uni)+'\','+editing+')">💾 Save</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="adminUniInfoState.editing=null;renderAdminUniversityInfo()">Cancel</button>';
-  } else {
-    const bulkBar = items.length ? ('<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">' +
-      '<button class="btn btn-ghost" style="flex:1;min-width:110px;padding:10px;font-size:12px;border-radius:8px;font-weight:800;" onclick="adminUniInfoToggleBulk()">' + (adminUniInfoBulkMode ? '✕ Cancel' : '☑ Select Multiple') + '</button>' +
-      (adminUniInfoBulkMode ? '<button class="btn" style="flex:1;min-width:110px;padding:10px;font-size:12px;border-radius:8px;font-weight:800;background:#ff4757;color:#fff;border:none;cursor:pointer;opacity:'+(adminUniInfoSelected.size?1:0.5)+';" onclick="adminUniInfoDeleteSelected()">🗑 Delete ('+adminUniInfoSelected.size+')</button>' : '') +
-      '</div>') : '';
-    body='<h3>Add Info Item</h3><label class="field-label">Title</label><input type="text" id="uniInfoTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><label class="field-label">Body (HTML allowed)</label><textarea id="uniInfoBody" placeholder="Content (HTML allowed)" class="field-textarea" style="margin-bottom:10px;"></textarea><label class="field-label">Stream</label><select id="uniInfoStream" class="field-select" style="margin-bottom:10px;"><option value="Natural">Natural</option><option value="Social">Social</option><option value="Both">Both streams</option></select><button class="btn btn-primary btn-full" onclick="adminAddUniInfo(\''+escapeAttr(uni)+'\')">Add Info</button>'+(items.length?'<h3 style="margin-top:20px;">Current ('+items.length+')</h3>'+bulkBar+items.map((item,i)=>{
-      const st = item.stream || 'Natural';
-      const bg = adminUniInfoBulkMode && adminUniInfoSelected.has(i) ? '#e0f2fe' : '#f7f7fa';
-      const action = adminUniInfoBulkMode
-        ? '<input type="checkbox" ' + (adminUniInfoSelected.has(i) ? 'checked' : '') + ' onchange="adminUniInfoToggleSel(' + i + ')" style="width:22px;height:22px;cursor:pointer;flex-shrink:0;">'
-        : '<div style="display:flex; gap:6px;"><button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminUniInfoState.editing=' + i + ';renderAdminUniversityInfo()">✎ Edit</button><button class="btn btn-danger" onclick="adminDeleteUniInfo(\'' + escapeAttr(uni) + '\',' + i + ')">X</button></div>';
-      return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1;"><div style="font-weight:700; font-size:13.5px;">'+escapeHtml(item.title)+'</div><div style="font-size:11px; color:#888; margin-top:2px;">'+escapeHtml(st)+' stream</div></div>'+action+'</div>';
-    }).join(''):'');
-  }
-  app.innerHTML=renderHeader('university')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — University Info Editor</div><h2>University Info Manager</h2><label class="field-label">University</label><select onchange="adminUniInfoState.uni=this.value;adminUniInfoState.editing=null;adminUniInfoSelected.clear();adminUniInfoBulkMode=false;renderAdminUniversityInfo()" class="field-select" style="margin-bottom:16px;">'+uniOpts+'</select>'+body+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:14px;"><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:8px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav('university')+renderChatFab();
-}
-async function adminAddUniInfo(uni){ const t=(document.getElementById('uniInfoTitle').value||'').trim(); const b=(document.getElementById('uniInfoBody').value||'').trim(); const sEl=document.getElementById('uniInfoStream'); const stream=sEl?(sEl.value==='Social'?'Social':sEl.value==='Both'?'Both':'Natural'):'Natural'; if(!t||!b) return appAlert('Fill both'); const items=getUniInfoFor(uni); items.push({title:t,body:b,stream:stream}); saveUniInfoFor(uni,items); await appAlert('Added for '+stream+' stream!'); renderAdminUniversityInfo(); }
-async function adminSaveUniInfo(uni,i){ const t=(document.getElementById('uniInfoTitle').value||'').trim(); const b=(document.getElementById('uniInfoBody').value||'').trim(); const sEl=document.getElementById('uniInfoStream'); const stream=sEl?(sEl.value==='Social'?'Social':sEl.value==='Both'?'Both':'Natural'):'Natural'; if(!t||!b) return appAlert('Fill both'); const items=getUniInfoFor(uni); if(!items[i]) return; items[i]={title:t,body:b,stream:stream}; saveUniInfoFor(uni,items); adminUniInfoState.editing=null; await appAlert('Saved for '+stream+' stream!'); renderAdminUniversityInfo(); }
-function adminDeleteUniInfo(uni,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const items=getUniInfoFor(uni); items.splice(i,1); saveUniInfoFor(uni,items); renderAdminUniversityInfo(); }); }
-
 function renderAdminActivateUser(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-activate');
-  const users = getUsers(); const phones = Object.keys(users);
-  const recent = (()=>{ try { return JSON.parse(localStorage.getItem(LS_ADMIN_KEYS)||'[]'); } catch(e){ return []; } })();
-  const userOptions = phones.map(p=>{ const u = users[p]; return '<option value="'+escapeHtml(u.deviceHash||'')+'" data-phone="'+escapeHtml(p)+'">'+escapeHtml(u.name)+' — '+escapeHtml(u.phone)+' ('+escapeHtml(u.deviceHash||'—')+')</option>'; }).join('');
-  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Activate a User</div><h2>🔑 Activate User</h2><p style="font-size:13px;color:#666;line-height:1.7;margin-bottom:14px;">Choose one of the 2 activation methods below.</p>'+(phones.length?'<label class="field-label">Pick registered user (optional)</label><select id="actPickUser" class="field-select" onchange="adminPickUserForActivation(this)" style="margin-bottom:12px;"><option value="">— Manual entry —</option>'+userOptions+'</select>':'')+'<label class="field-label">Device Hash (4 characters)</label><input type="text" id="actDeviceHash" maxlength="4" placeholder="ABCD" class="field-input" style="font-family:monospace;text-transform:uppercase;letter-spacing:3px;font-size:18px;text-align:center;"><label class="field-label">Your Secret</label><input type="text" id="actSecret" class="field-input" value="'+escapeAttr(CONFIG.SECRET)+'" style="font-family:monospace;font-size:12px;"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="adminGenerateActivationKey()">🔑 Option 1 — Generate Key</button><button class="btn btn-full" style="margin-top:8px;background:#ff9800;color:#fff;" onclick="adminShowMasterKey()">🔓 Option 2 — Master Key</button><div id="actResult" style="margin-top:16px;"></div>'+(recent.length?'<h3 style="margin-top:24px;">Recent Keys ('+recent.length+')</h3>'+recent.slice(0,10).map(r=>'<div style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;font-size:12px;"><div style="font-family:monospace;font-weight:800;color:#6a3093;font-size:14px;margin-bottom:4px;">'+escapeHtml(r.key)+'</div><div style="color:#888;">Hash: '+escapeHtml(r.hash)+' · '+new Date(r.at).toLocaleString()+(r.name?' · '+escapeHtml(r.name):'')+'</div></div>').join(''):'')+'<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML = renderHeader('my')+'<div class="panel"><div style="background:#e8f5e9;border-left:4px solid #4caf50;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#2e7d32;margin-bottom:16px;font-weight:700;">Admin — Generate Key</div><h2>🔑 Generate Key</h2><p style="font-size:13px;color:#666;line-height:1.7;margin-bottom:14px;">Create a key valid for 1 user, or a master key with multiple uses.</p>'+
+  '<label class="field-label">Target User ID (Optional - leave blank for ANY device)</label><input type="text" id="actDeviceHash" maxlength="6" placeholder="ABC123" class="field-input" style="font-family:monospace;text-transform:uppercase;letter-spacing:3px;font-size:18px;text-align:center;margin-bottom:12px;">'+
+  '<label class="field-label">Max Uses (1 for single user, 2+ for master key)</label><input type="number" id="actMaxUses" value="1" min="1" max="100" class="field-input" style="margin-bottom:16px;">'+
+  '<button class="btn btn-primary btn-full" style="background:#4caf50;font-size:16px;padding:16px;" onclick="adminGenerateActivationKey()">🔑 Generate Key</button>'+
+  '<div id="actResult" style="margin-top:16px;"></div>'+
+  '<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-function adminPickUserForActivation(sel){ const h = sel.value; const inp = document.getElementById('actDeviceHash'); if(inp && h) inp.value = h; }
-function adminGenerateActivationKey(){
-  const hashEl = document.getElementById('actDeviceHash'); const secEl = document.getElementById('actSecret'); const out = document.getElementById('actResult');
-  const hash = (hashEl.value||'').trim().toUpperCase(); const secret = (secEl.value||'').trim() || CONFIG.SECRET;
-  if(!/^[A-Z0-9]{4}$/.test(hash)){ out.innerHTML='<div style="color:#c62828;font-weight:700;">Device hash must be exactly 4 letters/numbers.</div>'; return; }
-  const pickSel = document.getElementById('actPickUser');
-  const uPhone = pickSel && pickSel.selectedOptions[0] ? (pickSel.selectedOptions[0].dataset.phone||'') : '';
-  const uName = uPhone && getUsers()[uPhone] ? getUsers()[uPhone].name : '';
-  function rnd4(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
-  const c = rnd4(); const b = simpleHash(secret + hash + c).slice(0,4).toUpperCase().padStart(4,'0'); const key = 'FH-'+hash+'-'+b+'-'+c;
-  try { const list = JSON.parse(localStorage.getItem(LS_ADMIN_KEYS)||'[]'); list.unshift({ key:key, hash:hash, name:uName, phone:uPhone, at:Date.now() }); localStorage.setItem(LS_ADMIN_KEYS, JSON.stringify(list.slice(0,50))); } catch(e){}
-  const tg = 'https://t.me/share/url?url='+encodeURIComponent(key)+'&text='+encodeURIComponent('Your All Freshman ET activation key:');
-  out.innerHTML = '<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:14px;padding:18px;text-align:center;"><div style="font-size:11px;color:#2e7d32;font-weight:800;letter-spacing:1px;margin-bottom:8px;">LICENSE KEY</div><div style="font-family:monospace;font-size:22px;font-weight:900;color:#2e7d32;letter-spacing:2px;word-break:break-all;margin-bottom:14px;">'+key+'</div>'+(uName?'<div style="font-size:12px;color:#666;margin-bottom:10px;">For: '+escapeHtml(uName)+'</div>':'')+'<button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Key</button><a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a></div>';
-}
-function adminShowMasterKey(){
-  if(!isAdminMode()) return;
-  const out = document.getElementById('actResult'); const key = 'MASTER-UNBLOCK-ALL';
-  const tg = 'https://t.me/share/url?url='+encodeURIComponent(key)+'&text='+encodeURIComponent('Your All Freshman ET master unlock code:');
-  if(out){ out.innerHTML = '<div style="background:#fff3cd;border:2px solid #ff9800;border-radius:14px;padding:18px;text-align:center;"><div style="font-size:11px;color:#856404;font-weight:800;letter-spacing:1px;margin-bottom:8px;">MASTER KEY — USE ONLY IN EMERGENCIES</div><div style="font-family:monospace;font-size:20px;font-weight:900;color:#856404;letter-spacing:2px;word-break:break-all;margin-bottom:12px;">'+key+'</div><div style="font-size:12px;color:#856404;line-height:1.7;margin-bottom:12px;">Works on <strong>any device</strong>. User enters it in <em>My → Enter License Key</em> and gets unlimited access forever.<br><br>⚠️ Give only to trusted users — it can\'t be revoked.</div><button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Master Key</button><a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a></div>'; }
-}
-function adminCopyKey(key){ try { navigator.clipboard.writeText(key); appAlert('✅ Key copied:\n'+key); } catch(e){ const ta = document.createElement('textarea'); ta.value = key; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); appAlert('✅ Key copied:\n'+key); } }
 
-function renderPaymentMethodRow(m){ return '<div class="pay-method-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;"><input type="text" class="pmName" placeholder="Name" value="'+escapeAttr((m&&m.name)||'')+'" style="flex:1;padding:10px;border:2px solid #e0e0e6;border-radius:8px;font-size:13px;background:#f7f7fa;color:#222;"><input type="text" class="pmNumber" placeholder="Number" value="'+escapeAttr((m&&m.number)||'')+'" style="flex:1.5;padding:10px;border:2px solid #e0e0e6;border-radius:8px;font-size:13px;font-family:monospace;background:#f7f7fa;color:#222;"><button type="button" class="btn btn-danger" style="padding:8px 12px;width:auto;min-width:auto;margin:0;" onclick="removePaymentMethod(this)">X</button></div>'; }
-function addPaymentMethod(){ const list = document.getElementById('payMethodsList'); if (!list) return; const count = list.querySelectorAll('.pay-method-row').length; if (count >= 6) return appAlert('Maximum 6 payment methods.'); const wrap = document.createElement('div'); wrap.innerHTML = renderPaymentMethodRow({name:'', number:''}); list.appendChild(wrap.firstChild); }
-function removePaymentMethod(btn){ const list = document.getElementById('payMethodsList'); if (!list) return; const count = list.querySelectorAll('.pay-method-row').length; if (count <= 1) return appAlert('At least one payment method required.'); const row = btn.closest('.pay-method-row'); if (row) row.remove(); }
-function trialUniCheckboxes(unis, selected){ return (unis||[]).map((u,i)=>{ const on = (selected||[]).indexOf(u) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;background:'+(on?'#f0e9f8':'transparent')+';font-weight:'+(on?'700':'400')+';"><input type="checkbox" data-trialuni="'+escapeAttr(u)+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+escapeHtml(u)+'</label>'; }).join(''); }
+async function adminGenerateActivationKey(){
+  const hashEl = document.getElementById('actDeviceHash'); 
+  const usesEl = document.getElementById('actMaxUses');
+  const out = document.getElementById('actResult');
+  const hash = (hashEl.value||'').trim().toUpperCase(); 
+  const maxUses = parseInt(usesEl.value) || 1;
+  if(hash && !/^[A-Z0-9]{6}$/.test(hash)){ out.innerHTML='<div style="color:#c62828;font-weight:700;">ID must be exactly 6 letters/numbers.</div>'; return; }
+  
+  out.innerHTML = '<div style="color:#666;">Generating...</div>';
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/generate-key', {
+      method: 'POST', headers: adminHeaders(),
+      body: JSON.stringify({ maxUses: maxUses, targetDeviceId: hash })
+    });
+    const data = await r.json();
+    if(!data.ok) { out.innerHTML = '<div style="color:#c62828;">Failed: ' + data.err + '</div>'; return; }
+    
+    const key = data.key;
+    const tg = 'https://t.me/share/url?url='+encodeURIComponent(key)+'&text='+encodeURIComponent('Your All Freshman ET activation key:');
+    out.innerHTML = '<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:14px;padding:18px;text-align:center;">'+
+      '<div style="font-size:11px;color:#2e7d32;font-weight:800;letter-spacing:1px;margin-bottom:8px;">LICENSE KEY ('+maxUses+' USE)</div>'+
+      '<div style="font-family:monospace;font-size:20px;font-weight:900;color:#2e7d32;letter-spacing:2px;word-break:break-all;margin-bottom:14px;">'+key+'</div>'+
+      '<div style="font-size:12px;color:#c62828;margin-bottom:10px;">Expires in 7 days</div>'+
+      '<button class="btn btn-primary btn-full" onclick="adminCopyKey(\''+key+'\')">📋 Copy Key</button>'+
+      '<a href="'+tg+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">📨 Share via Telegram</a></div>';
+  } catch (e) {
+    out.innerHTML = '<div style="color:#c62828;">Network error.</div>';
+  }
+}
+
+async function renderAdminUsers(){
+  if(!isAdminMode()){ renderMy(); return; }
+  setScreen('admin-users');
+  const local = getUsers(); const localPhones = Object.keys(local);
+  let serverUsers = []; let serverErr = '';
+  const r = await backendListUsers();
+  if (r && r.ok && Array.isArray(r.users)) serverUsers = r.users;
+  else serverErr = (r && r.err) ? r.err : 'failed';
+  const byPhone = {};
+  serverUsers.forEach(u => { byPhone[u.phone] = { ...u, _source:'server' }; });
+  localPhones.forEach(p => { if (!byPhone[p]) byPhone[p] = { ...local[p], _source:'local' }; });
+  const merged = Object.values(byPhone);
+  
+  const rows = merged.length ? merged.map(user => {
+    const phone = escapeHtml(user.phone || '-');
+    const name = escapeHtml(user.name || '-');
+    const uni = escapeHtml(user.university || '-');
+    const stream = escapeHtml(user.stream || '-');
+    const hash = escapeHtml(user.deviceHash || '-');
+    const created = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
+    const usedKey = user.used_key ? '<span style="background:#f0e9f8;color:#6a3093;font-family:monospace;padding:2px 6px;border-radius:4px;font-size:11px;">'+escapeHtml(user.used_key)+'</span>' : '<span style="color:#888;font-size:11px;">None (Trial)</span>';
+    let statusBadge = '';
+    const st = String(user.status || 'trial').toLowerCase();
+    const dl = parseInt(user.daysLeft) || 0;
+    if (user.role === 'admin' || user.master === 1) {
+      statusBadge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">👑 ADMIN</span>';
+    } else if (st === 'licensed') {
+      statusBadge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟢 LICENSED · ' + dl + 'd</span>';
+    } else if (st === 'trial') {
+      statusBadge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟡 TRIAL · ' + dl + 'd</span>';
+    } else {
+      statusBadge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🔴 EXPIRED</span>';
+    }
+    
+    return '<div style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;border-left:4px solid #6a3093;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;"><div style="font-weight:800;color:#333;">' + name + '</div>' + statusBadge + '</div>' +
+      '<div><strong>Phone:</strong> ' + phone + '</div>' +
+      '<div><strong>University:</strong> ' + uni + ' (' + stream + ')</div>' +
+      '<div><strong>ID:</strong> <code>' + hash + '</code></div>' +
+      '<div style="margin:6px 0;"><strong>Joined:</strong> ' + created + '</div>' +
+      '<div style="margin:6px 0;"><strong>Used Key:</strong> ' + usedKey + '</div>' +
+      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#e91e63;" onclick="adminUnbindDevice(\'' + user.phone + '\')">🔓 Unblock</button>' +
+        '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + user.phone + '\')">Delete</button>' +
+      '</div>' +
+    '</div>';
+  }).join('') : '<div class="empty-msg">No users found anywhere.</div>';
+  
+  app.innerHTML = renderHeader('my') + '<div class="panel">' +
+      '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — User Accounts</div>' +
+      '<h2>User Accounts (' + merged.length + ')</h2>' + 
+      '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUsers()">🔄 Refresh from Server</button>' +
+      rows +
+      '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
+    '</div>' + renderBottomNav('my') + renderChatFab();
+ }
+
+async function adminUnbindDevice(phone) {
+  if (!isAdminMode()) return;
+  if (!(await appConfirm('Unblock device for ' + phone + '?\n\nThis forces them to log in again on their current phone.'))) return;
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/unbind-device', {
+      method: 'POST', headers: adminHeaders(),
+      body: JSON.stringify({ phone })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
+    await appAlert('✅ Device unblocked for ' + phone);
+    renderAdminUsers();
+  } catch (e) { appAlert('Network error.'); }
+}
+
+async function adminDeleteUser(phone){
+  if(!(await appConfirm('Delete user '+phone+'?\n\nThis will permanently remove them from this device AND the cloud.'))) return;
+  const u = getUsers(); delete u[phone]; saveUsers(u); adminRemoveUsedPhone(phone);
+  const r = await backendDeleteUser(phone);
+  if (r && r.ok) await appAlert('✅ User deleted from device and cloud.');
+  else await appAlert('⚠️ Deleted locally, but server delete failed: ' + ((r && r.err) || 'unknown'));
+  renderAdminUsers();
+}
+
+function renderEnterKey(){
+  setScreen('enter-key');
+  const locked = isKeyLocked();
+  const lockInfo = locked ? (()=>{ const r=keyLockRemaining(); return '<div class="key-attempt-warn danger">Try again in '+r.d+'d '+r.h+'h '+r.m+'m</div>'; })() : '';
+  app.innerHTML = renderHeader(currentTab)+'<div class="panel"><h2>Enter License Key</h2>'+lockInfo+'<input type="text" id="licenseKeyInput" placeholder="FH-XXXXXX-XXXX-XXXX" class="field-input" style="font-family:monospace; text-transform:uppercase;" '+(locked?'disabled':'')+'><div id="keyMsg" style="margin-top:10px; font-size:13px;"></div><button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitLicenseKey()" '+(locked?'disabled':'')+'>Activate</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav(currentTab)+renderChatFab();
+}
+
+async function submitLicenseKey(){
+  const inp = document.getElementById('licenseKeyInput'); const msg = document.getElementById('keyMsg');
+  const key = (inp && inp.value ? inp.value : '').trim().toUpperCase();
+  if(!key){ msg.innerHTML='<div style="color:#c62828;">Enter your key.</div>'; return; }
+  
+  msg.innerHTML='<div style="color:#666;">Checking...</div>';
+  try {
+    const r = await fetch(BACKEND_URL + '/api/activate-key', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: getCurrentUserPhone(), key: key, deviceId: getDeviceId() })
+    });
+    const res = await r.json();
+    
+    if(res.ok){
+      msg.innerHTML='<div style="color:#2e7d32; font-weight:700;">✅ Activated! Unlocking…</div>'; 
+      pushStatusToServer(); _clearNavStack(); setTimeout(()=>{ switchTab('book'); }, 1000); return;
+    }
+    
+    registerWrongKey();
+    if(res.err==='key-expired'){ msg.innerHTML='<div style="color:#c62828;">This key has expired (7 days passed).</div>'; return; }
+    if(res.err==='key-maxed'){ msg.innerHTML='<div style="color:#c62828;">This key has already been fully used.</div>'; return; }
+    msg.innerHTML='<div style="color:#c62828;">Invalid key. Attempts left: '+(4-getKeyAttempts().count)+'</div>';
+    
+  } catch (e) {
+    msg.innerHTML='<div style="color:#c62828;">Network error.</div>';
+  }
+}
 
 function renderAdminSettings(){
   if(!isAdminMode()){ renderMy(); return; }
@@ -1815,7 +1754,7 @@ function renderAdminSettings(){
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function saveAdminSettings(){
   const s=getSettings();
@@ -1837,6 +1776,10 @@ async function saveAdminSettings(){
   if (trialUnis.length === 0) { await appAlert('Select at least one trial university.'); return; }
   s.TRIAL_UNIVERSITIES = trialUnis;
   const subjRaw = (document.getElementById('stTrialSubjects').value||'english'); const subjList = subjRaw.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); s.TRIAL_SUBJECTS = subjList.length ? subjList : ['english'];
+  const bKws = (document.getElementById('stTrialBookKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); s.TRIAL_BOOK_KEYWORDS = bKws;
+  const nKws = (document.getElementById('stTrialNoteKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); s.TRIAL_NOTE_KEYWORDS = nKws;
+  const eKws = (document.getElementById('stTrialExamKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); s.TRIAL_EXAM_KEYWORDS = eKws;
+  const cKws = (document.getElementById('stTrialCocKeywords').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); s.TRIAL_COC_KEYWORDS = cKws;
   const tc=[]; ['book','note','exam','coc','info'].forEach(k=>{ const el=document.getElementById('stTrialContent_'+k); if(el&&el.checked) tc.push(k); }); s.TRIAL_CONTENT=tc;
   const uniText = (document.getElementById('stUniversities').value||''); const uniList = uniText.split('\n').map(x=>x.trim()).filter(Boolean); if(uniList.length) s.UNIVERSITIES = uniList;
   s.ADMIN_PASSWORD=document.getElementById('stAdminPw').value.trim()||DEFAULT_CONFIG.ADMIN_PASSWORD;
@@ -1846,228 +1789,10 @@ async function saveAdminSettings(){
 }
 function resetAdminSettings(){ appConfirm('Reset ALL settings to factory defaults?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); appAlert('Settings reset.'); renderAdminSettings(); }); }
 
-let adminUserBulkMode = false;
-let adminUserSelected = new Set();
-function adminUserToggleBulk(){ adminUserBulkMode = !adminUserBulkMode; adminUserSelected.clear(); renderAdminUsers(); }
-function adminUserToggleSel(phone){ if(adminUserSelected.has(phone)) adminUserSelected.delete(phone); else adminUserSelected.add(phone); renderAdminUsers(); }
-async function adminUserDeleteSelected(){
-  if (!adminUserSelected.size) return appAlert('Nothing selected.');
-  if (!(await appConfirm('Delete ' + adminUserSelected.size + ' user(s) permanently from device AND cloud?'))) return;
-  const phones = Array.from(adminUserSelected);
-  let okCount = 0, failCount = 0;
-  for (const phone of phones) {
-    const u = getUsers(); delete u[phone]; saveUsers(u); adminRemoveUsedPhone(phone);
-    const r = await backendDeleteUser(phone);
-    if (r && r.ok) okCount++; else failCount++;
-  }
-  adminUserSelected.clear(); adminUserBulkMode = false;
-  await appAlert('✅ Deleted ' + okCount + ' user(s).' + (failCount ? '\n⚠️ ' + failCount + ' failed (server).' : ''));
-  renderAdminUsers();
-}
-async function renderAdminUsers(){
-  if(!isAdminMode()){ renderMy(); return; }
-  setScreen('admin-users');
-  const local = getUsers(); const localPhones = Object.keys(local);
-  let serverUsers = []; let serverErr = '';
-  const r = await backendListUsers();
-  if (r && r.ok && Array.isArray(r.users)) serverUsers = r.users;
-  else serverErr = (r && r.err) ? r.err : 'failed';
-  const byPhone = {};
-  serverUsers.forEach(u => { byPhone[u.phone] = { ...u, _source:'server' }; });
-  localPhones.forEach(p => { if (!byPhone[p]) byPhone[p] = { ...local[p], _source:'local' }; });
-  const merged = Object.values(byPhone);
-  const bulkBar = merged.length ? ('<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">' +
-    '<button class="btn btn-ghost" style="flex:1;min-width:110px;padding:10px;font-size:12px;border-radius:8px;font-weight:800;" onclick="adminUserToggleBulk()">' + (adminUserBulkMode ? '✕ Cancel' : '☑ Select Multiple') + '</button>' +
-    (adminUserBulkMode ? '<button class="btn" style="flex:1;min-width:110px;padding:10px;font-size:12px;border-radius:8px;font-weight:800;background:#ff4757;color:#fff;border:none;cursor:pointer;opacity:'+(adminUserSelected.size?1:0.5)+';" onclick="adminUserDeleteSelected()">🗑 Delete ('+adminUserSelected.size+')</button>' : '') +
-    '</div>') : '';
-  const rows = merged.length ? merged.map(user => {
-    const phone = escapeHtml(user.phone || '-');
-    const name = escapeHtml(user.name || '-');
-    const uni = escapeHtml(user.university || '-');
-    const stream = escapeHtml(user.stream || '-');
-    const hash = escapeHtml(user.deviceHash || '-');
-    const created = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
-    let statusBadge = '';
-    const st = String(user.status || 'trial').toLowerCase();
-    const dl = parseInt(user.daysLeft) || 0;
-    if (user.role === 'admin' || user.master === 1) {
-      statusBadge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">👑 ADMIN</span>';
-    } else if (user.grace === 1) {
-      statusBadge = '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">⏳ GRACE · ' + dl + 'h</span>';
-    } else if (st === 'licensed') {
-      statusBadge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟢 LICENSED · ' + dl + 'd</span>';
-    } else if (st === 'trial') {
-      statusBadge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟡 TRIAL · ' + dl + 'd</span>';
-    } else if (st === 'expired') {
-      statusBadge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🔴 EXPIRED</span>';
-    } else {
-      statusBadge = '<span style="background:#eee;color:#666;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">' + escapeHtml(st.toUpperCase()) + '</span>';
-    }
-    const src = user._source === 'server'
-      ? '<span style="background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">SERVER</span>'
-      : '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">LOCAL</span>';
-    const bg = adminUserBulkMode && adminUserSelected.has(user.phone) ? '#e0f2fe' : '#f7f7fa';
-    const action = adminUserBulkMode
-      ? '<input type="checkbox" ' + (adminUserSelected.has(user.phone) ? 'checked' : '') + ' onchange="adminUserToggleSel(\'' + user.phone + '\')" style="width:22px;height:22px;cursor:pointer;flex-shrink:0;">'
-      : '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
-          '<button class="btn btn-ghost" style="flex:1;padding:8px;font-size:12px;" onclick="openUserEditor(\'' + user.phone + '\')">✎ Edit</button>' +
-          '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#4caf50;" onclick="adminActivateThisUser(\'' + (user.deviceHash||'') + '\')">🔑 Activate</button>' +
-          '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#e91e63;" onclick="adminUnbindDevice(\'' + user.phone + '\')">🔓 Unbind</button>' +
-          '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + user.phone + '\')">Delete</button>' +
-        '</div>';
-    return '<div style="background:'+bg+';border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;"><div style="font-weight:800;color:#333;">' + name + '</div>' + src + '</div>' +
-      '<div><strong>Phone:</strong> ' + phone + '</div>' +
-      '<div><strong>University:</strong> ' + uni + '</div>' +
-      '<div><strong>Stream:</strong> ' + stream + '</div>' +
-      '<div><strong>Device Hash:</strong> <code>' + hash + '</code></div>' +
-      '<div style="margin:6px 0;"><strong>Status:</strong> ' + statusBadge + '</div>' +
-      '<div><strong>Created:</strong> ' + created + '</div>' +
-      '<div style="display:flex;justify-content:flex-end;">' + action + '</div>' +
-    '</div>';
-  }).join('') : '<div class="empty-msg">No users found anywhere.</div>';
-  const errBox = serverErr ? '<div style="background:#ffebee;border-left:4px solid #f44336;border-radius:10px;padding:10px 14px;font-size:12px;color:#c62828;margin-bottom:14px;">⚠️ Server fetch failed: ' + escapeHtml(serverErr) + ' — showing local only.</div>' : '';
-  app.innerHTML = renderHeader('my') + '<div class="panel">' +
-      '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — User Accounts</div>' +
-      '<h2>User Accounts (' + merged.length + ')</h2>' + errBox +
-      '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUsers()">🔄 Refresh from Server</button>' +
-      '<button class="btn btn-ghost btn-full" style="margin-bottom:14px;" onclick="renderAdminUserEditor()">🔎 Search & Edit User</button>' +
-      bulkBar + rows +
-      '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
-    '</div>' + renderBottomNav('my') + renderChatFab();
- }
-// [EDIT 2] adminToggleMultiDevice function REMOVED (no longer needed).
-// [EDIT 4] New adminUnbindDevice function added below.
-async function adminUnbindDevice(phone) {
-  if (!isAdminMode()) return;
-  if (!(await appConfirm('Unbind device for ' + phone + '?\n\nThe user will be able to log in on a new phone.'))) return;
-  try {
-    const r = await fetch(BACKEND_URL + '/api/admin/unbind-device', {
-      method: 'POST', headers: adminHeaders(),
-      body: JSON.stringify({ phone })
-    });
-    const data = await r.json();
-    if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
-    await appAlert('✅ Device unbound for ' + phone);
-    renderAdminUsers();
-  } catch (e) { appAlert('Network error.'); }
-}
-
-async function renderAdminProgress(){
-  if(!isAdminMode()){ renderMy(); return; }
-  setScreen('admin-progress');
-  app.innerHTML = renderHeader('my') + '<div class="panel"><div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — All Users\' Progress</div><h2>📊 All Progress</h2><div class="empty-msg">Loading from server…</div></div>' + renderBottomNav('my') + renderChatFab();
-  const r = await backendListProgress();
-  if (!r || !r.ok) {
-    app.innerHTML = renderHeader('my') + '<div class="panel"><div style="background:#ffebee;border-left:4px solid #f44336;border-radius:10px;padding:14px;color:#c62828;font-weight:700;margin-bottom:16px;">❌ Failed to load: ' + escapeHtml((r && r.err) || 'unknown') + '</div><button class="btn btn-primary btn-full" onclick="renderAdminProgress()">🔄 Retry</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
-    return;
-  }
-  const list = r.progress || [];
-  if (!list.length) {
-    app.innerHTML = renderHeader('my') + '<div class="panel"><div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — All Users\' Progress</div><h2>📊 All Progress</h2><div class="empty-msg">No attempts recorded yet.</div><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="renderAdminProgress()">🔄 Refresh</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
-    return;
-  }
-  const byPhone = {};
-  list.forEach(x => {
-    const p = x.phone || 'unknown';
-    if (!byPhone[p]) byPhone[p] = { name:x.name || '—', university:x.university || '—', stream:x.stream || '—', items:[] };
-    byPhone[p].items.push(x);
-  });
-  const cards = Object.keys(byPhone).map(phone => {
-    const u = byPhone[phone];
-    const avg = Math.round(u.items.reduce((s,x) => s + (x.score / x.total) * 100, 0) / u.items.length);
-    const best = Math.max(...u.items.map(x => Math.round((x.score / x.total) * 100)));
-    const rows = u.items.slice(0, 15).map(x => {
-      const pct = Math.round((x.score / x.total) * 100);
-      const date = x.at ? new Date(x.at).toLocaleDateString() : '';
-      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed #eee;">' +
-        '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(x.subject) + ' <span style="color:#999;">· ' + date + '</span></span>' +
-        '<span style="font-weight:700;color:' + (pct < 60 ? '#c62828' : '#2e7d32') + ';">' + x.score + '/' + x.total + ' · ' + pct + '%</span>' +
-      '</div>';
-    }).join('');
-    return '<div style="background:#f7f7fa;border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid #6a3093;">' +
-      '<div style="font-weight:800;color:#333;margin-bottom:2px;">' + escapeHtml(u.name) + '</div>' +
-      '<div style="font-size:11.5px;color:#888;margin-bottom:8px;">' + escapeHtml(phone) + ' · ' + escapeHtml(u.university) + ' · ' + escapeHtml(u.stream) + '</div>' +
-      '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">' +
-        '<span style="background:#e3f2fd;color:#1565c0;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;">Attempts: ' + u.items.length + '</span>' +
-        '<span style="background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;">Avg: ' + avg + '%</span>' +
-        '<span style="background:#fff3e0;color:#e65100;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;">Best: ' + best + '%</span>' +
-      '</div>' + rows +
-    '</div>';
-  }).join('');
-  app.innerHTML = renderHeader('my') + '<div class="panel">' +
-      '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — All Users\' Progress</div>' +
-      '<h2>📊 All Progress (' + Object.keys(byPhone).length + ' users, ' + list.length + ' attempts)</h2>' +
-      '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminProgress()">🔄 Refresh</button>' +
-      cards +
-      '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
-    '</div>' + renderBottomNav('my') + renderChatFab();
-}
-
-function adminActivateThisUser(hash){ renderAdminActivateUser(); setTimeout(()=>{ const el = document.getElementById('actDeviceHash'); if(el && hash) el.value = hash; }, 100); }
-function renderAdminUserEditor(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-user-editor'); app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Search & Edit User</div><h2>🔎 Search & Edit User</h2><label class="field-label">User Phone Number</label><input type="tel" id="userSearchPhone" class="field-input" placeholder="09xxxxxxxx" style="margin-bottom:14px;"><button class="btn btn-primary btn-full" onclick="openUserEditor(document.getElementById(\'userSearchPhone\').value.trim())">🔎 Search</button><div id="userEditorResult" style="margin-top:16px;"></div><button class="btn btn-ghost btn-full" style="margin-top:20px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-async function openUserEditor(phone){
-  if(!isAdminMode()) return;
-  if(!/^(09|07)\d{8}$/.test(phone||'')) return appAlert('Enter valid phone (09/07 + 8 digits).');
-  const result = document.getElementById('userEditorResult'); if(!result) return;
-  result.innerHTML = '<div style="text-align:center;padding:20px;color:#666;font-size:13px;">Loading…</div>';
-  let user = getUsers()[phone];
-  if (!user) { const r = await backendGetUser(phone); if (r && r.ok && r.user) user = r.user; }
-  if(!user){ result.innerHTML='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">❌ No user found with phone '+escapeHtml(phone)+'.</div>'; return; }
-  result.innerHTML='<div style="background:#e8f5e9; border-left:4px solid #4caf50; border-radius:10px; padding:10px 14px; font-size:13px; color:#2e7d32; font-weight:700; margin-bottom:14px;">✅ User found</div>'+
-    '<div style="background:#f7f7fa; border-radius:10px; padding:14px; margin-bottom:12px; font-size:12.5px; line-height:1.8;">'+
-      '<div><strong>Device Hash:</strong> <code>'+escapeHtml(user.deviceHash||'-')+'</code></div>'+
-      '<div><strong>Role:</strong> '+escapeHtml(user.role||'user')+'</div>'+
-      '<div><strong>Created:</strong> '+new Date(user.createdAt||0).toLocaleString()+'</div>'+
-    '</div>'+
-    '<button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#4caf50;" onclick="adminActivateThisUser(\''+escapeAttr(user.deviceHash||'')+'\')">🔑 Activate This User</button>'+
-    '<button class="btn btn-primary btn-full" style="margin-bottom:14px;background:#e91e63;" onclick="adminUnbindDevice(\''+escapeAttr(phone)+'\')">🔓 Unbind Device</button>'+
-    '<label class="field-label">Name</label><input type="text" id="editUserName" class="field-input" value="'+escapeAttr(user.name||'')+'">'+
-    '<label class="field-label">University</label><select id="editUserUni" class="field-select"><option value="">- Select -</option>'+CONFIG.UNIVERSITIES.map(x=>'<option value="'+escapeHtml(x)+'" '+(user.university===x?'selected':'')+'>'+escapeHtml(x)+'</option>').join('')+'</select>'+
-    '<label class="field-label">Stream</label><select id="editUserStream" class="field-select"><option value="Natural" '+(user.stream==='Natural'?'selected':'')+'>Natural</option><option value="Social" '+(user.stream==='Social'?'selected':'')+'>Social</option></select>'+
-    '<label class="field-label">Reset Password (leave blank to keep)</label><input type="text" id="editUserPw" class="field-input" placeholder="min 4 characters">'+
-    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveUserEdit(\''+escapeAttr(phone)+'\')">💾 Save Changes</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="adminDeleteUser(\''+escapeAttr(phone)+'\')">🗑 Delete User</button>';
-}
-async function saveUserEdit(oldPhone){
-  if(!isAdminMode()) return;
-  const u = getUsers(); if(!u[oldPhone]) return appAlert('User not found.');
-  const newName=(document.getElementById('editUserName').value||'').trim();
-  const newUni=document.getElementById('editUserUni').value;
-  const newStream=document.getElementById('editUserStream').value;
-  const newPw=(document.getElementById('editUserPw').value||'').trim();
-  if(!newName) return appAlert('Name required');
-  const user = u[oldPhone]; user.name = newName; user.university = newUni || user.university; user.stream = newStream || user.stream;
-  if(newPw){ if(newPw.length < 4) return appAlert('Password must be at least 4 characters.'); try { user.passwordHash = await hashPasswordNew(newPw); } catch(e){ user.passwordHash = hashPassword(oldPhone, newPw); } }
-  u[oldPhone] = user;
-  saveUsers(u);
-  try { await backendUpdateUser({ phone: oldPhone, passwordHash: user.passwordHash, deviceHash: user.deviceHash }); } catch(e){ console.warn('server update failed', e); }
-  await appAlert('✅ User updated!'); openUserEditor(oldPhone);
-}
-async function adminDeleteUser(phone){
-  if(!(await appConfirm('Delete user '+phone+'?\n\nThis will permanently remove them from this device AND the cloud.'))) return;
-  const u = getUsers(); delete u[phone]; saveUsers(u); adminRemoveUsedPhone(phone);
-  const r = await backendDeleteUser(phone);
-  const result = document.getElementById('userEditorResult');
-  if(result) result.innerHTML = '';
-  if (r && r.ok) await appAlert('✅ User deleted from device and cloud.');
-  else await appAlert('⚠️ Deleted locally, but server delete failed: ' + ((r && r.err) || 'unknown'));
-  renderAdminUsers();
-}
-
-function renderAdminStats(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-stats'); const h=getHistory(), access=checkAccess(); const ta=h.length, avg=ta?Math.round(h.reduce((a,x)=>a+(x.score/x.total)*100,0)/ta):0; app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin Analytics</div><h2>This Device</h2><div class="stat-grid"><div class="stat-box"><div class="num">'+Object.keys(getUsers()).length+'</div><div class="label">Users</div></div><div class="stat-box"><div class="num">'+ta+'</div><div class="label">Attempts</div></div><div class="stat-box"><div class="num">'+avg+'%</div><div class="label">Avg</div></div><div class="stat-box"><div class="num">'+(access.status==='licensed'?'OK':access.status==='trial'?'T':'X')+'</div><div class="label">'+access.status+'</div></div></div><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-
-function renderAdminRegisteredPhones(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-phones'); const list=getRegisteredPhones(); app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Registered Phones</div><h2>Registered Phones</h2><div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:10px 14px; font-size:12px; color:#1565c0; margin-bottom:14px;">Total: <strong>'+list.length+'</strong></div>'+(list.length?list.map(p=>'<div style="background:#f7f7fa; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; font-family:monospace; flex:1;">'+escapeHtml(p)+'</div><button class="btn btn-danger" onclick="confirmRemovePhone(\''+escapeAttr(p)+'\')">Remove</button></div>').join(''):'<div class="empty-msg">No phones registered yet.</div>')+'<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-function confirmRemovePhone(phone){ appConfirm('Allow phone '+phone+' to register again?').then(ok=>{ if(!ok) return; adminRemoveUsedPhone(phone); appAlert('Removed.'); renderAdminRegisteredPhones(); }); }
-
-let adminEditState={ uni:'', stream:'Natural', semester:1, tab:'exam', editing:null, addToUnis:null };
-let adminBulkState={ uni:'', stream:'Natural', semester:1, targetUnis:null };
-
 function renderAdminContentManager(tab){
   if(!isAdminMode()){ renderMy(); return; }
   if(!tab) tab='exam';
   const sem = adminEditState.semester || 1;
-  if (sem !== 1 && tab === 'coc') tab = 'exam';
   if (adminEditState.tab !== tab || adminEditState._lastUni !== adminEditState.uni || adminEditState._lastStream !== adminEditState.stream || adminEditState._lastSem !== sem) {
     adminResetBulkSelection();
     adminEditState._lastUni = adminEditState.uni;
@@ -2080,8 +1805,7 @@ function renderAdminContentManager(tab){
   const uni=adminEditState.uni; const stream=adminEditState.stream;
   const c=getUniContent(uni,stream,sem);
   const uniOpts=CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  const cocTabBtn = (sem === 1) ? '<button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button>' : '';
-  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabBtn+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
+  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button><button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button></div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
 }
 
 function renderAdminBookList(uni,stream,sem,pdfs){
@@ -2184,17 +1908,17 @@ async function adminAddCoc(uni,stream,sem){
   const targets = adminEditState.addToUnis && adminEditState.addToUnis.size ? Array.from(adminEditState.addToUnis) : [uni];
   let count = 0;
   targets.forEach(tUni => {
-    const c = getUniContent(tUni, stream, 1);
+    const c = getUniContent(tUni, stream, sem);
     c.cocs = c.cocs || [];
     c.cocs.push({name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u});
-    setUniContent(tUni, stream, 1, c);
+    setUniContent(tUni, stream, sem, c);
     count++;
   });
   await appAlert('✅ Added to ' + count + ' university(ies).');
   renderAdminContentManager('coc');
 }
-async function adminSaveCoc(uni,stream,sem,i){ const n=(document.getElementById('editCocName').value||'').trim(); const ch=(document.getElementById('editCocChapter').value||'').trim(); const y=(document.getElementById('editCocYear').value||'').trim(); const tm=parseInt(document.getElementById('editCocTime').value)||0; const tx=document.getElementById('editCocText').value.trim(); const u=(document.getElementById('editCocUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,1); c.cocs=c.cocs||[]; if(!c.cocs[i]) return; c.cocs[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,1,c); adminEditState.editing=null; await appAlert('COC updated!'); renderAdminContentManager('coc'); }
-function adminDeleteCoc(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,1); c.cocs=c.cocs||[]; c.cocs.splice(i,1); setUniContent(uni,stream,1,c); renderAdminContentManager('coc'); }); }
+async function adminSaveCoc(uni,stream,sem,i){ const n=(document.getElementById('editCocName').value||'').trim(); const ch=(document.getElementById('editCocChapter').value||'').trim(); const y=(document.getElementById('editCocYear').value||'').trim(); const tm=parseInt(document.getElementById('editCocTime').value)||0; const tx=document.getElementById('editCocText').value.trim(); const u=(document.getElementById('editCocUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,sem); c.cocs=c.cocs||[]; if(!c.cocs[i]) return; c.cocs[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('COC updated!'); renderAdminContentManager('coc'); }
+function adminDeleteCoc(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.cocs=c.cocs||[]; c.cocs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('coc'); }); }
 
 function renderAdminBulkAdd(){
   if(!isAdminMode()){ renderMy(); return; }
@@ -2360,12 +2084,11 @@ function renderAdminNotifications(){
     return '<div style="background:'+bg+';border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
       '<div style="flex:1;min-width:0;word-break:break-word;">' + escapeHtml(n.message) + '</div>' + action + '</div>';
   }).join('') : '<div class="empty-msg">No notifications.</div>';
-  app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Send Notification</h2><label class="field-label">Target</label><select id="notifTarget" class="field-select"><option value="all">All Users</option><option value="custom">Specific Hash(es)</option></select><label class="field-label">Message</label><textarea id="notifMsg" class="field-textarea"></textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="sendAdminNotif()">Send</button><h3 style="margin-top:20px;">Existing ('+list.length+')</h3>'+bulkBar+listHtml+'<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Send Notification</h2><label class="field-label">Target</label><select id="notifTarget" class="field-select"><option value="all">All Users</option><option value="custom">Specific ID(s)</option></select><label class="field-label">Message</label><textarea id="notifMsg" class="field-textarea"></textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="sendAdminNotif()">Send</button><h3 style="margin-top:20px;">Existing ('+list.length+')</h3>'+bulkBar+listHtml+'<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function sendAdminNotif(){ const target=document.getElementById('notifTarget').value; const msg=document.getElementById('notifMsg').value.trim(); if(!msg) return appAlert('Enter message'); const list=getNotifications(); list.push({id:'n_'+Date.now(),target:target,message:msg,at:Date.now()}); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} await appAlert('Added!'); renderAdminNotifications(); }
 function deleteAdminNotif(idx){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const list=getNotifications(); if(idx<0||idx>=list.length) return; list.splice(idx,1); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} renderAdminNotifications(); }); }
 
-/* ============ ADMIN TAP — PASSWORD + EMAIL OTP (5 min, session 24h) ============ */
 let adminTapCount = 0, adminTapTimer = null;
 async function adminTap() {
   adminTapCount++;
@@ -2400,8 +2123,7 @@ async function adminTap() {
     if (step1 && step1.err === 'email-failed') {
       return appAlert('Password correct, but email could not be sent.\n\nDetail: ' + (step1.detail || 'unknown') + '\n\nCheck RESEND_API_KEY and admin_email.');
     }
-    // 👇 UPDATED: Now shows the real reason from the Worker
-    return appAlert('Admin Login Failed.\nReason: ' + (step1 ? step1.err : 'Network Error') + (step1 && step1.receivedLen ? '\nPassword Length Received: ' + step1.receivedLen : ''));
+    return appAlert('Admin Login Failed.\nReason: ' + (step1 ? step1.err : 'Network Error'));
   }
 
   await appAlert('📧 A code was sent to:\n\n' + (step1.sentTo || 'your admin email') + '\n\nCheck your inbox and spam. The code expires in 5 minutes.');
@@ -2451,7 +2173,7 @@ function renderClosureScreen(){ setScreen(currentTab); app.innerHTML=renderHeade
 function renderPlayStoreContact(){
   setScreen('payment');
   const tg = (CONFIG.TELEGRAM_USERNAME || '').replace(/^@/,''); const phone = (CONFIG.CONTACT_PHONE || '').trim();
-  const msg = 'Unlock All Freshman ET\nHash: ' + getDeviceHash() + '\nPhone: ' + (getCurrentUserPhone() || '');
+  const msg = 'Unlock All Freshman ET\nID: ' + getDeviceHash() + '\nPhone: ' + (getCurrentUserPhone() || '');
   const link = tg ? 'https://t.me/' + tg + '?text=' + encodeURIComponent(msg) : '#';
   app.innerHTML = renderHeader(currentTab) + '<div class="locked-box"><div class="icon">💎</div><h2>Get Premium — Unlock Everything</h2><p>Contact admin on Telegram to pay and get a license key.</p><a href="'+escapeAttr(link)+'" target="_blank" class="btn btn-telegram btn-full" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">📨 Contact Admin on Telegram</a>'+(phone ? '<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block;text-align:center;text-decoration:none;">📞 Call '+escapeHtml(phone)+'</a>' : '')+'<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderEnterKey()">I Have a Key</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav(currentTab) + renderChatFab();
 }
@@ -2468,23 +2190,6 @@ function renderPayStage(){ setScreen('payment'); app.innerHTML=renderHeader(curr
 function pickMethod(m){ }
 function submitPayment(){ }
 function renderPendingScreen(tab){ setScreen('pending'); app.innerHTML=renderHeader(tab)+'<div class="panel"><h2>Pending</h2></div>'+renderBottomNav(tab)+renderChatFab(); }
-
-function renderEnterKey(){
-  setScreen('enter-key');
-  const locked = isKeyLocked();
-  const lockInfo = locked ? (()=>{ const r=keyLockRemaining(); return '<div class="key-attempt-warn danger">Try again in '+r.d+'d '+r.h+'h '+r.m+'m</div>'; })() : '';
-  app.innerHTML = renderHeader(currentTab)+'<div class="panel"><h2>Enter License Key</h2>'+lockInfo+'<input type="text" id="licenseKeyInput" placeholder="FH-XXXX-XXXX-XXXX" class="field-input" style="font-family:monospace; text-transform:uppercase;" '+(locked?'disabled':'')+'><div id="keyMsg" style="margin-top:10px; font-size:13px;"></div><button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitLicenseKey()" '+(locked?'disabled':'')+'>Activate</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav(currentTab)+renderChatFab();
-}
-function submitLicenseKey(){
-  const inp = document.getElementById('licenseKeyInput'); const msg = document.getElementById('keyMsg');
-  const key = (inp && inp.value ? inp.value : '').trim().toUpperCase();
-  if(!key){ msg.innerHTML='<div style="color:#c62828;">Enter your key.</div>'; return; }
-  const res = tryActivateLicense(key);
-  if(res.ok){ msg.innerHTML='<div style="color:#2e7d32; font-weight:700;">✅ Activated! Unlocking…</div>'; pushStatusToServer(); _clearNavStack(); setTimeout(()=>{ switchTab('book'); }, 1000); return; }
-  if(res.reason==='wrong-device'){ msg.innerHTML='<div style="color:#c62828;">Wrong device. Attempts: '+res.remaining+'</div>'; return; }
-  if(res.reason==='blocked'){ msg.innerHTML='<div style="color:#c62828;">Too many attempts. Blocked.</div>'; setTimeout(()=>renderKeyBlockedScreen(), 1200); return; }
-  msg.innerHTML='<div style="color:#c62828;">Invalid key.</div>';
-}
 
 function parseQuestions(text){
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
@@ -2570,7 +2275,7 @@ Object.assign(window, {
   adminAddExam, adminDeleteExam, adminSaveExam, formatQuestionsForEdit,
   adminAddCoc, adminDeleteCoc, adminSaveCoc,
   addPaymentMethod, removePaymentMethod, renderPaymentMethodRow,
-  trialUnisDisplay, trialSubjectsDisplay, isTrialSubjectKey, isTrialExamAllowed, isTrialNoteAllowed, isTrialCocAllowed,
+  trialUnisDisplay, trialSubjectsDisplay, isTrialSubjectKey, isTrialExamAllowed, isTrialNoteAllowed, isTrialCocAllowed, isTrialBookAllowed,
   openSupportGroup, appAlert, appConfirm, appPrompt,
   isPhoneUsed, markPhoneUsed, getRegisteredPhones, adminRemoveUsedPhone, getSessionDays,
   setAppZoom, getAppZoom, backendRegister, backendLogin, backendGetUser, backendUpdateUser,
