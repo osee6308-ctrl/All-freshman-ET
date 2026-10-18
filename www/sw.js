@@ -1,4 +1,4 @@
-const CACHE_NAME = 'all-freshman-v15'; // 🚨 CHANGED TO v15 🚨
+const CACHE_NAME = 'all-freshman-v16'; // 🚨 BUMPED FROM v15 → v16 🚨
 const ASSETS = [
   './manifest.json',
   './logo.png',
