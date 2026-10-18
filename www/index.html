@@ -213,9 +213,7 @@ const DEFAULT_CONFIG = {
   ],
   FT_MIN_LEN: 6, FT_MAX_LEN: 30, DEFAULT_EXAM_TIME_MINUTES: 30,
   ADMIN_PASSWORD: "osama2024", ADMIN_TAPS_REQUIRED: 7,
-  KEY_MAX_ATTEMPTS: 4, BLOCK_BASE_WEEKS: 1, 
-  // 🚨 IMPORTANT: UPDATE THIS TO YOUR CLOUDFLARE PAGES URL BEFORE UPLOADING
-  CONTENT_URL: "https://all-freshman.pages.dev/www",
+  KEY_MAX_ATTEMPTS: 4, BLOCK_BASE_WEEKS: 1, CONTENT_URL: "",
   UNIVERSITIES: [
     "Addis Ababa University","Addis Ababa Science and Technology University","Adama Science and Technology University","Adigrat University","Aksum University","Ambo University","Arba Minch University","Arsi University","Assosa University","Bahir Dar University","Bonga University","Bule Hora University","Debark University","Debre Berhan University","Debre Markos University","Debre Tabor University","Dilla University","Dire Dawa University","Ethiopian Civil Service University","Gambella University","Haramaya University","Hawassa University","Injibara University","Jigjiga University","Jimma University","Kebri Dehar University","Kotebe Metropolitan University","Madda Walabu University","Mekelle University","Mettu University","Mizan-Tepi University","Oda Bultum University","Raya University","Salale University","Semera University","University of Gondar","Wachemo University","Werabe University","Wolaita Sodo University","Woldia University","Wolkite University","Wollo University"
   ]
@@ -392,9 +390,9 @@ function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
 function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
 function applyTheme(){ document.body.classList.toggle('dark', getTheme() === 'dark'); }
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
+function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
 
-
-  const app = document.getElementById('app');
+ const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
 const scrollMemory = {};
 
@@ -467,6 +465,7 @@ const saveProfileData=p=>localStorage.setItem(LS_PROFILE,JSON.stringify(p));
 const getUniversity=()=>localStorage.getItem(LS_UNIVERSITY)||'';
 const setUniversity=u=>localStorage.setItem(LS_UNIVERSITY,u);
 
+/* ============ ADMIN MODE — SERVER TOKEN BASED ============ */
 const isAdminMode = () => {
   const t = getAdminToken();
   if (!t) return false;
@@ -677,7 +676,7 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
-  document.addEventListener('visibilitychange', () => {
+ document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
   } else {
@@ -980,7 +979,7 @@ function renderHeader(activeTab, opts){
 }
 function renderBottomNav(activeTab){
   const tabs = [{ id:'book', label:'Modules', ico:'📚' }, { id:'note', label:'Note', ico:'📝' }, { id:'exam', label:'Exam', ico:'📋' }];
-  tabs.push({ id:'coc', label:'COC', ico:'🎯' }); 
+  if (getCurrentSemester() === 1) tabs.push({ id:'coc', label:'COC', ico:'🎯' });
   tabs.push({ id:'university', label:'Info', ico:'🏛️' }); tabs.push({ id:'my', label:'My', ico:'👤' });
   return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.ico+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
 }
@@ -1058,8 +1057,9 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       }
-  function renderSignIn(){
+                 }
+
+ function renderSignIn(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
     '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
@@ -1145,6 +1145,7 @@ function renderForgotPassword() {
     renderBottomNav('my') + renderChatFab();
 }
 
+// ✅ FIX #1: expired check moved BEFORE university — Info now gated like Modules/Exams
 function switchTab(tab){
   _clearNavStack(); saveScrollNow();
   if(BASE_TABS[tab]) _lastBaseTab = tab;
@@ -1160,10 +1161,7 @@ function switchTab(tab){
   if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
   else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
   else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
-  else if(tab === 'coc'){ 
-    if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } 
-    setScreen('coc-home'); renderCocHome(); 
-  }
+  else if(tab === 'coc'){ if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('coc'); return; } setScreen('coc-home'); renderCocHome(); }
 }
 function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
 function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
@@ -1174,6 +1172,7 @@ function semesterChanger(current){ return '<div class="semester-pick">'+CONFIG.S
 
 function changeSemester(s){ 
   setCurrentSemester(s); 
+  if(s !== 1 && currentTab === 'coc'){ currentTab = 'book'; } 
   switchTab(currentTab); 
 }
 
@@ -1292,9 +1291,9 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-                                                                                                                                                                                                                                                                                                 }
+     }
 
-/* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
+ /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   if(!isTrialContentAllowed('exam')){ setScreen('exam-home'); app.innerHTML=renderHeader('exam')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('exam')+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1382,49 +1381,32 @@ function startBuiltInExam(key){
   startQuiz(s.name, s.questions||[], CONFIG.DEFAULT_EXAM_TIME_MINUTES);
 }
 
-/* ============ COC — SHOW ALL, LOCK NON-TRIAL, 1ST SEM ONLY ============ */
+/* ============ COC — SHOW ALL, LOCK NON-TRIAL, BOTH SEMESTERS ============ */
 function renderCocHome(){
-  if(!isSignedIn() || !hasActiveSession()){ 
-    setScreen('coc-home'); app.innerHTML = renderHeader('coc')+'<div class="locked-box"><div class="icon">🎯</div><h2>Register to View COC</h2><p>Sign up or sign in to browse COC materials.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; 
+  if(getCurrentSemester() !== 1){ 
+    appAlert('COC is only available in 1st semester.'); 
+    switchTab('book'); 
+    return; 
   }
-  if(!isTrialContentAllowed('coc')){ 
-    setScreen('coc-home'); app.innerHTML=renderHeader('coc')+renderTrialContentLocked('coc')+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; 
-  }
-  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); 
-  
-  // 🚨 FORCE SEMESTER 1 FOR COC
-  const sem = 1; 
-  
+  if(!isSignedIn() || !hasActiveSession()){ setScreen('coc-home'); app.innerHTML = renderHeader('coc')+'<div class="locked-box"><div class="icon">🎯</div><h2>Register to View COC</h2><p>Sign up or sign in to browse COC materials.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; }
+  if(!isTrialContentAllowed('coc')){ setScreen('coc-home'); app.innerHTML=renderHeader('coc')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('coc')+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; }
+  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem = getCurrentSemester();
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
   let preSelect = _lastUniSelection.coc || '';
   if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
-  
   const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{cocs:[]}; const has=c.cocs&&c.cocs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  
   const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
-  
-  // 🚨 DISPLAY STATIC "1st Semester" AT THE TOP
-  const staticSemesterPick = '<div class="semester-pick"><button class="active" style="opacity:1; cursor:default;">1st Semester</button></div>';
-
-  app.innerHTML = renderHeader('coc') + staticSemesterPick + 
-    '<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
-  
+  app.innerHTML = renderHeader('coc')+semesterChanger(sem)+'<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+' · Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
   if(preSelect) renderCocList(preSelect);
   restoreScroll('coc_coc-home');
 }
-
 function renderCocList(uni){
   if (uni) _lastUniSelection.coc = uni;
   const el=document.getElementById('cocList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
   if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see COC</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('coc'); return; }
-  const myStream=getUserStream(); 
-  
-  // 🚨 FORCE SEMESTER 1 HERE TOO
-  const sem = 1; 
-  
-  const c=getUniContent(uni,myStream,sem);
+  const myStream=getUserStream(); const sem = getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allCocs = c.cocs || [];
   if(!allCocs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No COC materials yet.</div>'; return; }
   const isTrialNow = checkAccess().status === 'trial';
@@ -1571,9 +1553,9 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-        }
+   }
 
-  /* ============ ADMIN: GENERATE RESET CODE ============ */
+ /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
   const phone = await appPrompt('Enter phone number to generate reset code for:');
@@ -1972,7 +1954,7 @@ function renderAdminSettings(){
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://all-freshman.pages.dev/www"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://osee6308-ctrl.github.io/All-freshman-ET/"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function saveAdminSettings(){
   const s=getSettings();
@@ -2019,10 +2001,6 @@ function renderAdminContentManager(tab){
   if(!isAdminMode()){ renderMy(); return; }
   if(!tab) tab='exam';
   const sem = adminEditState.semester || 1;
-  
-  // 🚨 FIX: If admin is in 2nd semester, don't allow the COC tab
-  if (sem === 2 && tab === 'coc') { tab = 'exam'; adminEditState.tab = 'exam'; }
-  
   if (adminEditState.tab !== tab || adminEditState._lastUni !== adminEditState.uni || adminEditState._lastStream !== adminEditState.stream || adminEditState._lastSem !== sem) {
     adminResetBulkSelection();
     adminEditState._lastUni = adminEditState.uni;
@@ -2035,11 +2013,7 @@ function renderAdminContentManager(tab){
   const uni=adminEditState.uni; const stream=adminEditState.stream;
   const c=getUniContent(uni,stream,sem);
   const uniOpts=CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
-  
-  // 🚨 FIX: Only show the COC button if sem === 1
-  const cocTabHTML = sem === 1 ? '<button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button>' : '';
-
-  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabHTML+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
+  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button><button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button></div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
 }
 
 function renderAdminBookList(uni,stream,sem,pdfs){
@@ -2475,67 +2449,40 @@ function trialUniCheckboxes(allUnis, selectedUnis){
   ).join('');
 }
 
+// ✅ FIX #2: Analytics — user list with click-to-open editor
 async function renderAdminStats(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-stats');
-  
-  if (!window._adminStatsFilter) window._adminStatsFilter = 'total';
-  const currentFilter = window._adminStatsFilter;
-
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Analytics</h2><div class="empty-msg">Loading…</div></div>'+renderBottomNav('my')+renderChatFab();
-  
   const r = await backendListUsers();
   const users = (r && r.ok && Array.isArray(r.users)) ? r.users : [];
-  
   const total = users.length;
   const licensed = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin').length;
   const trial = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin').length;
   const expired = total - licensed - trial;
   const today = new Date().toDateString();
   const todayCount = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today).length;
-
-  const box = (key, n, label, color) => {
-    const isActive = (currentFilter === key);
-    const border = isActive ? 'border: 3px solid #6a3093; transform: scale(0.98);' : 'border: 3px solid transparent;';
-    return '<div class="stat-box" onclick="window._adminStatsFilter=\''+key+'\';renderAdminStats()" style="background:'+color+'; cursor:pointer; '+border+' transition:0.2s;">'+
-           '<div class="num" style="color:#333;">'+n+'</div><div class="label">'+label+'</div></div>';
-  };
-
-  let filteredUsers = users;
-  if (currentFilter === 'licensed') filteredUsers = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin');
-  else if (currentFilter === 'trial') filteredUsers = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin');
-  else if (currentFilter === 'expired') filteredUsers = users.filter(u => u.status!=='licensed' && u.master!==1 && u.role!=='admin' && u.status!=='trial');
-  else if (currentFilter === 'today') filteredUsers = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today);
-
-  const userRows = filteredUsers.length ? filteredUsers.map(u => {
+  const box = (n,l,c) => '<div class="stat-box" style="background:'+c+';"><div class="num" style="color:#333;">'+n+'</div><div class="label">'+l+'</div></div>';
+  const userRows = users.length ? users.map(u => {
     let badge = '';
     const st = String(u.status||'trial').toLowerCase();
     if(u.role==='admin'||u.master===1) badge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">👑 ADMIN</span>';
     else if(st==='licensed') badge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🟢 LICENSED</span>';
     else if(st==='trial') badge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🟡 TRIAL</span>';
     else badge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🔴 EXPIRED</span>';
-    
     return '<div onclick="openUserEditorFor(\''+escapeAttr(u.phone)+'\')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f7f7fa;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;font-size:13px;">'+
       '<div style="flex:1;min-width:0;">'+
         '<div style="font-weight:700;color:#333;">'+escapeHtml(u.name||'-')+'</div>'+
         '<div style="font-size:11px;color:#888;">'+escapeHtml(u.phone||'-')+' · '+escapeHtml(u.university||'-')+'</div>'+
       '</div>'+
       badge+'<span style="color:#6a3093;font-weight:800;font-size:18px;">›</span></div>';
-  }).join('') : '<div class="empty-msg">No users in this category.</div>';
-
+  }).join('') : '<div class="empty-msg">No users yet.</div>';
   app.innerHTML = renderHeader('my')+
     '<div class="panel"><h2>Analytics</h2>'+
-    '<p style="font-size:11px;color:#888;margin-bottom:8px;">Tap a box to filter users below</p>'+
-    '<div class="stat-grid">'+
-      box('total', total,'Total Users','#e3f2fd')+
-      box('licensed', licensed,'Licensed','#e8f5e9')+
-      box('trial', trial,'Trial','#fff3cd')+
-      box('expired', expired,'Expired','#ffebee')+
-      box('today', todayCount,'Joined Today','#f3e5f5')+
+    '<div class="stat-grid">'+box(total,'Total Users','#e3f2fd')+box(licensed,'Licensed','#e8f5e9')+box(trial,'Trial','#fff3cd')+box(expired,'Expired','#ffebee')+box(todayCount,'Joined Today','#f3e5f5')+'</div>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="renderAdminStats()">🔄 Refresh</button>'+
     '</div>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="window._adminStatsFilter=\'total\';renderAdminStats()">🔄 Refresh All Users</button>'+
-    '</div>'+
-    '<div class="panel"><h2>Users ('+filteredUsers.length+')</h2>'+
+    '<div class="panel"><h2>Users ('+users.length+')</h2>'+
     '<p style="color:#777;font-size:12px;margin-bottom:10px;">Tap a user to view or edit their account.</p>'+
     userRows+
     '</div>'+
@@ -2543,6 +2490,7 @@ async function renderAdminStats(){
     renderBottomNav('my')+renderChatFab();
 }
 
+// ✅ FIX #2: Open user editor directly for a specific phone
 function openUserEditorFor(phone){
   renderAdminUserEditor();
   setTimeout(()=>{
@@ -2577,83 +2525,45 @@ function renderAdminUserEditor(){
     '<div id="ueResult" style="margin-top:14px;"></div>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-
 async function openUserEditor(){
   const phone = (document.getElementById('ueSearch').value||'').trim();
   const box = document.getElementById('ueResult');
   if(!/^(09|07)\d{8}$/.test(phone)){ box.innerHTML='<div style="color:#c62828;">Enter valid phone.</div>'; return; }
   box.innerHTML='<div class="empty-msg">Searching…</div>';
-  
   const r = await backendListUsers();
   const users = (r && r.ok && Array.isArray(r.users)) ? r.users : [];
   const u = users.find(x => String(x.phone).replace(/[^\d]/g,'')===String(phone).replace(/[^\d]/g,''));
-  
   if(!u){ box.innerHTML='<div style="color:#c62828;">Not found.</div>'; return; }
-  
-  const uniOpts = CONFIG.UNIVERSITIES.map(uni => '<option value="'+escapeAttr(uni)+'" '+(u.university===uni?'selected':'')+'>'+escapeHtml(uni)+'</option>').join('');
-  
+  const status = (u.role==='admin'||u.master===1)?'ADMIN':(u.status||'trial').toUpperCase();
   box.innerHTML = '<div style="background:#f7f7fa;border-radius:10px;padding:14px;font-size:13px;">'+
-    '<div style="font-weight:800; color:#6a3093; margin-bottom:10px;">Editing: '+escapeHtml(u.phone)+'</div>'+
-    
-    '<label class="field-label">Name</label>'+
-    '<input type="text" id="ueName" class="field-input" value="'+escapeAttr(u.name||'')+'" style="margin-bottom:10px;">'+
-    
-    '<label class="field-label">University</label>'+
-    '<select id="ueUni" class="field-select" style="margin-bottom:10px;">'+uniOpts+'</select>'+
-    
-    '<label class="field-label">Stream</label>'+
-    '<select id="ueStream" class="field-select" style="margin-bottom:10px;">'+
-      '<option value="Natural" '+(u.stream==='Natural'?'selected':'')+'>Natural</option>'+
-      '<option value="Social" '+(u.stream==='Social'?'selected':'')+'>Social</option>'+
-    '</select>'+
-
-    '<label class="field-label">Status</label>'+
+    '<div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div>'+
+    '<div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div>'+
+    '<div><strong>University:</strong> '+escapeHtml(u.university||'-')+' · '+escapeHtml(u.stream||'-')+'</div>'+
+    '<div><strong>Status:</strong> '+status+' · '+ (u.daysLeft||0) +'d</div>'+
+    '<div><strong>ID:</strong> <code>'+escapeHtml(u.deviceHash||'-')+'</code></div>'+
+    '<label class="field-label" style="margin-top:12px;">Change Status</label>'+
     '<select id="ueStatus" class="field-select" style="margin-bottom:10px;">'+
-      ['trial','licensed','expired'].map(s=>'<option value="'+s+'" '+(u.status===s?'selected':'')+'>'+s.toUpperCase()+'</option>').join('')+
+      ['trial','licensed','expired'].map(s=>'<option value="'+s+'" '+(u.status===s?'selected':'')+'>'+s+'</option>').join('')+
     '</select>'+
-
-    '<label class="field-label">Days Left</label>'+
-    '<input type="number" id="ueDays" class="field-input" value="'+(u.daysLeft||0)+'" style="margin-bottom:10px;">'+
-    
-    '<label class="field-label">Reset Password (Leave blank to keep current)</label>'+
-    '<input type="text" id="uePw" class="field-input" placeholder="New password/PIN" style="margin-bottom:10px;">'+
-    
-    '<label class="field-label">Role / Master</label>'+
-    '<select id="ueRole" class="field-select" style="margin-bottom:10px;">'+
-      '<option value="user" '+(u.role==='user'?'selected':'')+'>User (Normal)</option>'+
-      '<option value="admin" '+(u.role==='admin'?'selected':'')+'>Admin (Master)</option>'+
-    '</select>'+
-
-    '<div style="display:flex;gap:6px;margin-top:12px;">'+
-      '<button class="btn btn-primary" style="flex:1;" onclick="saveUserEdit(\''+escapeAttr(u.phone)+'\')">💾 Save Changes</button>'+
+    '<label class="field-label">Days Left</label><input type="number" id="ueDays" class="field-input" value="'+(u.daysLeft||0)+'" style="margin-bottom:10px;">'+
+    '<div style="display:flex;gap:6px;margin-top:8px;">'+
+      '<button class="btn btn-primary" style="flex:1;" onclick="saveUserEdit(\''+escapeAttr(u.phone)+'\')">Save</button>'+
       '<button class="btn btn-ghost" style="flex:1;" onclick="adminUnbindDevice(\''+escapeAttr(u.phone)+'\')">Unblock</button>'+
     '</div></div>';
 }
-
 async function saveUserEdit(phone){
-  const name = document.getElementById('ueName').value.trim();
-  const university = document.getElementById('ueUni').value;
-  const stream = document.getElementById('ueStream').value;
   const status = document.getElementById('ueStatus').value;
   const daysLeft = parseInt(document.getElementById('ueDays').value)||0;
-  const role = document.getElementById('ueRole').value;
-  const master = role === 'admin' ? 1 : 0;
-  let passwordHash = null;
-  
-  const pw = document.getElementById('uePw').value;
-  if(pw && pw.length >= 4){ passwordHash = await hashPasswordNew(pw); }
-
   try {
-    const r = await fetch(BACKEND_URL+'/api/admin/edit-user', {
-      method:'POST', headers:adminHeaders(),
-      body: JSON.stringify({ phone, name, university, stream, status, daysLeft, role, master, passwordHash })
+    const r = await fetch(BACKEND_URL+'/api/update-status', {
+      method:'POST', headers:authHeaders(),
+      body: JSON.stringify({ phone, status, daysLeft, master: status==='licensed'?1:0, grace:0 })
     });
     const d = await r.json();
-    if(d && d.ok){ await appAlert('✅ User fully updated.'); openUserEditor(); }
+    if(d && d.ok){ await appAlert('✅ Saved.'); openUserEditor(); }
     else appAlert('Failed: '+((d&&d.err)||'unknown'));
   } catch(e){ appAlert('Network error.'); }
 }
-
 function adminActivateThisUser(){ renderAdminActivateUser(); }
 function adminPickUserForActivation(){ renderAdminActivateUser(); }
 function adminShowMasterKey(){ appAlert('Generate a key with max uses >1 for a master key.'); }
@@ -2727,13 +2637,16 @@ function adminDeleteUniInfo(i){
   });
 }
 
+// ✅ FIX #1: University Info — full trial gating (same as Exam/Modules)
 function renderUniversityInfo(){
   setScreen('university-info');
+  // Not signed in → locked
   if(!isSignedIn() || !hasActiveSession()){
     app.innerHTML = renderHeader('university')+'<div class="locked-box"><div class="icon">🏛️</div><h2>Register to View Info</h2><p>Sign up to see university info, dates, and guides.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('university')+renderChatFab();
     restoreScroll('university_university-info');
     return;
   }
+  // Trial content not allowed → locked screen
   if(!isTrialContentAllowed('info')){
     app.innerHTML = renderHeader('university')+renderTrialContentLocked('info')+renderBottomNav('university')+renderChatFab();
     restoreScroll('university_university-info');
@@ -2908,4 +2821,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
- </html>
+</html>
