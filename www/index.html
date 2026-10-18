@@ -188,7 +188,6 @@ if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'h
     v = String(v);
     try { localStorage.setItem('app_zoom', v); } catch(e){}
     document.documentElement.style.zoom = v;
-    if (document.body) document.body.style.zoom = v;
   }
   window.setAppZoom = function(v){ applyZoom(v); if (typeof window.renderMy === 'function') window.renderMy(); };
   window.getAppZoom = function(){ return parseFloat(localStorage.getItem('app_zoom') || '1.15'); };
@@ -1553,8 +1552,7 @@ async function submitForceChangePassword() {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
                                                                                            }
-
- /* ============ ADMIN: GENERATE RESET CODE ============ */
+  /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
   const phone = await appPrompt('Enter phone number to generate reset code for:');
@@ -1652,6 +1650,7 @@ function renderMy(introMsg){
     '<div class="panel"><h2>Tutorials</h2>'+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+renderTutorialCard('pay',tutorials.pay.title,tutorials.pay.url)+'</div>'+
     (isAdminMode() ? '<div class="panel"><h2>Admin Dashboard</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box"><div class="num">'+stats.total+'</div><div class="label">Your Attempts</div></div><div class="stat-box"><div class="num">'+stats.avg+'%</div><div class="label">Your Avg</div></div><div class="stat-box"><div class="num">'+stats.best+'%</div><div class="label">Your Best</div></div></div></div>' : '')+
     '<div class="panel" style="text-align:center; padding:16px;"><p style="font-size:12px; color:#999; margin:0; cursor:pointer;" onclick="adminTap()">'+CONFIG.APP_NAME+' · By <strong>'+escapeHtml(CONFIG.OWNER_NAME)+'</strong></p>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;font-size:11px;" onclick="location.reload()">🔄 Reload App</button>'+
     (isAdminMode()?'<div style="margin-top:12px; background:#fff3cd; color:#856404; padding:8px 12px; border-radius:8px; font-size:11.5px; font-weight:700;">ADMIN MODE — '+escapeHtml(getCurrentUserPhone())+'</div>'+
     '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderAdminSettings()">⚙️ App Settings</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#4caf50;" onclick="renderAdminActivateUser()">🔑 Activate User</button>'+
@@ -2633,7 +2632,6 @@ function renderInfoLocked(access){
 function trialSubjectRx(){ return null; }
 function trialPremiumCTA(){ return '<button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\'premium\')">Unlock Full Access</button>'; }
 
-/* No-op stubs for functions referenced in Object.assign but never implemented */
 function adminUniInfoToggleBulk(){}
 function adminUniInfoToggleSel(){}
 function adminUniInfoDeleteSelected(){}
@@ -2650,7 +2648,7 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   🚀 NON-BLOCKING INIT — UI renders immediately from cache
+   🚀 NON-BLOCKING INIT
    ═══════════════════════════════════════════════════════════════ */
 async function fetchSettingsFast(){
   try {
@@ -2675,16 +2673,19 @@ async function fetchSettingsFast(){
   if(!localStorage.getItem(LS_FIRST_RUN)) localStorage.setItem(LS_FIRST_RUN, Date.now().toString());
   try { history.pushState({ nav: true }, ''); } catch(e){}
 
-  // ── RENDER UI IMMEDIATELY from cached settings (0ms wait) ──
   if(isBlocked()||isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); _navReady=true; }
   else if(isKeyLocked()){ renderKeyBlockedScreen(); _navReady=true; }
   else if(isClosureDay()){ renderClosureScreen(); _navReady=true; }
   else if(!isSignedIn()||!hasActiveSession()){ setScreen('my'); renderMy(); _navReady=true; }
   else { switchTab('book'); _navReady=true; }
 
-  // ── Background updates: don't block UI ──
   fetchSettingsFast().then(changed => {
-    if(changed && currentScreen === 'my'){ try{ renderMy(); }catch(e){} }
+    if(changed){
+      try {
+        if(currentScreen === 'my') renderMy();
+        else if(BASE_SCREENS.has(currentScreen)) _renderScreenByName(currentScreen);
+      } catch(e){}
+    }
   });
   syncRemoteContent().catch(()=>{});
   if(isSignedIn() && hasActiveSession()){ pushStatusToServer().catch(()=>{}); }
