@@ -1057,8 +1057,9 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-                                                                                 }
-function renderSignIn(){
+                 }
+
+ function renderSignIn(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
     '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
@@ -1144,6 +1145,7 @@ function renderForgotPassword() {
     renderBottomNav('my') + renderChatFab();
 }
 
+// ✅ FIX #1: expired check moved BEFORE university — Info now gated like Modules/Exams
 function switchTab(tab){
   _clearNavStack(); saveScrollNow();
   if(BASE_TABS[tab]) _lastBaseTab = tab;
@@ -1154,8 +1156,8 @@ function switchTab(tab){
   if(isClosureDay()){ renderClosureScreen(); return; }
   if(tab === 'my'){ setScreen('my'); renderMy(); return; }
   const accessNow = checkAccess(); const signedIn = isSignedIn() && hasActiveSession();
-  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
   if(signedIn && accessNow.status === 'expired'){ renderPaymentFlow(tab); return; }
+  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
   if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
   else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
   else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
@@ -1289,7 +1291,7 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-   }
+     }
 
  /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
@@ -1551,8 +1553,9 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-                                                                                           }
-  /* ============ ADMIN: GENERATE RESET CODE ============ */
+   }
+
+ /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
   const phone = await appPrompt('Enter phone number to generate reset code for:');
@@ -2446,6 +2449,7 @@ function trialUniCheckboxes(allUnis, selectedUnis){
   ).join('');
 }
 
+// ✅ FIX #2: Analytics — user list with click-to-open editor
 async function renderAdminStats(){
   if(!isAdminMode()){ renderMy(); return; }
   setScreen('admin-stats');
@@ -2459,12 +2463,40 @@ async function renderAdminStats(){
   const today = new Date().toDateString();
   const todayCount = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today).length;
   const box = (n,l,c) => '<div class="stat-box" style="background:'+c+';"><div class="num" style="color:#333;">'+n+'</div><div class="label">'+l+'</div></div>';
+  const userRows = users.length ? users.map(u => {
+    let badge = '';
+    const st = String(u.status||'trial').toLowerCase();
+    if(u.role==='admin'||u.master===1) badge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">👑 ADMIN</span>';
+    else if(st==='licensed') badge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🟢 LICENSED</span>';
+    else if(st==='trial') badge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🟡 TRIAL</span>';
+    else badge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🔴 EXPIRED</span>';
+    return '<div onclick="openUserEditorFor(\''+escapeAttr(u.phone)+'\')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f7f7fa;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;font-size:13px;">'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-weight:700;color:#333;">'+escapeHtml(u.name||'-')+'</div>'+
+        '<div style="font-size:11px;color:#888;">'+escapeHtml(u.phone||'-')+' · '+escapeHtml(u.university||'-')+'</div>'+
+      '</div>'+
+      badge+'<span style="color:#6a3093;font-weight:800;font-size:18px;">›</span></div>';
+  }).join('') : '<div class="empty-msg">No users yet.</div>';
   app.innerHTML = renderHeader('my')+
     '<div class="panel"><h2>Analytics</h2>'+
     '<div class="stat-grid">'+box(total,'Total Users','#e3f2fd')+box(licensed,'Licensed','#e8f5e9')+box(trial,'Trial','#fff3cd')+box(expired,'Expired','#ffebee')+box(todayCount,'Joined Today','#f3e5f5')+'</div>'+
     '<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="renderAdminStats()">🔄 Refresh</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+
+    '</div>'+
+    '<div class="panel"><h2>Users ('+users.length+')</h2>'+
+    '<p style="color:#777;font-size:12px;margin-bottom:10px;">Tap a user to view or edit their account.</p>'+
+    userRows+
+    '</div>'+
+    '<div class="panel" style="text-align:center;"><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>'+
     renderBottomNav('my')+renderChatFab();
+}
+
+// ✅ FIX #2: Open user editor directly for a specific phone
+function openUserEditorFor(phone){
+  renderAdminUserEditor();
+  setTimeout(()=>{
+    const input = document.getElementById('ueSearch');
+    if(input){ input.value = phone; openUserEditor(); }
+  }, 50);
 }
 
 async function renderAdminProgress(){
@@ -2605,22 +2637,50 @@ function adminDeleteUniInfo(i){
   });
 }
 
+// ✅ FIX #1: University Info — full trial gating (same as Exam/Modules)
 function renderUniversityInfo(){
   setScreen('university-info');
-  const uniSel = _lastUniSelection.university || getUserUniversity() || CONFIG.UNIVERSITIES[0];
+  // Not signed in → locked
+  if(!isSignedIn() || !hasActiveSession()){
+    app.innerHTML = renderHeader('university')+'<div class="locked-box"><div class="icon">🏛️</div><h2>Register to View Info</h2><p>Sign up to see university info, dates, and guides.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('university')+renderChatFab();
+    restoreScroll('university_university-info');
+    return;
+  }
+  // Trial content not allowed → locked screen
+  if(!isTrialContentAllowed('info')){
+    app.innerHTML = renderHeader('university')+renderTrialContentLocked('info')+renderBottomNav('university')+renderChatFab();
+    restoreScroll('university_university-info');
+    return;
+  }
+  const access = checkAccess();
+  const isTrial = access.status === 'trial';
+  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
+  let uniSel = _lastUniSelection.university || getUserUniversity() || CONFIG.UNIVERSITIES[0];
+  if(isTrial && trialUnis.length && trialUnis.indexOf(uniSel) === -1) uniSel = trialUnis[0];
   _lastUniSelection.university = uniSel;
-  const uniOpts = CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeAttr(u)+'" '+(u===uniSel?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
   const myStream = getUserStream();
-  const items = getUniInfoForStream(uniSel, myStream);
-  const cards = items.length ? items.map(it =>
-    '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);">'+
-    '<div style="font-weight:800;color:#333;margin-bottom:6px;">'+escapeHtml(it.title||'Info')+'</div>'+
-    '<div style="font-size:13px;color:#555;line-height:1.7;">'+(it.body||'')+'</div></div>'
-  ).join('') : '<div style="background:#fff;border-radius:12px;padding:40px;text-align:center;color:#999;">No info for this university yet.</div>';
-  app.innerHTML = renderHeader('university')+
+  const uniOpts = CONFIG.UNIVERSITIES.map(u => {
+    const isLocked = isTrial && trialUnis.indexOf(u) === -1;
+    return '<option value="'+escapeAttr(u)+'" '+(u===uniSel?'selected':'')+'>'+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>';
+  }).join('');
+  const trialNote = isTrial
+    ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> unlocked · other universities locked · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>'
+    : '';
+  let contentHtml;
+  if(isTrialLockedUniversity(uniSel)){
+    contentHtml = renderTrialLockedUniversity('info');
+  } else {
+    const items = getUniInfoForStream(uniSel, myStream);
+    contentHtml = items.length ? items.map(it =>
+      '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);">'+
+      '<div style="font-weight:800;color:#333;margin-bottom:6px;">'+escapeHtml(it.title||'Info')+'</div>'+
+      '<div style="font-size:13px;color:#555;line-height:1.7;">'+(it.body||'')+'</div></div>'
+    ).join('') : '<div style="background:#fff;border-radius:12px;padding:40px;text-align:center;color:#999;">No info for this university yet.</div>';
+  }
+  app.innerHTML = renderHeader('university')+trialNote+
     '<div class="panel"><h2>University Info <span class="stream-badge">'+escapeHtml(myStream)+'</span></h2>'+
-    '<select class="field-select" onchange="_lastUniSelection.university=this.value;renderUniversityInfo()" style="margin-bottom:14px;"><option value="">- Choose university -</option>'+uniOpts+'</select></div>'+
-    cards+renderBottomNav('university')+renderChatFab();
+    '<select class="field-select" onchange="_lastUniSelection.university=this.value;renderUniversityInfo()" style="margin-bottom:4px;"><option value="">- Choose university -</option>'+uniOpts+'</select></div>'+
+    contentHtml+renderBottomNav('university')+renderChatFab();
   restoreScroll('university_university-info');
 }
 function renderSelectedUniInfo(){ renderUniversityInfo(); }
@@ -2647,9 +2707,6 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App
   window.Capacitor.Plugins.App.addListener('backButton', () => { handleAndroidBack(); });
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   🚀 NON-BLOCKING INIT
-   ═══════════════════════════════════════════════════════════════ */
 async function fetchSettingsFast(){
   try {
     const ctrl = new AbortController();
@@ -2722,7 +2779,7 @@ Object.assign(window, {
   toggleTheme, setTheme, doLogout, showActivationStatus,
   renderAdminSettings, saveAdminSettings, resetAdminSettings,
   renderAdminStats, renderAdminContentManager, renderAdminTutorials,
-  renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit,
+  renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit, openUserEditorFor,
   adminDeleteUser, adminActivateThisUser, renderAdminProgress,
   renderAdminRegisteredPhones, confirmRemovePhone,
   adminTap, syncNow, exportContentForShipping, copyExport, clearDraftContent,
