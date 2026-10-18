@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "updated": "2026-10-13",
+  "version": 1,
+  "updated": "2026-10-18",
   "settings": {
     "TRIAL_DAYS": 3,
     "LICENSE_DAYS": 365,
