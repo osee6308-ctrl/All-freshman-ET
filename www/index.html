@@ -181,6 +181,14 @@
 <body>
 <div class="container" id="app"></div>
 <script>
+ window.onerror = function(message, source, lineno, colno, error) {
+  document.body.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif; background:#c62828; z-index:99999; position:fixed; inset:0; overflow:auto;">' +
+    '<h1 style="font-size:20px;">App Crash Detected!</h1>' +
+    '<p style="font-size:16px;"><b>Error:</b> ' + message + '</p>' +
+    '<p style="font-size:16px;"><b>Line Number:</b> ' + lineno + '</p>' +
+    '<p style="font-size:14px; color:#ffcdd2; margin-top:20px;">Take a screenshot of this and send it to Osama!</p>' +
+    '</div>';
+};
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 (function(){
