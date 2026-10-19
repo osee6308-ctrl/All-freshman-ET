@@ -589,7 +589,8 @@ function isTrialCocAllowed(name){ const kws = Array.isArray(CONFIG.TRIAL_COC_KEY
 
 function renderTrialContentLocked(kind){ const names = { book:'Modules Library', note:'Notes', exam:'Exams', coc:'COC', info:'University Info' }; const nm = names[kind] || 'This content'; const accessNow = checkAccess(); const daysTxt = accessNow.daysLeft ? (accessNow.daysLeft + ' day' + (accessNow.daysLeft===1?'':'s') + ' left') : ''; return '<div class="locked-box"><div class="icon">🔒</div><h2>'+nm+' Not in Trial</h2><p>Trial gives access to limited content only.<br>'+escapeHtml(daysTxt)+'<br>Contact admin to unlock full access.</p><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+kind+'\')">Unlock Full Access</button></div>'; }
 function renderTrialLockedUniversity(kind){ return '<div style="background:#fff; border-radius:12px; padding:40px 20px; text-align:center;"><div style="font-size:40px; margin-bottom:10px;">🔒</div><div style="font-weight:800; font-size:15px; color:#c62828; margin-bottom:8px;">Locked — Trial limitation</div><div style="color:#666; font-size:13px; line-height:1.7; margin-bottom:16px;">Trial gives access to <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only.<br>Pick one from the dropdown above, or unlock full access.</div><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+(kind||'book')+'\')">Unlock Full Access</button></div>'; }
-
+const SS_ALLOWED_SCREENS = ['my','exam-home','quiz','auth'];
+ 
 function setScreen(name){
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
   if (!_goingBack && _navReady && !_navSilent) { 
