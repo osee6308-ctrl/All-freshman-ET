@@ -1,4 +1,4 @@
-const CACHE_NAME = 'all-freshman-v1.411';
+const CACHE_NAME = 'all-freshman-v1.4111';
 const ASSETS = [
   './manifest.json',
   './logo.png',
