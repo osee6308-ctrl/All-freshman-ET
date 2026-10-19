@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="android-disable-cache" content="true">
 <title>All Freshman ET</title>
 <link rel="manifest" href="manifest.json">
@@ -16,7 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
-  body { min-height:100vh; background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#222; transition: background .3s, color .3s; }
+  body { min-height:100vh; background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#222; transition: background .3s, color .3s; touch-action: pan-y; }
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
   body:not(.admin-mode) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   body:not(.admin-mode) input, body:not(.admin-mode) textarea { -webkit-user-select: text; user-select: text; }
@@ -30,7 +30,7 @@
   .hdr-actions { display:flex; gap:6px; flex-shrink:0; }
   .hdr-btn { position:relative; background:rgba(255,255,255,.18); border:none; color:#fff; width:42px; height:42px; border-radius:50%; cursor:pointer; font-size:19px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .hdr-btn .dot { position:absolute; top:6px; right:6px; min-width:16px; height:16px; padding:0 4px; background:#ff4757; color:#fff; border-radius:20px; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #2a5298; }
-  .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 4px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:8000; gap:2px; }
+  .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 4px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:9000; gap:2px; }
   .bottom-nav .tab { flex:1; padding:8px 2px; border:none; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; font-size:9.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:10px; transition:.15s; }
   .bottom-nav .tab .ico { font-size:17px; line-height:1; }
   .bottom-nav .tab.active { background:rgba(255,255,255,.15); color:#fff; }
@@ -105,7 +105,7 @@
   .tutorial-card .t-sub { font-size:11.5px; color:#888; }
   .video-frame { width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#000; margin-bottom:12px; }
   .video-frame iframe, .video-frame video { width:100%; height:100%; border:0; display:block; }
-  .notif-panel { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; display:none; justify-content:flex-end; }
+  .notif-panel { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:99999; display:none; justify-content:flex-end; }
   .notif-panel.open { display:flex; }
   .notif-drawer { width:92%; max-width:420px; background:#fff; height:100%; overflow-y:auto; padding:20px; animation:slideIn .25s; }
   @keyframes slideIn { from { transform:translateX(100%); } to { transform:translateX(0); } }
@@ -120,7 +120,7 @@
   .key-attempt-warn.danger { background:#ffebee; border-left-color:#f44336; color:#c62828; }
   .auth-choice { display:flex; flex-direction:column; gap:12px; }
   .auth-choice button { padding:20px; font-size:15px; border-radius:14px; font-weight:800; }
-  .chat-menu { position:fixed; bottom:100px; right:20px; z-index:9000; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+  .chat-menu { position:fixed; bottom:100px; right:20px; z-index:8000; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
   .chat-fab { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#0088cc,#0066aa); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(0,136,204,.5); color:#fff; font-size:10px; font-weight:800; cursor:pointer; border:none; position:relative; text-decoration:none; }
   .viewer-topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; background:#fff; padding:12px 16px; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,.15); }
   .viewer-topbar .vt-title { flex:1; font-weight:800; font-size:14px; color:#333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
@@ -181,14 +181,6 @@
 <body>
 <div class="container" id="app"></div>
 <script>
-  window.onerror = function(message, source, lineno, colno, error) {
-  document.body.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif; background:#c62828; z-index:99999; position:fixed; inset:0; overflow:auto;">' +
-    '<h1 style="font-size:20px;">App Crash Detected!</h1>' +
-    '<p style="font-size:16px;"><b>Error:</b> ' + message + '</p>' +
-    '<p style="font-size:16px;"><b>Line Number:</b> ' + lineno + '</p>' +
-    '<p style="font-size:14px; color:#ffcdd2; margin-top:20px;">Take a screenshot of this and send it to Osama!</p>' +
-    '</div>';
-};
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 (function(){
@@ -222,8 +214,7 @@ const DEFAULT_CONFIG = {
   FT_MIN_LEN: 6, FT_MAX_LEN: 30, DEFAULT_EXAM_TIME_MINUTES: 30,
   ADMIN_PASSWORD: "osama2024", ADMIN_TAPS_REQUIRED: 7,
   KEY_MAX_ATTEMPTS: 4, BLOCK_BASE_WEEKS: 1, 
-  // 🚨 IMPORTANT: UPDATE THIS TO YOUR CLOUDFLARE PAGES URL BEFORE UPLOADING
-  CONTENT_URL: "https://all-freshman.pages.dev/www",
+  CONTENT_URL: "https://all-freshman1.pages.dev/www",
   UNIVERSITIES: [
     "Addis Ababa University","Addis Ababa Science and Technology University","Adama Science and Technology University","Adigrat University","Aksum University","Ambo University","Arba Minch University","Arsi University","Assosa University","Bahir Dar University","Bonga University","Bule Hora University","Debark University","Debre Berhan University","Debre Markos University","Debre Tabor University","Dilla University","Dire Dawa University","Ethiopian Civil Service University","Gambella University","Haramaya University","Hawassa University","Injibara University","Jigjiga University","Jimma University","Kebri Dehar University","Kotebe Metropolitan University","Madda Walabu University","Mekelle University","Mettu University","Mizan-Tepi University","Oda Bultum University","Raya University","Salale University","Semera University","University of Gondar","Wachemo University","Werabe University","Wolaita Sodo University","Woldia University","Wolkite University","Wollo University"
   ]
@@ -401,8 +392,11 @@ function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
 function applyTheme(){ document.body.classList.toggle('dark', getTheme() === 'dark'); }
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
-
-  const app = document.getElementById('app');
+ 
+ 
+ 
+ 
+const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
 const scrollMemory = {};
 
@@ -586,8 +580,6 @@ function isTrialCocAllowed(name){ const kws = Array.isArray(CONFIG.TRIAL_COC_KEY
 function renderTrialContentLocked(kind){ const names = { book:'Modules Library', note:'Notes', exam:'Exams', coc:'COC', info:'University Info' }; const nm = names[kind] || 'This content'; const accessNow = checkAccess(); const daysTxt = accessNow.daysLeft ? (accessNow.daysLeft + ' day' + (accessNow.daysLeft===1?'':'s') + ' left') : ''; return '<div class="locked-box"><div class="icon">🔒</div><h2>'+nm+' Not in Trial</h2><p>Trial gives access to limited content only.<br>'+escapeHtml(daysTxt)+'<br>Contact admin to unlock full access.</p><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+kind+'\')">Unlock Full Access</button></div>'; }
 function renderTrialLockedUniversity(kind){ return '<div style="background:#fff; border-radius:12px; padding:40px 20px; text-align:center;"><div style="font-size:40px; margin-bottom:10px;">🔒</div><div style="font-weight:800; font-size:15px; color:#c62828; margin-bottom:8px;">Locked — Trial limitation</div><div style="color:#666; font-size:13px; line-height:1.7; margin-bottom:16px;">Trial gives access to <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only.<br>Pick one from the dropdown above, or unlock full access.</div><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+(kind||'book')+'\')">Unlock Full Access</button></div>'; }
 
-const SS_ALLOWED_SCREENS = ['my','exam-home','quiz','auth'];
-
 function setScreen(name){
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
   if (!_goingBack && _navReady && !_navSilent) { 
@@ -685,7 +677,10 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
-  document.addEventListener('visibilitychange', () => {
+ 
+
+
+ document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
   } else {
@@ -821,9 +816,6 @@ document.addEventListener('touchstart', _onBlankTap, { passive: true });
 document.addEventListener('mousedown', _onBlankTap);
 document.addEventListener('keydown', function(e){ const code = e.keyCode || e.which || 0; const key  = e.key || ''; const isEnter = code === 13 || key === 'Enter'; const isTab   = code === 9  || key === 'Tab'; if (!(isEnter || isTab)) return; const t = e.target; if (!t) return; if (t.tagName === 'TEXTAREA') return; if (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') return; _dismissKeyboard(); setTimeout(function(){ try { t.blur(); } catch(err){} }, 20); }, true);
 
-/* ============ BULK / COPY / MOVE ============ */
-let adminBulkMode = false;
-let adminSelected = new Set();
 function adminResetBulkSelection(){ adminBulkMode = false; adminSelected.clear(); }
 function adminToggleBulkMode(type){ adminBulkMode = !adminBulkMode; adminSelected.clear(); renderAdminContentManager(type); }
 function adminToggleSelect(idx){ if (adminSelected.has(idx)) adminSelected.delete(idx); else adminSelected.add(idx); renderAdminContentManager(adminEditState.tab); }
@@ -957,7 +949,6 @@ function adminUniPickerHTML(){
 }
 window.adminToggleAddToUni = adminToggleAddToUni;
 window.adminToggleAllAddToUnis = adminToggleAllAddToUnis;
-/* ============ END BULK ============ */
 
 function goBack() {
   if (_screenStack.length > 0) { const prev = _screenStack.pop(); _goingBack = true; try { _renderScreenByName(prev); } finally { setTimeout(() => { _goingBack = false; }, 100); } return; }
@@ -1065,9 +1056,13 @@ async function submitSignUp(){
     ok('✓ Account created!'); setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
-  }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       }
-  function renderSignIn(){
+  }                      
+}
+
+
+
+
+ function renderSignIn(){
   setScreen('auth');
   app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
     '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
@@ -1300,9 +1295,249 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-                                                                                                                                                                                                                                                                                                 }
+   }
 
-/* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
+
+
+
+ function renderSignIn(){
+  setScreen('auth');
+  app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
+    '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
+    '<label class="field-label">Password / PIN</label><div class="pw-wrap"><input type="password" id="siPw" placeholder="••••••" class="field-input" autocomplete="current-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'siPw\', this)">👁️</button></div>'+
+    '<div id="siMsg" style="margin-top:10px; font-size:13px;"></div>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
+    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to unbind your old device.</div></div>'+
+    renderBottomNav('my')+renderChatFab();
+}
+async function submitSignIn(){
+  const phone = (document.getElementById('siPhone').value || '').trim();
+  const pw = document.getElementById('siPw').value;
+  const msg = document.getElementById('siMsg');
+  const btn = document.getElementById('siSubmitBtn');
+  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
+  const ok  = t => { msg.innerHTML = '<div style="color:#2e7d32; font-weight:600;">' + t + '</div>'; };
+  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
+  if (!isValidPassword(pw)) return err('Password must be at least 4 characters.');
+  if (isPhoneBlacklisted(phone)) { err('Account blocked.'); setTimeout(() => renderBlockedScreen(), 1200); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Verifying…'; }
+
+  try {
+    const res = await backendLogin(phone, pw);
+    if (!res || !res.ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      if (res && res.err === 'device_conflict') {
+        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to unbind your old device.');
+        return err('Blocked: already logged in on another device.');
+      }
+      if (res && res.err === 'wrong-password') return err('Wrong password. Please try again.');
+      if (res && res.err === 'not-found') return err('No account found for this phone. Please sign up first.');
+      return err('Sign-in failed: ' + ((res && res.err) || 'unknown'));
+    }
+
+    const user = res.user;
+    user.deviceId = getDeviceId();
+    user.deviceHash = getDeviceHash();
+    saveUser(user);
+    setCurrentUserPhone(phone);
+    saveProfileData({ name: user.name, phone: user.phone, university: user.university, stream: user.stream });
+    setUniversity(user.university);
+    setCheckedIn();
+    startSession(phone);
+    markPhoneUsed(phone);
+
+    ok('✓ Signed in!');
+    pushStatusToServer();
+
+    if (res.mustChangePassword) {
+      setTimeout(() => { _clearNavStack(); renderForceChangePassword(); }, 400);
+      return;
+    }
+
+    setTimeout(() => {
+      showPostAuthWarning(() => {
+        _clearNavStack();
+        switchTab('book');
+      });
+    }, 400);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+    err('Sign-in failed. Please try again.');
+  }
+}
+
+function renderForgotPassword() {
+  setScreen('auth');
+  const phone = getCurrentUserPhone() || '';
+  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | ID: ' + getDeviceHash();
+  app.innerHTML = renderHeader('my') +
+    '<div class="panel"><h2>Forgot Password</h2>' +
+    '<p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Two ways to recover:</p>' +
+    '<div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;">' +
+      '<div><strong>Device ID:</strong> <code>' + getDeviceHash() + '</code></div>' +
+      '<div><strong>Your phone:</strong> <code>' + (phone || '-') + '</code></div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-full" onclick="renderResetWithCode()">🔐 I Have a Reset Code</button>' +
+    '<a href="https://t.me/' + escapeAttr(CONFIG.TELEGRAM_USERNAME) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📨 Ask Admin on Telegram</a>' +
+    (CONFIG.CONTACT_PHONE ? '<a href="tel:' + escapeAttr(CONFIG.CONTACT_PHONE) + '" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call ' + escapeHtml(CONFIG.CONTACT_PHONE) + '</a>' : '') +
+    '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>' +
+    renderBottomNav('my') + renderChatFab();
+}
+
+function switchTab(tab){
+  _clearNavStack(); saveScrollNow();
+  if(BASE_TABS[tab]) _lastBaseTab = tab;
+  if(quizState.timerId && currentScreen === 'quiz'){ clearInterval(quizState.timerId); quizState = {}; }
+  if(currentScreen !== 'book-viewer' && currentScreen !== 'note-viewer') _viewerState = null;
+  if(isBlocked() || isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); return; }
+  if(isKeyLocked()){ renderKeyBlockedScreen(); return; }
+  if(isClosureDay()){ renderClosureScreen(); return; }
+  if(tab === 'my'){ setScreen('my'); renderMy(); return; }
+  const accessNow = checkAccess(); const signedIn = isSignedIn() && hasActiveSession();
+  if(signedIn && accessNow.status === 'expired'){ renderPaymentFlow(tab); return; }
+  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
+  if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
+  else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
+  else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
+  else if(tab === 'coc'){ 
+    if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } 
+    setScreen('coc-home'); renderCocHome(); 
+  }
+}
+function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
+function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
+function setCurrentSemester(s){ localStorage.setItem(LS_SEMESTER,String(s)); }
+function renderSemesterPicker(targetTab){ setScreen('semester'); app.innerHTML=renderHeader(targetTab)+'<div class="panel"><h2>Choose Semester</h2><p style="color:#777; font-size:13px; margin-bottom:16px;">Content differs by semester. You can change it later.</p><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(1,\''+targetTab+'\')">1st Semester</button><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(2,\''+targetTab+'\')">2nd Semester</button></div></div>'+renderBottomNav(targetTab)+renderChatFab(); }
+function chooseSemester(s,tab){ setCurrentSemester(s); switchTab(tab); }
+function semesterChanger(current){ return '<div class="semester-pick">'+CONFIG.SEMESTERS.map(s=>'<button class="'+(current===s?'active':'')+'" onclick="changeSemester('+s+')">'+(s===1?'1st':'2nd')+' Semester</button>').join('')+'</div>'; }
+
+function changeSemester(s){ 
+  setCurrentSemester(s); 
+  switchTab(currentTab); 
+}
+
+function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
+function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
+function setBookZoom(z){ localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const wrap=document.getElementById('bookZoomWrap'); const lbl=document.getElementById('bookZoomPct'); const nz=getBookZoom(); if(wrap){ const iframe=wrap.querySelector('iframe'); if(iframe){ iframe.style.transform='scale('+nz+')'; iframe.style.transformOrigin='top left'; iframe.style.width=(100/nz)+'%'; iframe.style.height=(100/nz)+'%'; } } if(lbl) lbl.textContent=Math.round(nz*100)+'%'; }
+function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
+
+/* ============ BOOKS — SHOW ALL, LOCK NON-TRIAL ============ */
+function renderBooksHome(){
+  if(!isSignedIn() || !hasActiveSession()){
+    setScreen('book');
+    app.innerHTML = renderHeader('book')+'<div class="locked-box"><div class="icon">📚</div><h2>Register to View Modules</h2><p>Sign up or sign in to browse the Modules Library.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('book')+renderChatFab();
+    restoreScroll('book_book'); return;
+  }
+  if(!isTrialContentAllowed('book')){ setScreen('book'); app.innerHTML=renderHeader('book')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('book')+renderBottomNav('book')+renderChatFab(); restoreScroll('book_book'); return; }
+  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester(); const tutorials=getTutorials();
+  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
+  let preSelect = _lastUniSelection.book || '';
+  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
+  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{pdfs:[]}; const has=c.pdfs&&c.pdfs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
+  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> unlocked · other universities locked · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
+  app.innerHTML = renderHeader('book')+semesterChanger(sem)+trialNote+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+'<div class="panel"><h2>Modules Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="bookUniSelect" onchange="renderBookList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="bookList"></div>'+renderBottomNav('book')+renderChatFab();
+  if(preSelect) renderBookList(preSelect);
+  restoreScroll('book_book');
+}
+function renderBookList(uni){
+  if (uni) _lastUniSelection.book = uni;
+  const el=document.getElementById('bookList'); if(!el) return;
+  if(!uni){ el.innerHTML=''; return; }
+  if(!isSignedIn() || !hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see modules</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
+  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
+  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
+  const allPdfs = c.pdfs || [];
+  if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  const listHtml = allPdfs.map((p, i) => {
+    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
+    const locked = isTrialNow && !allowed;
+    const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
+    const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
+    const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
+    const borderColor = locked ? '#ff9800' : '#6a3093';
+    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
+    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
+    return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+lockBadge+'</div>'+desc+'</div>';
+  }).join('');
+  el.innerHTML = listHtml;
+}
+function openBook(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
+  if(!p) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
+    if(!allowed){
+      appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  if(!p.url) return;
+  _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i };
+  _screenStack.push('book'); _renderBookViewerDirect();
+}
+
+/* ============ NOTES — SHOW ALL, LOCK NON-TRIAL ============ */
+function renderNotesHome(){
+  if(!isSignedIn() || !hasActiveSession()){ setScreen('note'); app.innerHTML=renderHeader('note')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Notes</h2><p>Sign up or sign in to browse Notes.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
+  if(!isTrialContentAllowed('note')){ setScreen('note'); app.innerHTML=renderHeader('note')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('note')+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
+  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester();
+  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
+  let preSelect = _lastUniSelection.note || '';
+  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
+  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{notes:[]}; const has=c.notes&&c.notes.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
+  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · other universities locked</div>' : '';
+  app.innerHTML=renderHeader('note')+semesterChanger(sem)+trialNote+renderTutorialCard('pay',getTutorials().pay.title,getTutorials().pay.url)+'<div class="panel"><h2>Notes <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="noteUniSelect" onchange="renderNoteList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="noteList"></div>'+renderBottomNav('note')+renderChatFab();
+  if(preSelect) renderNoteList(preSelect);
+  restoreScroll('note_note');
+}
+function renderNoteList(uni){
+  if (uni) _lastUniSelection.note = uni;
+  const el=document.getElementById('noteList'); if(!el) return;
+  if(!uni){ el.innerHTML=''; return; }
+  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see notes</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
+  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
+  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
+  const allNotes = c.notes || [];
+  if(!allNotes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  const listHtml = allNotes.map((n, i) => {
+    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
+    const locked = isTrialNow && !allowed;
+    const borderColor = locked ? '#ff9800' : '#2196f3';
+    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
+    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
+    return '<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+lockBadge+'</div></div>';
+  }).join('');
+  el.innerHTML = listHtml;
+}
+function openNote(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i];
+  if(!n) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
+    if(!allowed){
+      appAlert('🔒 This note is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
+  _screenStack.push('note'); _renderNoteViewerDirect();
+ }
+
+
+
+ /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   if(!isTrialContentAllowed('exam')){ setScreen('exam-home'); app.innerHTML=renderHeader('exam')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('exam')+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1579,69 +1814,10 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-        }
+ }
 
-  /* ============ ADMIN: GENERATE RESET CODE ============ */
-async function adminGenerateResetCode() {
-  if (!isAdminMode()) return;
-  const phone = await appPrompt('Enter phone number to generate reset code for:');
-  if (!phone) return;
-  try {
-    const r = await fetch(BACKEND_URL + '/api/admin/generate-reset-code', {
-      method: 'POST', headers: adminHeaders(), body: JSON.stringify({ phone: phone.trim() })
-    });
-    const data = await r.json();
-    if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
-    const mins = Math.round((data.expiresAt - Date.now()) / 60000);
-    await appAlert('✅ Reset code for ' + phone + ':\n\n' + data.code + '\n\nGive this to the user. It works only once.');
-  } catch (e) { appAlert('Network error.'); }
-}
 
-/* ============ USER: RESET WITH CODE ============ */
-function renderResetWithCode() {
-  setScreen('reset-code');
-  app.innerHTML = renderHeader('my') +
-    '<div class="panel"><h2>Reset Password</h2>' +
-    '<p style="color:#666; font-size:13px; margin-bottom:14px;">Enter the code you received from admin, then choose a new password.</p>' +
-    '<label class="field-label">Phone</label><input type="tel" id="rcPhone" class="field-input" value="' + escapeAttr(getCurrentUserPhone() || '') + '">' +
-    '<label class="field-label">6-Digit Code</label><input type="text" id="rcCode" class="field-input" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:4px;font-size:18px;text-align:center;">' +
-    '<label class="field-label">New Password</label><div class="pw-wrap"><input type="password" id="rcPw1" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw1\', this)">👁️</button></div>' +
-    '<label class="field-label">Confirm</label><div class="pw-wrap"><input type="password" id="rcPw2" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw2\', this)">👁️</button></div>' +
-    '<div id="rcMsg" style="margin-top:10px; font-size:13px;"></div>' +
-    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitResetWithCode()">Reset Password</button>' +
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
-    renderBottomNav('my') + renderChatFab();
-}
 
-async function submitResetWithCode() {
-  const phone = (document.getElementById('rcPhone').value || '').trim();
-  const code = (document.getElementById('rcCode').value || '').trim();
-  const pw1 = document.getElementById('rcPw1').value;
-  const pw2 = document.getElementById('rcPw2').value;
-  const msg = document.getElementById('rcMsg');
-  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
-  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone.');
-  if (!/^\d{6}$/.test(code)) return err('Code must be 6 digits.');
-  if (!isValidPassword(pw1)) return err('Min 4 characters.');
-  if (pw1 !== pw2) return err('Passwords do not match.');
-
-  const newHash = await hashPasswordNew(pw1);
-  try {
-    const r = await fetch(BACKEND_URL + '/api/reset-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code, newPasswordHash: newHash })
-    });
-    const data = await r.json();
-    if (!data || !data.ok) {
-      if (data && data.err === 'code-expired') return err('Code expired. Ask admin for a new one.');
-      if (data && data.err === 'wrong-code') return err('Wrong code.');
-      if (data && data.err === 'no-code') return err('No reset code found. Contact admin.');
-      return err('Failed: ' + ((data && data.err) || 'unknown'));
-    }
-    await appAlert('✅ Password reset! Please sign in with your new password.');
-    renderSignIn();
-  } catch (e) { err('Network error.'); }
-}
 
 function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
@@ -1980,7 +2156,7 @@ function renderAdminSettings(){
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://all-freshman.pages.dev/www"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://all-freshman1.pages.dev/www"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 async function saveAdminSettings(){
   const s=getSettings();
@@ -2028,7 +2204,6 @@ function renderAdminContentManager(tab){
   if(!tab) tab='exam';
   const sem = adminEditState.semester || 1;
   
-  // 🚨 FIX: If admin is in 2nd semester, don't allow the COC tab
   if (sem === 2 && tab === 'coc') { tab = 'exam'; adminEditState.tab = 'exam'; }
   
   if (adminEditState.tab !== tab || adminEditState._lastUni !== adminEditState.uni || adminEditState._lastStream !== adminEditState.stream || adminEditState._lastSem !== sem) {
@@ -2044,7 +2219,6 @@ function renderAdminContentManager(tab){
   const c=getUniContent(uni,stream,sem);
   const uniOpts=CONFIG.UNIVERSITIES.map(u=>'<option value="'+escapeHtml(u)+'" '+(uni===u?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
   
-  // 🚨 FIX: Only show the COC button if sem === 1
   const cocTabHTML = sem === 1 ? '<button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button>' : '';
 
   app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabHTML+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
@@ -2494,6 +2668,7 @@ async function renderAdminStats(){
   
   const r = await backendListUsers();
   const users = (r && r.ok && Array.isArray(r.users)) ? r.users : [];
+  window._adminStatsUsers = users;
   
   const total = users.length;
   const licensed = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin').length;
@@ -2505,15 +2680,45 @@ async function renderAdminStats(){
   const box = (key, n, label, color) => {
     const isActive = (currentFilter === key);
     const border = isActive ? 'border: 3px solid #6a3093; transform: scale(0.98);' : 'border: 3px solid transparent;';
-    return '<div class="stat-box" onclick="window._adminStatsFilter=\''+key+'\';renderAdminStats()" style="background:'+color+'; cursor:pointer; '+border+' transition:0.2s;">'+
+    return '<div class="stat-box" onclick="filterAdminUsers(\''+key+'\')" style="background:'+color+'; cursor:pointer; '+border+' transition:0.2s;">'+
            '<div class="num" style="color:#333;">'+n+'</div><div class="label">'+label+'</div></div>';
   };
 
+  app.innerHTML = renderHeader('my')+
+    '<div class="panel"><h2>Analytics</h2>'+
+    '<p style="font-size:11px;color:#888;margin-bottom:8px;">Tap a box to filter users below</p>'+
+    '<div class="stat-grid">'+
+      box('total', total,'Total Users','#e3f2fd')+
+      box('licensed', licensed,'Licensed','#e8f5e9')+
+      box('trial', trial,'Trial','#fff3cd')+
+      box('expired', expired,'Expired','#ffebee')+
+      box('today', todayCount,'Joined Today','#f3e5f5')+
+    '</div>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="window._adminStatsFilter=\'total\';renderAdminStats()">🔄 Refresh All Users</button>'+
+    '</div>'+
+    '<div class="panel"><h2 id="adminStatsTitle">Users ('+total+')</h2>'+
+    '<p style="color:#777;font-size:12px;margin-bottom:10px;">Tap a user to view or edit their account.</p>'+
+    '<div id="analytics-user-list"></div>'+
+    '</div>'+
+    '<div class="panel" style="text-align:center;"><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>'+
+    renderBottomNav('my')+renderChatFab();
+    
+  filterAdminUsers(currentFilter);
+}
+
+window.filterAdminUsers = function(filterKey) {
+  window._adminStatsFilter = filterKey;
+  const users = window._adminStatsUsers || [];
+  const today = new Date().toDateString();
+  
   let filteredUsers = users;
-  if (currentFilter === 'licensed') filteredUsers = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin');
-  else if (currentFilter === 'trial') filteredUsers = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin');
-  else if (currentFilter === 'expired') filteredUsers = users.filter(u => u.status!=='licensed' && u.master!==1 && u.role!=='admin' && u.status!=='trial');
-  else if (currentFilter === 'today') filteredUsers = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today);
+  if (filterKey === 'licensed') filteredUsers = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin');
+  else if (filterKey === 'trial') filteredUsers = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin');
+  else if (filterKey === 'expired') filteredUsers = users.filter(u => u.status!=='licensed' && u.master!==1 && u.role!=='admin' && u.status!=='trial');
+  else if (filterKey === 'today') filteredUsers = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today);
+
+  const title = document.getElementById('adminStatsTitle');
+  if(title) title.innerHTML = 'Users ('+filteredUsers.length+')';
 
   const userRows = filteredUsers.length ? filteredUsers.map(u => {
     let badge = '';
@@ -2531,25 +2736,9 @@ async function renderAdminStats(){
       badge+'<span style="color:#6a3093;font-weight:800;font-size:18px;">›</span></div>';
   }).join('') : '<div class="empty-msg">No users in this category.</div>';
 
-  app.innerHTML = renderHeader('my')+
-    '<div class="panel"><h2>Analytics</h2>'+
-    '<p style="font-size:11px;color:#888;margin-bottom:8px;">Tap a box to filter users below</p>'+
-    '<div class="stat-grid">'+
-      box('total', total,'Total Users','#e3f2fd')+
-      box('licensed', licensed,'Licensed','#e8f5e9')+
-      box('trial', trial,'Trial','#fff3cd')+
-      box('expired', expired,'Expired','#ffebee')+
-      box('today', todayCount,'Joined Today','#f3e5f5')+
-    '</div>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="window._adminStatsFilter=\'total\';renderAdminStats()">🔄 Refresh All Users</button>'+
-    '</div>'+
-    '<div class="panel"><h2>Users ('+filteredUsers.length+')</h2>'+
-    '<p style="color:#777;font-size:12px;margin-bottom:10px;">Tap a user to view or edit their account.</p>'+
-    userRows+
-    '</div>'+
-    '<div class="panel" style="text-align:center;"><button class="btn btn-ghost btn-full" onclick="goBack()">Back</button></div>'+
-    renderBottomNav('my')+renderChatFab();
-}
+  const listContainer = document.getElementById('analytics-user-list');
+  if(listContainer) listContainer.innerHTML = userRows;
+};
 
 function openUserEditorFor(phone){
   renderAdminUserEditor();
@@ -2794,10 +2983,6 @@ function adminUserToggleBulk(){}
 function adminUserToggleSel(){}
 function adminUserDeleteSelected(){}
 
-/* ═══════════════════════════════════════════════════════════════
-   END FIX BLOCK
-   ═══════════════════════════════════════════════════════════════ */
-
 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
   window.Capacitor.Plugins.App.addListener('backButton', () => { handleAndroidBack(); });
 }
@@ -2873,7 +3058,7 @@ Object.assign(window, {
   renderAdminNotifications, sendAdminNotif, deleteAdminNotif,
   toggleTheme, setTheme, doLogout, showActivationStatus,
   renderAdminSettings, saveAdminSettings, resetAdminSettings,
-  renderAdminStats, renderAdminContentManager, renderAdminTutorials,
+  renderAdminStats, filterAdminUsers, renderAdminContentManager, renderAdminTutorials,
   renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit, openUserEditorFor,
   adminDeleteUser, adminActivateThisUser, renderAdminProgress,
   renderAdminRegisteredPhones, confirmRemovePhone,
@@ -2916,4 +3101,4 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
- </html>
+</html>
