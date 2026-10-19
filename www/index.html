@@ -392,10 +392,9 @@ function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
 function applyTheme(){ document.body.classList.toggle('dark', getTheme() === 'dark'); }
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
- 
- 
- 
- 
+
+ // ================= PART 2 STARTS HERE =================
+
 const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
 const scrollMemory = {};
@@ -677,10 +676,9 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
- 
+ // ================= PART 3 STARTS HERE =================
 
-
- document.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
     document.body.classList.add('blur-sensitive');
   } else {
@@ -1056,488 +1054,249 @@ async function submitSignUp(){
     ok('✓ Account created!'); setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
-  }                      
-}
-
-
-
-
- function renderSignIn(){
-  setScreen('auth');
-  app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
-    '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
-    '<label class="field-label">Password / PIN</label><div class="pw-wrap"><input type="password" id="siPw" placeholder="••••••" class="field-input" autocomplete="current-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'siPw\', this)">👁️</button></div>'+
-    '<div id="siMsg" style="margin-top:10px; font-size:13px;"></div>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
-    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to unbind your old device.</div></div>'+
-    renderBottomNav('my')+renderChatFab();
-}
-async function submitSignIn(){
-  const phone = (document.getElementById('siPhone').value || '').trim();
-  const pw = document.getElementById('siPw').value;
-  const msg = document.getElementById('siMsg');
-  const btn = document.getElementById('siSubmitBtn');
-  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
-  const ok  = t => { msg.innerHTML = '<div style="color:#2e7d32; font-weight:600;">' + t + '</div>'; };
-  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
-  if (!isValidPassword(pw)) return err('Password must be at least 4 characters.');
-  if (isPhoneBlacklisted(phone)) { err('Account blocked.'); setTimeout(() => renderBlockedScreen(), 1200); return; }
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Verifying…'; }
-
-  try {
-    const res = await backendLogin(phone, pw);
-    if (!res || !res.ok) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      if (res && res.err === 'device_conflict') {
-        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to unbind your old device.');
-        return err('Blocked: already logged in on another device.');
-      }
-      if (res && res.err === 'wrong-password') return err('Wrong password. Please try again.');
-      if (res && res.err === 'not-found') return err('No account found for this phone. Please sign up first.');
-      return err('Sign-in failed: ' + ((res && res.err) || 'unknown'));
-    }
-
-    const user = res.user;
-    user.deviceId = getDeviceId();
-    user.deviceHash = getDeviceHash();
-    saveUser(user);
-    setCurrentUserPhone(phone);
-    saveProfileData({ name: user.name, phone: user.phone, university: user.university, stream: user.stream });
-    setUniversity(user.university);
-    setCheckedIn();
-    startSession(phone);
-    markPhoneUsed(phone);
-
-    ok('✓ Signed in!');
-    pushStatusToServer();
-
-    if (res.mustChangePassword) {
-      setTimeout(() => { _clearNavStack(); renderForceChangePassword(); }, 400);
-      return;
-    }
-
-    setTimeout(() => {
-      showPostAuthWarning(() => {
-        _clearNavStack();
-        switchTab('book');
-      });
-    }, 400);
-  } catch (e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-    err('Sign-in failed. Please try again.');
   }
-}
-
-function renderForgotPassword() {
-  setScreen('auth');
-  const phone = getCurrentUserPhone() || '';
-  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | ID: ' + getDeviceHash();
-  app.innerHTML = renderHeader('my') +
-    '<div class="panel"><h2>Forgot Password</h2>' +
-    '<p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Two ways to recover:</p>' +
-    '<div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;">' +
-      '<div><strong>Device ID:</strong> <code>' + getDeviceHash() + '</code></div>' +
-      '<div><strong>Your phone:</strong> <code>' + (phone || '-') + '</code></div>' +
-    '</div>' +
-    '<button class="btn btn-primary btn-full" onclick="renderResetWithCode()">🔐 I Have a Reset Code</button>' +
-    '<a href="https://t.me/' + escapeAttr(CONFIG.TELEGRAM_USERNAME) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📨 Ask Admin on Telegram</a>' +
-    (CONFIG.CONTACT_PHONE ? '<a href="tel:' + escapeAttr(CONFIG.CONTACT_PHONE) + '" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call ' + escapeHtml(CONFIG.CONTACT_PHONE) + '</a>' : '') +
-    '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>' +
-    renderBottomNav('my') + renderChatFab();
-}
-
-function switchTab(tab){
-  _clearNavStack(); saveScrollNow();
-  if(BASE_TABS[tab]) _lastBaseTab = tab;
-  if(quizState.timerId && currentScreen === 'quiz'){ clearInterval(quizState.timerId); quizState = {}; }
-  if(currentScreen !== 'book-viewer' && currentScreen !== 'note-viewer') _viewerState = null;
-  if(isBlocked() || isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); return; }
-  if(isKeyLocked()){ renderKeyBlockedScreen(); return; }
-  if(isClosureDay()){ renderClosureScreen(); return; }
-  if(tab === 'my'){ setScreen('my'); renderMy(); return; }
-  const accessNow = checkAccess(); const signedIn = isSignedIn() && hasActiveSession();
-  if(signedIn && accessNow.status === 'expired'){ renderPaymentFlow(tab); return; }
-  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
-  if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
-  else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
-  else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
-  else if(tab === 'coc'){ 
-    if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } 
-    setScreen('coc-home'); renderCocHome(); 
-  }
-}
-function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
-function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
-function setCurrentSemester(s){ localStorage.setItem(LS_SEMESTER,String(s)); }
-function renderSemesterPicker(targetTab){ setScreen('semester'); app.innerHTML=renderHeader(targetTab)+'<div class="panel"><h2>Choose Semester</h2><p style="color:#777; font-size:13px; margin-bottom:16px;">Content differs by semester. You can change it later.</p><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(1,\''+targetTab+'\')">1st Semester</button><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(2,\''+targetTab+'\')">2nd Semester</button></div></div>'+renderBottomNav(targetTab)+renderChatFab(); }
-function chooseSemester(s,tab){ setCurrentSemester(s); switchTab(tab); }
-function semesterChanger(current){ return '<div class="semester-pick">'+CONFIG.SEMESTERS.map(s=>'<button class="'+(current===s?'active':'')+'" onclick="changeSemester('+s+')">'+(s===1?'1st':'2nd')+' Semester</button>').join('')+'</div>'; }
-
-function changeSemester(s){ 
-  setCurrentSemester(s); 
-  switchTab(currentTab); 
-}
-
-function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
-function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
-function setBookZoom(z){ localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const wrap=document.getElementById('bookZoomWrap'); const lbl=document.getElementById('bookZoomPct'); const nz=getBookZoom(); if(wrap){ const iframe=wrap.querySelector('iframe'); if(iframe){ iframe.style.transform='scale('+nz+')'; iframe.style.transformOrigin='top left'; iframe.style.width=(100/nz)+'%'; iframe.style.height=(100/nz)+'%'; } } if(lbl) lbl.textContent=Math.round(nz*100)+'%'; }
-function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
-
-/* ============ BOOKS — SHOW ALL, LOCK NON-TRIAL ============ */
-function renderBooksHome(){
-  if(!isSignedIn() || !hasActiveSession()){
-    setScreen('book');
-    app.innerHTML = renderHeader('book')+'<div class="locked-box"><div class="icon">📚</div><h2>Register to View Modules</h2><p>Sign up or sign in to browse the Modules Library.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('book')+renderChatFab();
-    restoreScroll('book_book'); return;
-  }
-  if(!isTrialContentAllowed('book')){ setScreen('book'); app.innerHTML=renderHeader('book')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('book')+renderBottomNav('book')+renderChatFab(); restoreScroll('book_book'); return; }
-  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester(); const tutorials=getTutorials();
-  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
-  let preSelect = _lastUniSelection.book || '';
-  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
-  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{pdfs:[]}; const has=c.pdfs&&c.pdfs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> unlocked · other universities locked · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
-  app.innerHTML = renderHeader('book')+semesterChanger(sem)+trialNote+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+'<div class="panel"><h2>Modules Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="bookUniSelect" onchange="renderBookList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="bookList"></div>'+renderBottomNav('book')+renderChatFab();
-  if(preSelect) renderBookList(preSelect);
-  restoreScroll('book_book');
-}
-function renderBookList(uni){
-  if (uni) _lastUniSelection.book = uni;
-  const el=document.getElementById('bookList'); if(!el) return;
-  if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn() || !hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see modules</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
-  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
-  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
-  const allPdfs = c.pdfs || [];
-  if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
-  const isTrialNow = checkAccess().status === 'trial';
-  const listHtml = allPdfs.map((p, i) => {
-    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
-    const locked = isTrialNow && !allowed;
-    const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
-    const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
-    const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
-    const borderColor = locked ? '#ff9800' : '#6a3093';
-    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
-    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-    return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+lockBadge+'</div>'+desc+'</div>';
-  }).join('');
-  el.innerHTML = listHtml;
-}
-function openBook(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
-  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
-  const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
-  if(!p) return;
-  if(checkAccess().status === 'trial'){
-    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
-    if(!allowed){
-      appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
-      return;
-    }
-  }
-  if(!p.url) return;
-  _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i };
-  _screenStack.push('book'); _renderBookViewerDirect();
-}
-
-/* ============ NOTES — SHOW ALL, LOCK NON-TRIAL ============ */
-function renderNotesHome(){
-  if(!isSignedIn() || !hasActiveSession()){ setScreen('note'); app.innerHTML=renderHeader('note')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Notes</h2><p>Sign up or sign in to browse Notes.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
-  if(!isTrialContentAllowed('note')){ setScreen('note'); app.innerHTML=renderHeader('note')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('note')+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
-  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester();
-  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
-  let preSelect = _lastUniSelection.note || '';
-  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
-  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{notes:[]}; const has=c.notes&&c.notes.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · other universities locked</div>' : '';
-  app.innerHTML=renderHeader('note')+semesterChanger(sem)+trialNote+renderTutorialCard('pay',getTutorials().pay.title,getTutorials().pay.url)+'<div class="panel"><h2>Notes <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="noteUniSelect" onchange="renderNoteList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="noteList"></div>'+renderBottomNav('note')+renderChatFab();
-  if(preSelect) renderNoteList(preSelect);
-  restoreScroll('note_note');
-}
-function renderNoteList(uni){
-  if (uni) _lastUniSelection.note = uni;
-  const el=document.getElementById('noteList'); if(!el) return;
-  if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see notes</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
-  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
-  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
-  const allNotes = c.notes || [];
-  if(!allNotes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; return; }
-  const isTrialNow = checkAccess().status === 'trial';
-  const listHtml = allNotes.map((n, i) => {
-    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
-    const locked = isTrialNow && !allowed;
-    const borderColor = locked ? '#ff9800' : '#2196f3';
-    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
-    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-    return '<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+lockBadge+'</div></div>';
-  }).join('');
-  el.innerHTML = listHtml;
-}
-function openNote(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
-  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
-  const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i];
-  if(!n) return;
-  if(checkAccess().status === 'trial'){
-    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
-    if(!allowed){
-      appAlert('🔒 This note is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
-      return;
-    }
-  }
-  _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
-  _screenStack.push('note'); _renderNoteViewerDirect();
-   }
-
-
-
-
- function renderSignIn(){
-  setScreen('auth');
-  app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
-    '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
-    '<label class="field-label">Password / PIN</label><div class="pw-wrap"><input type="password" id="siPw" placeholder="••••••" class="field-input" autocomplete="current-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'siPw\', this)">👁️</button></div>'+
-    '<div id="siMsg" style="margin-top:10px; font-size:13px;"></div>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
-    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
-    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to unbind your old device.</div></div>'+
-    renderBottomNav('my')+renderChatFab();
-}
-async function submitSignIn(){
-  const phone = (document.getElementById('siPhone').value || '').trim();
-  const pw = document.getElementById('siPw').value;
-  const msg = document.getElementById('siMsg');
-  const btn = document.getElementById('siSubmitBtn');
-  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
-  const ok  = t => { msg.innerHTML = '<div style="color:#2e7d32; font-weight:600;">' + t + '</div>'; };
-  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
-  if (!isValidPassword(pw)) return err('Password must be at least 4 characters.');
-  if (isPhoneBlacklisted(phone)) { err('Account blocked.'); setTimeout(() => renderBlockedScreen(), 1200); return; }
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Verifying…'; }
-
-  try {
-    const res = await backendLogin(phone, pw);
-    if (!res || !res.ok) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      if (res && res.err === 'device_conflict') {
-        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to unbind your old device.');
-        return err('Blocked: already logged in on another device.');
-      }
-      if (res && res.err === 'wrong-password') return err('Wrong password. Please try again.');
-      if (res && res.err === 'not-found') return err('No account found for this phone. Please sign up first.');
-      return err('Sign-in failed: ' + ((res && res.err) || 'unknown'));
-    }
-
-    const user = res.user;
-    user.deviceId = getDeviceId();
-    user.deviceHash = getDeviceHash();
-    saveUser(user);
-    setCurrentUserPhone(phone);
-    saveProfileData({ name: user.name, phone: user.phone, university: user.university, stream: user.stream });
-    setUniversity(user.university);
-    setCheckedIn();
-    startSession(phone);
-    markPhoneUsed(phone);
-
-    ok('✓ Signed in!');
-    pushStatusToServer();
-
-    if (res.mustChangePassword) {
-      setTimeout(() => { _clearNavStack(); renderForceChangePassword(); }, 400);
-      return;
-    }
-
-    setTimeout(() => {
-      showPostAuthWarning(() => {
-        _clearNavStack();
-        switchTab('book');
-      });
-    }, 400);
-  } catch (e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-    err('Sign-in failed. Please try again.');
-  }
-}
-
-function renderForgotPassword() {
-  setScreen('auth');
-  const phone = getCurrentUserPhone() || '';
-  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | ID: ' + getDeviceHash();
-  app.innerHTML = renderHeader('my') +
-    '<div class="panel"><h2>Forgot Password</h2>' +
-    '<p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Two ways to recover:</p>' +
-    '<div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;">' +
-      '<div><strong>Device ID:</strong> <code>' + getDeviceHash() + '</code></div>' +
-      '<div><strong>Your phone:</strong> <code>' + (phone || '-') + '</code></div>' +
-    '</div>' +
-    '<button class="btn btn-primary btn-full" onclick="renderResetWithCode()">🔐 I Have a Reset Code</button>' +
-    '<a href="https://t.me/' + escapeAttr(CONFIG.TELEGRAM_USERNAME) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📨 Ask Admin on Telegram</a>' +
-    (CONFIG.CONTACT_PHONE ? '<a href="tel:' + escapeAttr(CONFIG.CONTACT_PHONE) + '" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call ' + escapeHtml(CONFIG.CONTACT_PHONE) + '</a>' : '') +
-    '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>' +
-    renderBottomNav('my') + renderChatFab();
-}
-
-function switchTab(tab){
-  _clearNavStack(); saveScrollNow();
-  if(BASE_TABS[tab]) _lastBaseTab = tab;
-  if(quizState.timerId && currentScreen === 'quiz'){ clearInterval(quizState.timerId); quizState = {}; }
-  if(currentScreen !== 'book-viewer' && currentScreen !== 'note-viewer') _viewerState = null;
-  if(isBlocked() || isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); return; }
-  if(isKeyLocked()){ renderKeyBlockedScreen(); return; }
-  if(isClosureDay()){ renderClosureScreen(); return; }
-  if(tab === 'my'){ setScreen('my'); renderMy(); return; }
-  const accessNow = checkAccess(); const signedIn = isSignedIn() && hasActiveSession();
-  if(signedIn && accessNow.status === 'expired'){ renderPaymentFlow(tab); return; }
-  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
-  if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
-  else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
-  else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
-  else if(tab === 'coc'){ 
-    if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } 
-    setScreen('coc-home'); renderCocHome(); 
-  }
-}
-function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
-function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
-function setCurrentSemester(s){ localStorage.setItem(LS_SEMESTER,String(s)); }
-function renderSemesterPicker(targetTab){ setScreen('semester'); app.innerHTML=renderHeader(targetTab)+'<div class="panel"><h2>Choose Semester</h2><p style="color:#777; font-size:13px; margin-bottom:16px;">Content differs by semester. You can change it later.</p><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(1,\''+targetTab+'\')">1st Semester</button><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(2,\''+targetTab+'\')">2nd Semester</button></div></div>'+renderBottomNav(targetTab)+renderChatFab(); }
-function chooseSemester(s,tab){ setCurrentSemester(s); switchTab(tab); }
-function semesterChanger(current){ return '<div class="semester-pick">'+CONFIG.SEMESTERS.map(s=>'<button class="'+(current===s?'active':'')+'" onclick="changeSemester('+s+')">'+(s===1?'1st':'2nd')+' Semester</button>').join('')+'</div>'; }
-
-function changeSemester(s){ 
-  setCurrentSemester(s); 
-  switchTab(currentTab); 
-}
-
-function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
-function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
-function setBookZoom(z){ localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const wrap=document.getElementById('bookZoomWrap'); const lbl=document.getElementById('bookZoomPct'); const nz=getBookZoom(); if(wrap){ const iframe=wrap.querySelector('iframe'); if(iframe){ iframe.style.transform='scale('+nz+')'; iframe.style.transformOrigin='top left'; iframe.style.width=(100/nz)+'%'; iframe.style.height=(100/nz)+'%'; } } if(lbl) lbl.textContent=Math.round(nz*100)+'%'; }
-function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
-
-/* ============ BOOKS — SHOW ALL, LOCK NON-TRIAL ============ */
-function renderBooksHome(){
-  if(!isSignedIn() || !hasActiveSession()){
-    setScreen('book');
-    app.innerHTML = renderHeader('book')+'<div class="locked-box"><div class="icon">📚</div><h2>Register to View Modules</h2><p>Sign up or sign in to browse the Modules Library.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('book')+renderChatFab();
-    restoreScroll('book_book'); return;
-  }
-  if(!isTrialContentAllowed('book')){ setScreen('book'); app.innerHTML=renderHeader('book')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('book')+renderBottomNav('book')+renderChatFab(); restoreScroll('book_book'); return; }
-  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester(); const tutorials=getTutorials();
-  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
-  let preSelect = _lastUniSelection.book || '';
-  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
-  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{pdfs:[]}; const has=c.pdfs&&c.pdfs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> unlocked · other universities locked · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
-  app.innerHTML = renderHeader('book')+semesterChanger(sem)+trialNote+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+'<div class="panel"><h2>Modules Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="bookUniSelect" onchange="renderBookList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="bookList"></div>'+renderBottomNav('book')+renderChatFab();
-  if(preSelect) renderBookList(preSelect);
-  restoreScroll('book_book');
-}
-function renderBookList(uni){
-  if (uni) _lastUniSelection.book = uni;
-  const el=document.getElementById('bookList'); if(!el) return;
-  if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn() || !hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see modules</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
-  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
-  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
-  const allPdfs = c.pdfs || [];
-  if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
-  const isTrialNow = checkAccess().status === 'trial';
-  const listHtml = allPdfs.map((p, i) => {
-    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
-    const locked = isTrialNow && !allowed;
-    const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
-    const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
-    const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
-    const borderColor = locked ? '#ff9800' : '#6a3093';
-    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
-    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-    return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+lockBadge+'</div>'+desc+'</div>';
-  }).join('');
-  el.innerHTML = listHtml;
-}
-function openBook(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
-  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
-  const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
-  if(!p) return;
-  if(checkAccess().status === 'trial'){
-    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
-    if(!allowed){
-      appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
-      return;
-    }
-  }
-  if(!p.url) return;
-  _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i };
-  _screenStack.push('book'); _renderBookViewerDirect();
-}
-
-/* ============ NOTES — SHOW ALL, LOCK NON-TRIAL ============ */
-function renderNotesHome(){
-  if(!isSignedIn() || !hasActiveSession()){ setScreen('note'); app.innerHTML=renderHeader('note')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Notes</h2><p>Sign up or sign in to browse Notes.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
-  if(!isTrialContentAllowed('note')){ setScreen('note'); app.innerHTML=renderHeader('note')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('note')+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
-  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester();
-  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
-  let preSelect = _lastUniSelection.note || '';
-  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
-  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{notes:[]}; const has=c.notes&&c.notes.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · other universities locked</div>' : '';
-  app.innerHTML=renderHeader('note')+semesterChanger(sem)+trialNote+renderTutorialCard('pay',getTutorials().pay.title,getTutorials().pay.url)+'<div class="panel"><h2>Notes <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="noteUniSelect" onchange="renderNoteList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="noteList"></div>'+renderBottomNav('note')+renderChatFab();
-  if(preSelect) renderNoteList(preSelect);
-  restoreScroll('note_note');
-}
-function renderNoteList(uni){
-  if (uni) _lastUniSelection.note = uni;
-  const el=document.getElementById('noteList'); if(!el) return;
-  if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see notes</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
-  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
-  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
-  const allNotes = c.notes || [];
-  if(!allNotes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; return; }
-  const isTrialNow = checkAccess().status === 'trial';
-  const listHtml = allNotes.map((n, i) => {
-    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
-    const locked = isTrialNow && !allowed;
-    const borderColor = locked ? '#ff9800' : '#2196f3';
-    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
-    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-    return '<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+lockBadge+'</div></div>';
-  }).join('');
-  el.innerHTML = listHtml;
-}
-function openNote(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
-  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
-  const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i];
-  if(!n) return;
-  if(checkAccess().status === 'trial'){
-    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
-    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
-    if(!allowed){
-      appAlert('🔒 This note is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
-      return;
-    }
-  }
-  _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
-  _screenStack.push('note'); _renderNoteViewerDirect();
  }
 
+ // ================= PART 4 STARTS HERE =================
 
+ function renderSignIn(){
+  setScreen('auth');
+  app.innerHTML = renderHeader('my')+'<div class="panel"><h2>Welcome Back</h2>'+
+    '<label class="field-label">Phone</label><input type="tel" id="siPhone" placeholder="09xxxxxxxx or 07xxxxxxxx" class="field-input">'+
+    '<label class="field-label">Password / PIN</label><div class="pw-wrap"><input type="password" id="siPw" placeholder="••••••" class="field-input" autocomplete="current-password" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'siPw\', this)">👁️</button></div>'+
+    '<div id="siMsg" style="margin-top:10px; font-size:13px;"></div>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" id="siSubmitBtn" onclick="submitSignIn()">Sign In</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderForgotPassword()">Forgot password?</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button>'+
+    '<div style="background:#e3f2fd; border-left:4px solid #2196f3; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#1565c0; line-height:1.6;">One account = one phone. If you already logged in on another phone, ask admin to unbind your old device.</div></div>'+
+    renderBottomNav('my')+renderChatFab();
+}
+async function submitSignIn(){
+  const phone = (document.getElementById('siPhone').value || '').trim();
+  const pw = document.getElementById('siPw').value;
+  const msg = document.getElementById('siMsg');
+  const btn = document.getElementById('siSubmitBtn');
+  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
+  const ok  = t => { msg.innerHTML = '<div style="color:#2e7d32; font-weight:600;">' + t + '</div>'; };
+  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone (09/07 + 8 digits).');
+  if (!isValidPassword(pw)) return err('Password must be at least 4 characters.');
+  if (isPhoneBlacklisted(phone)) { err('Account blocked.'); setTimeout(() => renderBlockedScreen(), 1200); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Verifying…'; }
 
- /* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
+  try {
+    const res = await backendLogin(phone, pw);
+    if (!res || !res.ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      if (res && res.err === 'device_conflict') {
+        await appAlert('🔒 This account is already logged in on another phone.\n\nOnly one device is allowed per user. Contact admin to unbind your old device.');
+        return err('Blocked: already logged in on another device.');
+      }
+      if (res && res.err === 'wrong-password') return err('Wrong password. Please try again.');
+      if (res && res.err === 'not-found') return err('No account found for this phone. Please sign up first.');
+      return err('Sign-in failed: ' + ((res && res.err) || 'unknown'));
+    }
+
+    const user = res.user;
+    user.deviceId = getDeviceId();
+    user.deviceHash = getDeviceHash();
+    saveUser(user);
+    setCurrentUserPhone(phone);
+    saveProfileData({ name: user.name, phone: user.phone, university: user.university, stream: user.stream });
+    setUniversity(user.university);
+    setCheckedIn();
+    startSession(phone);
+    markPhoneUsed(phone);
+
+    ok('✓ Signed in!');
+    pushStatusToServer();
+
+    if (res.mustChangePassword) {
+      setTimeout(() => { _clearNavStack(); renderForceChangePassword(); }, 400);
+      return;
+    }
+
+    setTimeout(() => {
+      showPostAuthWarning(() => {
+        _clearNavStack();
+        switchTab('book');
+      });
+    }, 400);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+    err('Sign-in failed. Please try again.');
+  }
+}
+
+function renderForgotPassword() {
+  setScreen('auth');
+  const phone = getCurrentUserPhone() || '';
+  const msg = 'FORGOT PASSWORD — Phone: ' + phone + ' | ID: ' + getDeviceHash();
+  app.innerHTML = renderHeader('my') +
+    '<div class="panel"><h2>Forgot Password</h2>' +
+    '<p style="color:#666; font-size:13.5px; line-height:1.7; margin:12px 0;">Two ways to recover:</p>' +
+    '<div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:14px;">' +
+      '<div><strong>Device ID:</strong> <code>' + getDeviceHash() + '</code></div>' +
+      '<div><strong>Your phone:</strong> <code>' + (phone || '-') + '</code></div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-full" onclick="renderResetWithCode()">🔐 I Have a Reset Code</button>' +
+    '<a href="https://t.me/' + escapeAttr(CONFIG.TELEGRAM_USERNAME) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📨 Ask Admin on Telegram</a>' +
+    (CONFIG.CONTACT_PHONE ? '<a href="tel:' + escapeAttr(CONFIG.CONTACT_PHONE) + '" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">📞 Call ' + escapeHtml(CONFIG.CONTACT_PHONE) + '</a>' : '') +
+    '<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back to Sign In</button></div>' +
+    renderBottomNav('my') + renderChatFab();
+}
+
+function switchTab(tab){
+  _clearNavStack(); saveScrollNow();
+  if(BASE_TABS[tab]) _lastBaseTab = tab;
+  if(quizState.timerId && currentScreen === 'quiz'){ clearInterval(quizState.timerId); quizState = {}; }
+  if(currentScreen !== 'book-viewer' && currentScreen !== 'note-viewer') _viewerState = null;
+  if(isBlocked() || isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); return; }
+  if(isKeyLocked()){ renderKeyBlockedScreen(); return; }
+  if(isClosureDay()){ renderClosureScreen(); return; }
+  if(tab === 'my'){ setScreen('my'); renderMy(); return; }
+  const accessNow = checkAccess(); const signedIn = isSignedIn() && hasActiveSession();
+  if(signedIn && accessNow.status === 'expired'){ renderPaymentFlow(tab); return; }
+  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
+  if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
+  else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
+  else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
+  else if(tab === 'coc'){ 
+    if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } 
+    setScreen('coc-home'); renderCocHome(); 
+  }
+}
+function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
+function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
+function setCurrentSemester(s){ localStorage.setItem(LS_SEMESTER,String(s)); }
+function renderSemesterPicker(targetTab){ setScreen('semester'); app.innerHTML=renderHeader(targetTab)+'<div class="panel"><h2>Choose Semester</h2><p style="color:#777; font-size:13px; margin-bottom:16px;">Content differs by semester. You can change it later.</p><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(1,\''+targetTab+'\')">1st Semester</button><button class="btn btn-primary" style="padding:20px; font-size:15px;" onclick="chooseSemester(2,\''+targetTab+'\')">2nd Semester</button></div></div>'+renderBottomNav(targetTab)+renderChatFab(); }
+function chooseSemester(s,tab){ setCurrentSemester(s); switchTab(tab); }
+function semesterChanger(current){ return '<div class="semester-pick">'+CONFIG.SEMESTERS.map(s=>'<button class="'+(current===s?'active':'')+'" onclick="changeSemester('+s+')">'+(s===1?'1st':'2nd')+' Semester</button>').join('')+'</div>'; }
+
+function changeSemester(s){ 
+  setCurrentSemester(s); 
+  switchTab(currentTab); 
+}
+
+function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
+function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
+function setBookZoom(z){ localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const wrap=document.getElementById('bookZoomWrap'); const lbl=document.getElementById('bookZoomPct'); const nz=getBookZoom(); if(wrap){ const iframe=wrap.querySelector('iframe'); if(iframe){ iframe.style.transform='scale('+nz+')'; iframe.style.transformOrigin='top left'; iframe.style.width=(100/nz)+'%'; iframe.style.height=(100/nz)+'%'; } } if(lbl) lbl.textContent=Math.round(nz*100)+'%'; }
+function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
+
+/* ============ BOOKS — SHOW ALL, LOCK NON-TRIAL ============ */
+function renderBooksHome(){
+  if(!isSignedIn() || !hasActiveSession()){
+    setScreen('book');
+    app.innerHTML = renderHeader('book')+'<div class="locked-box"><div class="icon">📚</div><h2>Register to View Modules</h2><p>Sign up or sign in to browse the Modules Library.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('book')+renderChatFab();
+    restoreScroll('book_book'); return;
+  }
+  if(!isTrialContentAllowed('book')){ setScreen('book'); app.innerHTML=renderHeader('book')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('book')+renderBottomNav('book')+renderChatFab(); restoreScroll('book_book'); return; }
+  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester(); const tutorials=getTutorials();
+  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
+  let preSelect = _lastUniSelection.book || '';
+  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
+  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{pdfs:[]}; const has=c.pdfs&&c.pdfs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
+  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> unlocked · other universities locked · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
+  app.innerHTML = renderHeader('book')+semesterChanger(sem)+trialNote+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+'<div class="panel"><h2>Modules Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="bookUniSelect" onchange="renderBookList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="bookList"></div>'+renderBottomNav('book')+renderChatFab();
+  if(preSelect) renderBookList(preSelect);
+  restoreScroll('book_book');
+}
+function renderBookList(uni){
+  if (uni) _lastUniSelection.book = uni;
+  const el=document.getElementById('bookList'); if(!el) return;
+  if(!uni){ el.innerHTML=''; return; }
+  if(!isSignedIn() || !hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see modules</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
+  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
+  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
+  const allPdfs = c.pdfs || [];
+  if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  const listHtml = allPdfs.map((p, i) => {
+    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
+    const locked = isTrialNow && !allowed;
+    const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
+    const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
+    const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
+    const borderColor = locked ? '#ff9800' : '#6a3093';
+    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
+    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
+    return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+lockBadge+'</div>'+desc+'</div>';
+  }).join('');
+  el.innerHTML = listHtml;
+}
+function openBook(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
+  if(!p) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
+    if(!allowed){
+      appAlert('🔒 This module is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  if(!p.url) return;
+  _viewerState = { type:'book', uni:uni, stream:stream, sem:sem, i:i };
+  _screenStack.push('book'); _renderBookViewerDirect();
+}
+
+/* ============ NOTES — SHOW ALL, LOCK NON-TRIAL ============ */
+function renderNotesHome(){
+  if(!isSignedIn() || !hasActiveSession()){ setScreen('note'); app.innerHTML=renderHeader('note')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Notes</h2><p>Sign up or sign in to browse Notes.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
+  if(!isTrialContentAllowed('note')){ setScreen('note'); app.innerHTML=renderHeader('note')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('note')+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
+  const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester();
+  const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
+  let preSelect = _lastUniSelection.note || '';
+  if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
+  const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{notes:[]}; const has=c.notes&&c.notes.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
+  const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · other universities locked</div>' : '';
+  app.innerHTML=renderHeader('note')+semesterChanger(sem)+trialNote+renderTutorialCard('pay',getTutorials().pay.title,getTutorials().pay.url)+'<div class="panel"><h2>Notes <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Semester '+sem+'</p><select id="noteUniSelect" onchange="renderNoteList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div><div id="noteList"></div>'+renderBottomNav('note')+renderChatFab();
+  if(preSelect) renderNoteList(preSelect);
+  restoreScroll('note_note');
+}
+function renderNoteList(uni){
+  if (uni) _lastUniSelection.note = uni;
+  const el=document.getElementById('noteList'); if(!el) return;
+  if(!uni){ el.innerHTML=''; return; }
+  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see notes</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
+  if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
+  const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
+  const allNotes = c.notes || [];
+  if(!allNotes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; return; }
+  const isTrialNow = checkAccess().status === 'trial';
+  const listHtml = allNotes.map((n, i) => {
+    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
+    const locked = isTrialNow && !allowed;
+    const borderColor = locked ? '#ff9800' : '#2196f3';
+    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
+    const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
+    return '<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+lockBadge+'</div></div>';
+  }).join('');
+  el.innerHTML = listHtml;
+}
+function openNote(uni,stream,sem,i){
+  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i];
+  if(!n) return;
+  if(checkAccess().status === 'trial'){
+    const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
+    const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
+    if(!allowed){
+      appAlert('🔒 This note is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      return;
+    }
+  }
+  _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
+  _screenStack.push('note'); _renderNoteViewerDirect();
+     }
+
+ // ================= PART 5 STARTS HERE =================
+
+/* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
 function renderExamHome(){
   if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   if(!isTrialContentAllowed('exam')){ setScreen('exam-home'); app.innerHTML=renderHeader('exam')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('exam')+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
@@ -1814,12 +1573,12 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
- }
+                                                          }
+ 
+ // ================= PART 6 STARTS HERE =================
 
 
-
-
-function renderMy(introMsg){
+ function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
   if(!isSignedIn()){
     setScreen('my');
