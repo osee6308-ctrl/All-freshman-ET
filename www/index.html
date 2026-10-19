@@ -180,6 +180,9 @@
 </head>
 <body>
 <div class="container" id="app"></div>
+ window.onerror = function(m, s, l, c, e) {
+  document.body.innerHTML = '<div style="color:white; background:red; padding:20px; font-size:16px; z-index:99999; position:fixed; inset:0;"><h2>App Crash!</h2><p><b>Error:</b> ' + m + '</p><p><b>Line Number:</b> ' + l + '</p></div>';
+};
 <script>
  window.onerror = function(message, source, lineno, colno, error) {
   document.body.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif; background:#c62828; z-index:99999; position:fixed; inset:0; overflow:auto;">' +
