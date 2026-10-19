@@ -1589,7 +1589,75 @@ async function submitForceChangePassword() {
  
  // ================= PART 6 STARTS HERE =================
 
+ 
+/* ============ ADMIN: GENERATE RESET CODE ============ */
+async function adminGenerateResetCode() {
+  if (!isAdminMode()) return;
+  const phone = await appPrompt('Enter phone number to generate reset code for:');
+  if (!phone) return;
+  try {
+    const r = await fetch(BACKEND_URL + '/api/admin/generate-reset-code', {
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify({ phone: phone.trim() })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) return appAlert('Failed: ' + ((data && data.err) || 'unknown'));
+    const mins = Math.round((data.expiresAt - Date.now()) / 60000);
+    await appAlert('✅ Reset code for ' + phone + ':\n\n' + data.code + '\n\nGive this to the user. It works only once.');
+  } catch (e) { appAlert('Network error.'); }
+}
 
+/* ============ USER: RESET WITH CODE ============ */
+function renderResetWithCode() {
+  setScreen('reset-code');
+  app.innerHTML = renderHeader('my') +
+    '<div class="panel"><h2>Reset Password</h2>' +
+    '<p style="color:#666; font-size:13px; margin-bottom:14px;">Enter the code you received from admin, then choose a new password.</p>' +
+    '<label class="field-label">Phone</label><input type="tel" id="rcPhone" class="field-input" value="' + escapeAttr(getCurrentUserPhone() || '') + '">' +
+    '<label class="field-label">6-Digit Code</label><input type="text" id="rcCode" class="field-input" maxlength="6" inputmode="numeric" style="font-family:monospace;letter-spacing:4px;font-size:18px;text-align:center;">' +
+    '<label class="field-label">New Password</label><div class="pw-wrap"><input type="password" id="rcPw1" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw1\', this)">👁️</button></div>' +
+    '<label class="field-label">Confirm</label><div class="pw-wrap"><input type="password" id="rcPw2" class="field-input" style="margin-bottom:0;"><button type="button" class="pw-eye" onclick="togglePassword(\'rcPw2\', this)">👁️</button></div>' +
+    '<div id="rcMsg" style="margin-top:10px; font-size:13px;"></div>' +
+    '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="submitResetWithCode()">Reset Password</button>' +
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
+    renderBottomNav('my') + renderChatFab();
+}
+
+async function submitResetWithCode() {
+  const phone = (document.getElementById('rcPhone').value || '').trim();
+  const code = (document.getElementById('rcCode').value || '').trim();
+  const pw1 = document.getElementById('rcPw1').value;
+  const pw2 = document.getElementById('rcPw2').value;
+  const msg = document.getElementById('rcMsg');
+  const err = t => { msg.innerHTML = '<div style="color:#c62828; font-weight:600;">' + t + '</div>'; };
+  if (!/^(09|07)\d{8}$/.test(phone)) return err('Enter valid phone.');
+  if (!/^\d{6}$/.test(code)) return err('Code must be 6 digits.');
+  if (!isValidPassword(pw1)) return err('Min 4 characters.');
+  if (pw1 !== pw2) return err('Passwords do not match.');
+
+  const newHash = await hashPasswordNew(pw1);
+  try {
+    const r = await fetch(BACKEND_URL + '/api/reset-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code, newPasswordHash: newHash })
+    });
+    const data = await r.json();
+    if (!data || !data.ok) {
+      if (data && data.err === 'code-expired') return err('Code expired. Ask admin for a new one.');
+      if (data && data.err === 'wrong-code') return err('Wrong code.');
+      if (data && data.err === 'no-code') return err('No reset code found. Contact admin.');
+      return err('Failed: ' + ((data && data.err) || 'unknown'));
+    }
+    await appAlert('✅ Password reset! Please sign in with your new password.');
+    renderSignIn();
+  } catch (e) { err('Network error.'); }
+}
+
+const SS_ALLOWED_SCREENS = ['my','exam-home','quiz','auth'];
+
+/* =================================================== */
+/* The code you pasted earlier starts right below here */
+/* =================================================== */
+ 
  function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
   if(!isSignedIn()){
