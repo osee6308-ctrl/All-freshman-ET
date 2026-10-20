@@ -181,9 +181,9 @@
 <body>
 <div class="container" id="app"></div>
 <script>
-window.onerror = function(msg, url, line) {
-  alert("APP CRASHED!\n\nError: " + msg + "\n\nLine: " + line);
-  return true;
+window.onerror = function (msg, url, lineNo) {
+    alert("APP CRASHED!\n\nError: " + msg + "\n\nLine Number: " + lineNo);
+    return true;
 };
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
