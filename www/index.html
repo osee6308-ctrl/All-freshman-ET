@@ -181,13 +181,9 @@
 <body>
 <div class="container" id="app"></div>
 <script>
-window.onerror = function(m, s, l, c, e) {
-  document.body.innerHTML = `<div style="color:white; background:red; padding:20px; font-size:16px; z-index:99999; position:fixed; inset:0; overflow:auto;">
-    <h2>App Crash!</h2>
-    <p><b>Error:</b> ${m}</p>
-    <p><b>Line Number:</b> ${l}</p>
-    <p>Take a screenshot and send it to Osama!</p>
-  </div>`;
+window.onerror = function(msg, url, line) {
+  alert("APP CRASHED!\n\nError: " + msg + "\n\nLine: " + line);
+  return true;
 };
 if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
