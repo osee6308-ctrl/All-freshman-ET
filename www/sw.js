@@ -1,4 +1,4 @@
-const CACHE_NAME = 'all-freshman-v1.116.0'; // 🚨 CHANGE THIS ONLY WHEN UPLOADING NEW CODE
+const CACHE_NAME = 'all-freshman-v1.117.0'; // 🚨 CHANGE THIS ONLY WHEN UPLOADING NEW CODE
 const ASSETS = [
   './manifest.json',
   './logo.png',
