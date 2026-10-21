@@ -15,8 +15,22 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
+  /* ORDER 43: Dynamic Variables for Admin Branding */
+  :root {
+    --bg-light: linear-gradient(135deg, #0a5c36, #1e8449 50%, #b8860b);
+    --bg-dark: #000000;
+    --primary-color: #0a5c36;
+    --accent-color: #b8860b;
+  }
+
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
-  body { min-height:100vh; background: linear-gradient(135deg,#1e3c72,#2a5298 50%,#6a3093); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#222; transition: background .3s, color .3s; touch-action: pan-y; }
+  
+  /* ORDER 7: Green/Gold Light Mode */
+  body { min-height:100vh; background: var(--bg-light); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#ffffff; transition: background .3s, color .3s; touch-action: pan-y; }
+  
+  /* ORDER 8: Deep Black Dark Mode */
+  body.dark { background: var(--bg-dark) !important; color:#ffffff !important; }
+  
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
   body:not(.admin-mode) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   body:not(.admin-mode) input, body:not(.admin-mode) textarea { -webkit-user-select: text; user-select: text; }
@@ -30,31 +44,41 @@
   .hdr-actions { display:flex; gap:6px; flex-shrink:0; }
   .hdr-btn { position:relative; background:rgba(255,255,255,.18); border:none; color:#fff; width:42px; height:42px; border-radius:50%; cursor:pointer; font-size:19px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .hdr-btn .dot { position:absolute; top:6px; right:6px; min-width:16px; height:16px; padding:0 4px; background:#ff4757; color:#fff; border-radius:20px; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #2a5298; }
-  .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 4px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:9000; gap:2px; }
-  .bottom-nav .tab { flex:1; padding:8px 2px; border:none; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; font-size:9.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:10px; transition:.15s; }
+  .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 4px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:9000; gap:2px; overflow-x:auto; }
+  body.dark .bottom-nav { background:rgba(10,10,10,.96); }
+  .bottom-nav .tab { flex:1; padding:8px 2px; border:none; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; font-size:9.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:10px; transition:.15s; min-width:60px; }
   .bottom-nav .tab .ico { font-size:17px; line-height:1; }
   .bottom-nav .tab.active { background:rgba(255,255,255,.15); color:#fff; }
-  .panel { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-bottom:16px; transition: background .3s, color .3s; }
-  .panel h2 { font-size:19px; margin-bottom:12px; color:#333; }
+  .panel { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-bottom:16px; transition: background .3s, color .3s; color: #222; }
+  body.dark .panel { background:#111111; color:#ffffff; border: 1px solid #333; }
+  .panel h2 { font-size:19px; margin-bottom:12px; color:var(--primary-color); }
+  body.dark .panel h2 { color:var(--accent-color); }
   .panel h3 { font-size:15px; margin:14px 0 8px; color:#6a3093; }
   .panel p, .panel li { font-size:14px; line-height:1.6; color:#444; }
+  body.dark .panel p, body.dark .panel li { color:#ccc; }
   .panel code { background:#f0e9f8; color:#6a3093; padding:1px 6px; border-radius:4px; font-size:12.5px; font-family:'Menlo','Courier New',monospace; }
-  .locked-box { background:#fff; border-radius:16px; padding:26px; box-shadow:0 10px 30px rgba(0,0,0,.25); text-align:center; margin-bottom:16px; }
+  .locked-box { background:#fff; border-radius:16px; padding:26px; box-shadow:0 10px 30px rgba(0,0,0,.25); text-align:center; margin-bottom:16px; color:#222; }
+  body.dark .locked-box { background:#111; color:#fff; border: 1px solid #333; }
   .locked-box .icon { font-size:44px; margin-bottom:10px; }
   .locked-box h2 { font-size:19px; color:#c62828; margin-bottom:8px; }
   .locked-box p { color:#666; font-size:13.5px; line-height:1.7; margin-bottom:16px; }
+  body.dark .locked-box p { color:#aaa; }
   .btn { padding:11px 20px; border:none; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; transition:opacity .15s; }
   .btn:active { opacity:.7; }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
-  .btn-primary { background:#6a3093; color:#fff; }
+  .btn-primary { background:var(--primary-color); color:#fff; }
+  body.dark .btn-primary { background:var(--accent-color); color:#000; }
   .btn-ghost { background:#eee; color:#333; }
+  body.dark .btn-ghost { background:#333; color:#fff; }
   .btn-danger { background:#ff4757; color:#fff; padding:6px 10px; font-size:12px; border-radius:6px; }
   .btn-telegram { background:linear-gradient(135deg,#0088cc,#0066aa); color:#fff; }
   .btn-full { width:100%; }
   .btn-row { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
   .btn-row .btn { flex:1; min-width:120px; }
   .field-label { display:block; font-size:11px; font-weight:700; color:#666; margin:12px 0 6px; text-transform:uppercase; }
+  body.dark .field-label { color:#aaa; }
   .field-input, .field-select, .field-textarea { width:100%; padding:12px; border:2px solid #e0e0e6; border-radius:10px; font-size:14px; outline:none; background:#fff; font-family:inherit; color:#222; }
+  body.dark .field-input, body.dark .field-select, body.dark .field-textarea { background:#222; color:#fff; border-color:#444; }
   .field-textarea { min-height:110px; resize:vertical; }
   input[type=file]:not(.upload-box) { display:none; }
   .upload-box { display:block; width:100%; margin-bottom:6px; padding:10px; border:2px dashed #bbb; border-radius:10px; background:#fafafa; }
@@ -62,11 +86,13 @@
   .pw-wrap input { padding-right:52px !important; }
   .pw-eye { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; cursor:pointer; font-size:18px; padding:8px; line-height:1; color:#666; border-radius:8px; width:auto; height:auto; margin:0; }
   .subjects-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
-  .subject-card { background:#fff; border-radius:14px; padding:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.15); transition: transform .15s; position:relative; }
+  .subject-card { background:#fff; border-radius:14px; padding:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.15); transition: transform .15s; position:relative; color:#222; }
+  body.dark .subject-card { background:#222; color:#fff; border: 1px solid #333; }
   .subject-card:active { transform:scale(.98); }
   .subject-card .name { font-weight:700; font-size:15px; margin-bottom:4px; color:#222; }
+  body.dark .subject-card .name { color:#fff; }
   .subject-card .meta { font-size:12px; color:#777; }
-  .subject-card .badge { position:absolute; top:12px; right:12px; background:#6a3093; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .subject-card .badge { position:absolute; top:12px; right:12px; background:var(--primary-color); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
   .semester-pick { display:flex; gap:10px; margin-bottom:16px; }
   .semester-pick button { flex:1; padding:16px; border:2px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:#fff; border-radius:14px; font-weight:800; cursor:pointer; font-size:13px; transition:.15s; }
   .semester-pick button.active { background:#fff; color:#4a2568; border-color:#fff; }
@@ -74,107 +100,129 @@
   .timer { background:rgba(255,255,255,.2); padding:5px 12px; border-radius:20px; font-variant-numeric:tabular-nums; }
   .progress-track { height:7px; background:rgba(255,255,255,.25); border-radius:10px; overflow:hidden; margin-bottom:16px; }
   .progress-fill { height:100%; background:#4ade80; width:0%; transition:width .3s; border-radius:10px; }
-  .question-card { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+  
+  /* ORDER 13 & 14: Vertical Scroll & Sticky Quiz Header */
+  .sticky-quiz-header { position: sticky; top: 0; z-index: 100; background: rgba(10,60,30,0.95); padding: 10px; margin: -12px -12px 12px -12px; backdrop-filter: blur(10px); border-bottom: 2px solid var(--accent-color); }
+  body.dark .sticky-quiz-header { background: rgba(0,0,0,0.95); border-bottom: 2px solid var(--accent-color); }
+  .quiz-nav-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px; }
+  .quiz-nav-dot { min-width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #333; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; border: 2px solid #ccc; }
+  .quiz-nav-dot.answered { background: #4caf50; color: #fff; border-color: #4caf50; }
+  .quiz-nav-dot.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+  .question-block { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-bottom:20px; border-left:5px solid var(--primary-color); color: #222; }
+  body.dark .question-block { background:#151515; color:#fff; border-left-color: var(--accent-color); border: 1px solid #333; }
+  
+  .question-card { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); color:#222; }
+  body.dark .question-card { background:#151515; color:#fff; border:1px solid #333; }
   .q-number { font-size:12px; color:#888; margin-bottom:6px; font-weight:600; letter-spacing:.5px; }
   .q-text { font-size:17px; font-weight:600; margin-bottom:18px; line-height:1.4; color:#222; }
-  .option { display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #e5e5ea; border-radius:10px; margin-bottom:9px; cursor:pointer; transition:.15s; font-size:14px; }
+  body.dark .q-text { color:#fff; }
+  
+  .option { display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #e5e5ea; border-radius:10px; margin-bottom:9px; cursor:pointer; transition:.15s; font-size:14px; background:#fafafa; }
+  body.dark .option { background:#222; border-color:#444; color:#fff; }
+  .option.selected { border-color: var(--primary-color); background: #e8f5e9; color: #000; }
+  body.dark .option.selected { border-color: var(--accent-color); background: #333; color: #fff; }
   .option .letter { width:26px; height:26px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0; color:#444; }
+  
+  /* ORDER 31, 32, 33: 3-Method Upload Tabs */
+  .method-tabs { display:flex; gap:8px; margin-bottom:12px; }
+  .method-tab { flex:1; padding:10px; border:2px solid #ddd; background:#fff; border-radius:8px; font-weight:700; cursor:pointer; text-align:center; font-size:13px; color:#555; }
+  .method-tab.active { border-color: var(--primary-color); background:#e8f5e9; color: var(--primary-color); }
+  body.dark .method-tab { background:#222; border-color:#444; color:#aaa; }
+  body.dark .method-tab.active { background:#1e8449; border-color: var(--accent-color); color:#fff; }
+  
   .nav-row { display:flex; justify-content:space-between; margin-top:20px; gap:10px; }
-  .result-card { background:#fff; border-radius:16px; padding:26px; box-shadow:0 10px 30px rgba(0,0,0,.25); text-align:center; }
+  .result-card { background:#fff; border-radius:16px; padding:26px; box-shadow:0 10px 30px rgba(0,0,0,.25); text-align:center; color: #222; }
+  body.dark .result-card { background:#111; color:#fff; border: 1px solid #333; }
   .score-circle { width:120px; height:120px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; margin:0 auto 16px; color:#fff; }
   .score-circle .pct { font-size:30px; font-weight:800; }
   .score-circle .grade { font-size:13px; opacity:.9; }
   .review { text-align:left; margin-top:20px; }
   .review-item { padding:11px; border-radius:10px; margin-bottom:7px; font-size:13px; }
-  .review-item.correct { background:#e8f5e9; border-left:4px solid #4caf50; }
-  .review-item.wrong { background:#ffebee; border-left:4px solid #f44336; }
+  .review-item.correct { background:#e8f5e9; border-left:4px solid #4caf50; color:#222; }
+  .review-item.wrong { background:#ffebee; border-left:4px solid #f44336; color:#222; }
+  body.dark .review-item.correct { background:#0f2a0f; color:#e0e0e0; border-left-color:#4caf50; }
+  body.dark .review-item.wrong { background:#2a0f0f; color:#e0e0e0; border-left-color:#f44336; }
   .review-item .rq { font-weight:600; margin-bottom:5px; color:#333; }
+  body.dark .review-item .rq { color:#e0e0e0; }
   .review-item .ra { font-size:12.5px; color:#555; }
+  body.dark .review-item .ra { color:#b0b0b0; }
   .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:20px; }
-  .stat-box { background:#f7f7fa; border-radius:12px; padding:16px; text-align:center; }
-  .stat-box .num { font-size:26px; font-weight:800; color:#6a3093; }
+  .stat-box { background:#f7f7fa; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:.2s; }
+  body.dark .stat-box { background:#222; }
+  .stat-box .num { font-size:26px; font-weight:800; color:var(--primary-color); }
+  body.dark .stat-box .num { color:var(--accent-color); }
   .stat-box .label { font-size:11.5px; color:#777; margin-top:4px; font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
-  .history-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee; font-size:13.5px; }
+  body.dark .stat-box .label { color:#aaa; }
+  .history-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee; font-size:13.5px; color:#222; }
+  body.dark .history-item { color:#e0e0e0; border-bottom-color:#333; }
   .score-badge { font-weight:700; padding:2px 10px; border-radius:20px; font-size:11.5px; background:#e8f5e9; color:#2e7d32; }
   .score-badge.low { background:#ffebee; color:#c62828; }
   .empty-msg { text-align:center; padding:30px 10px; color:#888; font-size:13.5px; }
-  .tutorial-card { background:#fff; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 6px 18px rgba(0,0,0,.15); display:flex; align-items:center; gap:14px; cursor:pointer; }
+  body.dark .empty-msg { color:#666; }
+  .tutorial-card { background:#fff; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 6px 18px rgba(0,0,0,.15); display:flex; align-items:center; gap:14px; cursor:pointer; color:#222; }
+  body.dark .tutorial-card { background:#111; color:#fff; border:1px solid #333; }
   .tutorial-card .t-icon { width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg,#6a3093,#4a2568); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
   .tutorial-card .t-body { flex:1; }
   .tutorial-card .t-title { font-weight:800; font-size:14px; color:#222; margin-bottom:2px; }
+  body.dark .tutorial-card .t-title { color:#fff; }
   .tutorial-card .t-sub { font-size:11.5px; color:#888; }
   .video-frame { width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#000; margin-bottom:12px; }
   .video-frame iframe, .video-frame video { width:100%; height:100%; border:0; display:block; }
   .notif-panel { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:99999; display:none; justify-content:flex-end; }
   .notif-panel.open { display:flex; }
-  .notif-drawer { width:92%; max-width:420px; background:#fff; height:100%; overflow-y:auto; padding:20px; animation:slideIn .25s; }
+  .notif-drawer { width:92%; max-width:420px; background:#fff; height:100%; overflow-y:auto; padding:20px; animation:slideIn .25s; color:#222; }
+  body.dark .notif-drawer { background:#16162a; color:#fff; }
   @keyframes slideIn { from { transform:translateX(100%); } to { transform:translateX(0); } }
   .notif-drawer h2 { font-size:17px; margin-bottom:14px; color:#333; }
+  body.dark .notif-drawer h2 { color:#fff; }
   .notif-item { background:#f7f7fa; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #6a3093; }
+  body.dark .notif-item { background:#20203a; border-left-color:var(--accent-color); }
   .notif-item.unread { background:#f0e9f8; border-left-color:#ff4757; }
   .notif-item .nt { font-size:11px; font-weight:800; color:#888; margin-bottom:6px; text-transform:uppercase; }
   .notif-item .nb { font-size:13.5px; line-height:1.65; color:#333; }
+  body.dark .notif-item .nb { color:#e0e0e0; }
   .stream-badge { display:inline-block; background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px; margin-left:6px; text-transform:uppercase; }
   .chapter-tag { display:inline-block; background:#e8f5e9; color:#2e7d32; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px; margin-right:6px; }
+  body.dark .chapter-tag { background:#0f2a0f; color:#7ed87e; }
   .key-attempt-warn { background:#fff3cd; border-left:4px solid #ff9800; color:#856404; padding:12px 14px; border-radius:10px; font-size:13px; font-weight:700; margin-top:12px; }
   .key-attempt-warn.danger { background:#ffebee; border-left-color:#f44336; color:#c62828; }
   .auth-choice { display:flex; flex-direction:column; gap:12px; }
   .auth-choice button { padding:20px; font-size:15px; border-radius:14px; font-weight:800; }
   .chat-menu { position:fixed; bottom:100px; right:20px; z-index:8000; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
   .chat-fab { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#0088cc,#0066aa); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(0,136,204,.5); color:#fff; font-size:10px; font-weight:800; cursor:pointer; border:none; position:relative; text-decoration:none; }
-  .viewer-topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; background:#fff; padding:12px 16px; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,.15); }
+  .viewer-topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; background:#fff; padding:12px 16px; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,.15); color:#222; }
+  body.dark .viewer-topbar { background:#151515; color:#fff; border:1px solid #333; }
   .viewer-topbar .vt-title { flex:1; font-weight:800; font-size:14px; color:#333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  body.dark .viewer-topbar .vt-title { color:#fff; }
   .zoom-group { display:flex; align-items:center; gap:4px; flex-shrink:0; }
-  .zoom-btn { width:34px; height:34px; border-radius:8px; border:none; background:#f0e9f8; color:#6a3093; font-size:18px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin:0; }
+  .zoom-btn { width:34px; height:34px; border-radius:8px; border:none; background:#f0e9f8; color:var(--primary-color); font-size:18px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; margin:0; }
+  body.dark .zoom-btn { background:#333; color:var(--accent-color); }
   .zoom-btn:active { background:#e0d0f0; }
-  .zoom-pct { font-size:12px; font-weight:700; color:#6a3093; min-width:44px; text-align:center; font-variant-numeric:tabular-nums; }
+  .zoom-pct { font-size:12px; font-weight:700; color:var(--primary-color); min-width:44px; text-align:center; font-variant-numeric:tabular-nums; }
+  body.dark .zoom-pct { color:var(--accent-color); }
   .viewer-body { background:#fff; border-radius:14px; padding:0; box-shadow:0 10px 30px rgba(0,0,0,.25); overflow:auto; max-height:78vh; }
+  body.dark .viewer-body { background:#111; }
   .viewer-body iframe { width:100%; height:78vh; border:0; display:block; background:#f0f0f0; }
   .viewer-note-body { padding:20px; font-size:15px; line-height:1.75; color:#333; transform-origin: top left; }
+  body.dark .viewer-note-body { color:#ccc; }
   .viewer-note-body * { max-width:100%; }
   .session-badge { display:inline-block; background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-left:6px; }
+  body.dark .session-badge { background:#1e3a5f; color:#90caf9; }
   .warning-modal { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px; }
-  .warning-modal .wm-card { background:#fff; border-radius:16px; padding:24px; max-width:440px; width:100%; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5); }
+  .warning-modal .wm-card { background:#fff; border-radius:16px; padding:24px; max-width:440px; width:100%; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5); color:#222; }
+  body.dark .warning-modal .wm-card { background:#16162a; color:#fff; }
   .uni-check-list { max-height:180px; overflow-y:auto; border:2px solid #0088cc; border-radius:10px; padding:8px; background:#fff; }
+  body.dark .uni-check-list { background:#0f0f1e; border-color:#0088cc; }
   .uni-check-list label { display:flex; align-items:center; gap:8px; padding:5px 6px; font-size:12px; cursor:pointer; border-radius:6px; }
   .uni-check-list label:hover { background:#f0f9ff; }
+  body.dark .uni-check-list label:hover { background:#1a1a3e; }
   .uni-check-list input { width:auto; margin:0; }
-  body.dark { background: linear-gradient(135deg,#050510,#0f0f24 50%,#1a0a2e); color:#e0e0e0; }
-  body.dark .panel, body.dark .question-card, body.dark .result-card, body.dark .locked-box, body.dark .tutorial-card, body.dark .subject-card, body.dark .warning-modal .wm-card, body.dark .viewer-topbar, body.dark .viewer-body { background:#16162a; color:#e0e0e0; }
-  body.dark .panel h2, body.dark .panel h3, body.dark .result-card h2, body.dark .subject-card .name, body.dark .locked-box h2, body.dark .viewer-topbar .vt-title { color:#d8b8f8; }
-  body.dark .panel p, body.dark .panel li, body.dark .q-text, body.dark .locked-box p, body.dark .viewer-note-body { color:#c8c8d8; }
-  body.dark .panel code { background:#2a1a3e; color:#d8b8f8; }
-  body.dark .field-input, body.dark .field-select, body.dark .field-textarea { background:#0f0f1e; color:#e0e0e0; border-color:#333; }
-  body.dark .option { background:#20203a; border-color:#333; color:#e0e0e0; }
-  body.dark .option .letter { background:#333; color:#ccc; }
-  body.dark .stat-box { background:#20203a; }
-  body.dark .stat-box .num { color:#d8b8f8; }
-  body.dark .stat-box .label { color:#888; }
-  body.dark .history-item { color:#e0e0e0; border-bottom-color:#333; }
-  body.dark .btn-ghost { background:#2a2a44; color:#e0e0e0; }
-  body.dark .tutorial-card .t-title { color:#e0e0e0; }
-  body.dark .notif-drawer { background:#16162a; }
-  body.dark .notif-drawer h2 { color:#e0e0e0; }
-  body.dark .notif-item { background:#20203a; color:#e0e0e0; }
-  body.dark .notif-item .nb { color:#e0e0e0; }
-  body.dark .field-label { color:#999; }
-  body.dark .review-item.correct { background:#0f2a0f; color:#e0e0e0; }
-  body.dark .review-item.wrong { background:#2a0f0f; color:#e0e0e0; }
-  body.dark .review-item .rq { color:#e0e0e0; }
-  body.dark .review-item .ra { color:#b0b0b0; }
-  body.dark .empty-msg { color:#666; }
-  body.dark .chapter-tag { background:#0f2a0f; color:#7ed87e; }
-  body.dark .upload-box { background:#0f0f1e; border-color:#333; color:#e0e0e0; }
-  body.dark .pw-eye { color:#c8c8d8; }
-  body.dark .zoom-btn { background:#2a1a3e; color:#d8b8f8; }
-  body.dark .zoom-pct { color:#d8b8f8; }
-  body.dark .subject-card .meta { color:#888; }
-  body.dark .session-badge { background:#1e3a5f; color:#90caf9; }
+  
   body.dark .pay-method-row input { background:#0f0f1e !important; color:#e0e0e0 !important; border-color:#333 !important; }
   body.dark #appDialogOverlay > div { background:#16162a !important; }
   body.dark #appDialogOverlay div[style*="color:#333"] { color:#e0e0e0 !important; }
-  body.dark .uni-check-list { background:#0f0f1e; border-color:#0088cc; }
-  body.dark .uni-check-list label:hover { background:#1a1a3e; }
+  
   @media (max-width:520px) { .app-header h1 { font-size:17px; } .subjects-grid { grid-template-columns:1fr 1fr; } .q-text { font-size:15.5px; } }
 </style>
 </head>
@@ -221,7 +269,32 @@ const DEFAULT_CONFIG = {
   CONTENT_URL: "https://all-freshman1.pages.dev/www",
   UNIVERSITIES: [
     "Addis Ababa University","Addis Ababa Science and Technology University","Adama Science and Technology University","Adigrat University","Aksum University","Ambo University","Arba Minch University","Arsi University","Assosa University","Bahir Dar University","Bonga University","Bule Hora University","Debark University","Debre Berhan University","Debre Markos University","Debre Tabor University","Dilla University","Dire Dawa University","Ethiopian Civil Service University","Gambella University","Haramaya University","Hawassa University","Injibara University","Jigjiga University","Jimma University","Kebri Dehar University","Kotebe Metropolitan University","Madda Walabu University","Mekelle University","Mettu University","Mizan-Tepi University","Oda Bultum University","Raya University","Salale University","Semera University","University of Gondar","Wachemo University","Werabe University","Wolaita Sodo University","Woldia University","Wolkite University","Wollo University"
-  ]
+  ],
+  
+  /* ORDER 37: Global Screenshot Block Config */
+  BLOCK_ALL_SCREENSHOTS: false,
+  
+  /* ORDER 48: Dynamic Navigation Tabs */
+  NAV_TABS: [
+    { id: 'book', label: 'Modules', icon: '📚' },
+    { id: 'note', label: 'Note', icon: '📝' },
+    { id: 'exam', label: 'Exam', icon: '📋' },
+    { id: 'coc', label: 'COC', icon: '🎯' },
+    { id: 'university', label: 'Info', icon: '🏛️' },
+    { id: 'my', label: 'My', icon: '👤' }
+  ],
+  
+  /* ORDER 42 & 44: Custom Pages & Settings */
+  CUSTOM_PAGES: {},
+  CUSTOM_SETTINGS: {},
+  
+  /* ORDER 43: App Branding (Colors) */
+  APP_COLORS: {
+    lightBg: 'linear-gradient(135deg, #0a5c36, #1e8449 50%, #b8860b)',
+    darkBg: '#000000',
+    primary: '#0a5c36',
+    accent: '#b8860b'
+  }
 };
 
 const LS_SETTINGS='fh_settings', LS_USERS='fh_users', LS_CURRENT_USER='fh_current_user',
@@ -393,11 +466,23 @@ async function pushStatusToServer() {
 function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
 function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
-function applyTheme(){ document.body.classList.toggle('dark', getTheme() === 'dark'); }
+
+/* ORDER 43: Apply Custom Branding Colors */
+function applyTheme(){ 
+  document.body.classList.toggle('dark', getTheme() === 'dark'); 
+  if (CONFIG.APP_COLORS) {
+    const root = document.documentElement;
+    if (CONFIG.APP_COLORS.lightBg) root.style.setProperty('--bg-light', CONFIG.APP_COLORS.lightBg);
+    if (CONFIG.APP_COLORS.darkBg) root.style.setProperty('--bg-dark', CONFIG.APP_COLORS.darkBg);
+    if (CONFIG.APP_COLORS.primary) root.style.setProperty('--primary-color', CONFIG.APP_COLORS.primary);
+    if (CONFIG.APP_COLORS.accent) root.style.setProperty('--accent-color', CONFIG.APP_COLORS.accent);
+  }
+}
+
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
 
- // ================= PART 2 STARTS HERE =================
+  // ================= PART 2 STARTS HERE =================
 
 const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
@@ -597,7 +682,13 @@ function setScreen(name){
   currentScreen = name; updateScreenshotGuard();
   if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){ try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){} }
 }
-function isScreenshotAllowed(){ if(isAdminMode()) return true; return SS_ALLOWED_SCREENS.includes(currentScreen); }
+
+/* ORDER 37 & 40: Global Screenshot Block with Supreme Admin Bypass */
+function isScreenshotAllowed(){ 
+  if(isAdminMode()) return true; 
+  if(CONFIG.BLOCK_ALL_SCREENSHOTS) return false;
+  return SS_ALLOWED_SCREENS.includes(currentScreen); 
+}
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
 
 const META_KEYS = new Set(['_blacklist','blacklist','notifications','tutorials','users','settings','registeredPhones','universityInfo','generalSubjects','version','updated']);
@@ -616,24 +707,97 @@ function getSeenNotifs(){ try{ return JSON.parse(localStorage.getItem(LS_SEEN_NO
 function markNotifSeen(id){ const s=getSeenNotifs(); if(!s.includes(id)){ s.push(id); localStorage.setItem(LS_SEEN_NOTIFS,JSON.stringify(s)); } }
 function unreadNotifCount(){ const seen=getSeenNotifs(); return getMyNotifications().filter(n=>!seen.includes(n.id)).length; }
 
-async function syncRemoteContent(){
-  if(!CONFIG.CONTENT_URL) return;
-  const base = CONFIG.CONTENT_URL.replace(/\/+$/,'');
-  const localVersion = localStorage.getItem(LS_SYNCED_VERSION) || '0';
-  let remoteVersion = null;
-  try { const vRes = await fetch(base + '/version.json?t=' + Date.now(), { cache:'no-store' }); if (vRes.ok) { const vData = await vRes.json(); remoteVersion = String(vData.version || '1'); if (remoteVersion === localVersion && localStorage.getItem(LS_SYNCED_CONTENT)) return; } } catch(e){}
+/* ORDER 28 & 38: Toast Notification with Deep-Link */
+function showToast(msg, deepLinkTab = null) {
+  const toast = document.createElement('div');
+  toast.innerHTML = msg;
+  toast.style.cssText = 'position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:var(--primary-color); color:#fff; padding:12px 24px; border-radius:24px; font-size:13.5px; font-weight:bold; z-index:999999; box-shadow:0 4px 15px rgba(0,0,0,0.4); transition:opacity 0.4s, transform 0.4s; opacity:1; text-align:center; white-space:nowrap; cursor:pointer;';
+  
+  if (deepLinkTab) {
+    toast.onclick = () => {
+      toast.remove();
+      switchTab(deepLinkTab);
+    };
+  }
+
+  document.body.appendChild(toast);
+  setTimeout(() => { 
+    toast.style.opacity = '0'; 
+    toast.style.transform = 'translate(-50%, 20px)'; 
+    setTimeout(() => toast.remove(), 400); 
+  }, 4000);
+}
+
+/* ORDER 25: Fetch from Cloudflare KV (No content.json) */
+async function syncRemoteContent() {
   try {
-    const res = await fetch(base + '/content.json?t=' + Date.now(), { cache:'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const remote = await res.json(); if (!remote) return;
-    localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(remote));
-    localStorage.setItem(LS_SYNCED_VERSION, remoteVersion || String(remote.version || '1'));
-    localStorage.setItem(LS_SYNCED_UPDATED, String(remote.updated || ''));
-    if (remote.tutorials) saveTutorials(remote.tutorials);
-    if (remote.universityInfo && typeof remote.universityInfo === 'object') localStorage.setItem(LS_UNI_INFO, JSON.stringify(remote.universityInfo));
-    if (remote.generalSubjects && typeof remote.generalSubjects === 'object') localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(remote.generalSubjects));
-    if (remote.settings){ const cur = getSettings(); const re = remote.settings._adminEdited || 0; const le = cur._adminEdited || 0; if (re > le){ saveSettings({...cur, ...remote.settings}); reloadConfig(); } }
-  } catch(e){}
+    const res = await fetch(BACKEND_URL + '/api/get-content?t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    if (data && data.ok && data.content) {
+      const oldStr = localStorage.getItem(LS_SYNCED_CONTENT) || '{}';
+      const newStr = JSON.stringify(data.content);
+      
+      if (oldStr !== newStr) {
+        localStorage.setItem(LS_SYNCED_CONTENT, newStr);
+        if (data.content.tutorials) saveTutorials(data.content.tutorials);
+        if (data.content.universityInfo) localStorage.setItem(LS_UNI_INFO, JSON.stringify(data.content.universityInfo));
+        if (data.content.generalSubjects) localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(data.content.generalSubjects));
+        
+        // Show Toast only if it's not the very first download
+        if (oldStr !== '{}') {
+          const latestTab = data.content._latestUpdateTab || 'book';
+          showToast('🎉 New content has been added! Tap to view.', latestTab);
+        }
+        
+        // Auto-refresh current screen if applicable
+        if (BASE_SCREENS.has(currentScreen) && currentScreen !== 'quiz' && currentScreen !== 'book-viewer' && currentScreen !== 'note-viewer') {
+           _renderScreenByName(currentScreen);
+        }
+      }
+    }
+  } catch(e) {
+    console.log('Offline mode - Using cached content.');
+  }
+}
+
+/* ORDER 29: Push Local Data to Cloud KV */
+async function pushLocalToKV() {
+  if (!isAdminMode()) return;
+  if (!(await appConfirm('Upload all content saved on this phone to the Cloud KV?\n\nThis will overwrite what is currently in the cloud.'))) return;
+  const lib = getContentLibrary();
+  try {
+    const res = await fetch(BACKEND_URL + '/api/admin/save-content', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ content: lib })
+    });
+    const data = await res.json();
+    if (data.ok) await appAlert('✅ Successfully pushed all local data to Cloud KV!');
+    else appAlert('Failed: ' + data.err);
+  } catch(e) {
+    appAlert('Network error. Please check your internet.');
+  }
+}
+
+/* ORDER 47: God Mode Repair Tool (Fixes any error without code) */
+async function repairAppData() {
+  if (!isAdminMode()) return;
+  if (!(await appConfirm('🚨 GOD MODE REPAIR:\n\nThis will download the latest clean data from Cloud KV and overwrite any corrupted local data on this phone.\n\nUse this if the app is crashing or content is missing.\n\nProceed?'))) return;
+  
+  try {
+    const res = await fetch(BACKEND_URL + '/api/get-content?t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    if (data && data.ok && data.content) {
+      localStorage.setItem(LS_SYNCED_CONTENT, JSON.stringify(data.content));
+      localStorage.removeItem(LS_CONTENT_DRAFT); // Clear any broken drafts
+      await appAlert('✅ App Repaired Successfully! The app will now reload.');
+      location.reload();
+    } else {
+      appAlert('Failed to fetch clean data from Cloud.');
+    }
+  } catch(e) {
+    appAlert('Network error. Cannot connect to Cloud to repair.');
+  }
 }
 
 function getClosureDate(y){ const ec=y-7; const l=(ec%4)===3; return new Date(y,8,l?6:5); }
@@ -681,7 +845,11 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
- // ================= PART 3 STARTS HERE =================
+  // ================= PART 3 STARTS HERE =================
+
+/* ORDER 2: Fix Admin Crash (Missing Variables) */
+var adminBulkMode = false;
+var adminSelected = new Set();
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !isScreenshotAllowed()) {
@@ -699,8 +867,8 @@ let _navSilent = false;
 let _navReady = false;
 let _viewerState = null;
 let _lastBaseTab = 'book';
-const BASE_TABS = { book:1, note:1, exam:1, coc:1, university:1, my:1 };
-const BASE_SCREENS = new Set(['book','note','exam-home','coc-home','university-info','my']);
+const BASE_TABS = { book:1, note:1, exam:1, coc:1, university:1, my:1, weekly:1 };
+const BASE_SCREENS = new Set(['book','note','exam-home','coc-home','university-info','my','weekly-home']);
 const _screenStack = [];
 let _goingBack = false;
 const _lastUniSelection = { book: '', note: '', exam: '', coc: '', university: '' };
@@ -713,6 +881,7 @@ function _renderScreenByName(name){
     case 'note': renderNotesHome(); break;
     case 'exam-home': renderExamHome(); break;
     case 'coc-home': renderCocHome(); break;
+    case 'weekly-home': renderWeeklyHome(); break; /* ORDER 49 */
     case 'university-info': renderUniversityInfo(); break;
     case 'admin-settings': renderAdminSettings(); break;
     case 'admin-activate': renderAdminActivateUser(); break;
@@ -729,6 +898,9 @@ function _renderScreenByName(name){
     case 'admin-tutorials': renderAdminTutorials(); break;
     case 'admin-notifications': renderAdminNotifications(); break;
     case 'admin-locked-users': renderAdminLockedUsers(); break;
+    case 'admin-pages': renderAdminPages(); break; /* ORDER 42 */
+    case 'admin-custom-settings': renderAdminCustomSettings(); break; /* ORDER 44 */
+    case 'admin-nav-manager': renderAdminNavManager(); break; /* ORDER 48 */
     case 'semester': renderSemesterPicker(_lastBaseTab); break;
     case 'book-viewer': if (_viewerState && _viewerState.type === 'book') _renderBookViewerDirect(); else renderBooksHome(); break;
     case 'note-viewer': if (_viewerState && _viewerState.type === 'note') _renderNoteViewerDirect(); else renderNotesHome(); break;
@@ -742,12 +914,17 @@ function appDialog(type, message, defaultValue){
   return new Promise((resolve) => {
     const existing = document.getElementById('appDialogOverlay'); if(existing) existing.remove();
     const overlay = document.createElement('div'); overlay.id = 'appDialogOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
     let inner = '';
-    if(type === 'alert') inner = '<div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><button id="appDlgOk" class="btn btn-primary btn-full">OK</button>';
-    else if(type === 'confirm') inner = '<div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
-    else if(type === 'prompt') inner = '<div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><input type="text" id="appDlgInput" class="field-input" value="'+escapeAttr(defaultValue||'')+'" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" inputmode="text" style="margin-bottom:16px;"><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
-    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'+inner+'</div>';
+    const isDark = getTheme() === 'dark';
+    const textColor = isDark ? '#fff' : '#333';
+    const bgColor = isDark ? '#222' : '#fff';
+    
+    if(type === 'alert') inner = '<div style="font-size:15px;color:'+textColor+';line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><button id="appDlgOk" class="btn btn-primary btn-full">OK</button>';
+    else if(type === 'confirm') inner = '<div style="font-size:15px;color:'+textColor+';line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
+    else if(type === 'prompt') inner = '<div style="font-size:15px;color:'+textColor+';line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><input type="text" id="appDlgInput" class="field-input" value="'+escapeAttr(defaultValue||'')+'" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" inputmode="text" style="margin-bottom:16px;"><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
+    
+    overlay.innerHTML = '<div style="background:'+bgColor+';border-radius:16px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'+inner+'</div>';
     document.body.appendChild(overlay);
     const okBtn = document.getElementById('appDlgOk'); const cancelBtn = document.getElementById('appDlgCancel'); const inputEl = document.getElementById('appDlgInput');
     const cleanup = () => { overlay.remove(); };
@@ -775,13 +952,49 @@ function _startQuizTimer(totalSeconds) {
   }, 1000);
 }
 
+/* ORDER 3 & 26: Direct PDF.js Viewer & AI Translate */
 function _renderBookViewerDirect(){
   if(!_viewerState || _viewerState.type !== 'book'){ setScreen('book'); renderBooksHome(); return; }
   const v = _viewerState; const c = getUniContent(v.uni, v.stream, v.sem); const p = c.pdfs && c.pdfs[v.i];
   if(!p || !p.url){ _viewerState = null; setScreen('book'); renderBooksHome(); return; }
   currentScreen = 'book-viewer'; updateScreenshotGuard();
   const z = getBookZoom();
-  app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body"><div id="bookZoomWrap" style="width:100%;"><iframe src="'+escapeAttr(p.url)+'" loading="lazy" referrerpolicy="no-referrer"></iframe></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
+  
+  app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body" style="padding:10px; background:#f0f0f0;"><div id="bookZoomWrap" style="width:100%; transition:transform 0.2s;"><div id="pdfCanvasContainer" style="text-align:center;"></div></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
+  
+  setTimeout(() => { setBookZoom(z); }, 50);
+  loadPdfToCanvas(p.url, 'pdfCanvasContainer');
+}
+
+async function loadPdfToCanvas(url, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '<div style="padding:20px; text-align:center; font-weight:bold; color:#555;">Loading PDF...</div>';
+  try {
+    const loadingTask = pdfjsLib.getDocument(url);
+    const pdf = await loadingTask.promise;
+    container.innerHTML = '';
+    
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      canvas.style.maxWidth = '100%';
+      canvas.style.marginBottom = '15px';
+      canvas.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+      canvas.style.background = '#fff';
+      container.appendChild(canvas);
+      
+      const renderContext = { canvasContext: context, viewport: viewport };
+      await page.render(renderContext).promise;
+    }
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<div style="padding:20px; text-align:center; color:#c62828; font-weight:bold;">Failed to load PDF directly.<br><a href="'+escapeAttr(url)+'" target="_blank" style="color:#0088cc; display:inline-block; margin-top:10px; padding:10px 20px; border:2px solid #0088cc; border-radius:8px; text-decoration:none;">Open in New Tab</a></div>';
+  }
 }
 
 function _renderNoteViewerDirect(){
@@ -980,12 +1193,15 @@ function renderHeader(activeTab, opts){
   const themeBtn = '<button class="hdr-btn" onclick="toggleTheme()" title="Theme">'+(getTheme()==='dark'?'☀️':'🌙')+'</button>';
   return '<div class="app-header"><div class="ht"><h1>'+CONFIG.APP_NAME+'</h1><p>'+escapeHtml(subtitle)+'</p></div><div class="hdr-actions">'+themeBtn+bell+'</div></div>';
 }
+
+/* ORDER 48: Dynamic Navigation Bar */
 function renderBottomNav(activeTab){
-  const tabs = [{ id:'book', label:'Modules', ico:'📚' }, { id:'note', label:'Note', ico:'📝' }, { id:'exam', label:'Exam', ico:'📋' }];
-  tabs.push({ id:'coc', label:'COC', ico:'🎯' }); 
-  tabs.push({ id:'university', label:'Info', ico:'🏛️' }); tabs.push({ id:'my', label:'My', ico:'👤' });
-  return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.ico+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
+  const tabs = (CONFIG.NAV_TABS && CONFIG.NAV_TABS.length) ? CONFIG.NAV_TABS : [
+    { id:'book', label:'Modules', icon:'📚' }, { id:'note', label:'Note', icon:'📝' }, { id:'exam', label:'Exam', icon:'📋' }, { id:'coc', label:'COC', icon:'🎯' }, { id:'university', label:'Info', icon:'🏛️' }, { id:'my', label:'My', icon:'👤' }
+  ];
+  return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.icon+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
 }
+
 function renderChatFab(){
   const tg = (CONFIG.TELEGRAM_USERNAME || '').trim(); const group = (CONFIG.SUPPORT_GROUP || '').trim();
   const link = group ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,'')) : (tg ? 'https://t.me/' + tg : '#');
@@ -1062,7 +1278,54 @@ async function submitSignUp(){
   }
  }
 
- // ================= PART 4 STARTS HERE =================
+/* ORDER 22: Tap-to-Translate / Meaning */
+document.addEventListener('selectionchange', () => {
+  const selection = window.getSelection().toString().trim();
+  let tooltip = document.getElementById('ai-translate-tooltip');
+  if (selection.length > 2) {
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'ai-translate-tooltip';
+      tooltip.style.cssText = 'position:absolute; background:#0a5c36; color:#fff; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; z-index:99999; box-shadow:0 4px 10px rgba(0,0,0,0.3);';
+      tooltip.innerHTML = '✨ AI Meaning / Translate';
+      tooltip.onclick = () => { translateText(selection); window.getSelection().removeAllRanges(); tooltip.remove(); };
+      document.body.appendChild(tooltip);
+    }
+    const range = window.getSelection().getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    tooltip.style.top = (rect.top + window.scrollY - 40) + 'px';
+    tooltip.style.left = (rect.left + window.scrollX) + 'px';
+    tooltip.style.display = 'block';
+  } else if (tooltip) {
+    tooltip.style.display = 'none';
+  }
+});
+
+async function translateText(text) {
+  if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+  const lang = await appPrompt('Which language do you want?\n\n(Type: Amharic, Afaan Oromoo, Tigrinya, or English)');
+  if (!lang) return;
+  
+  const popup = document.createElement('div');
+  popup.className = 'ai-popup open';
+  popup.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3>✨ AI Translation</h3><button onclick="this.closest(\'.ai-popup\').remove()" class="btn btn-ghost" style="padding:4px 8px;">Close</button></div><div id="ai-trans-result" style="font-size:14px; line-height:1.6; color:#333;">Translating...</div>';
+  document.body.appendChild(popup);
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/ai/translate', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ text: text, language: lang })
+    });
+    const data = await res.json();
+    const resultBox = document.getElementById('ai-trans-result');
+    if (data.ok) resultBox.innerHTML = data.result.replace(/\n/g, '<br>');
+    else resultBox.innerHTML = '<span style="color:red;">Translation failed. Try again.</span>';
+  } catch(e) {
+    document.getElementById('ai-trans-result').innerHTML = '<span style="color:red;">Network error.</span>';
+  }
+ }
+
+  // ================= PART 4 STARTS HERE =================
 
  function renderSignIn(){
   setScreen('auth');
@@ -1150,6 +1413,7 @@ function renderForgotPassword() {
     renderBottomNav('my') + renderChatFab();
 }
 
+/* ORDER 35, 36, 48, 49: Updated Switch Tab */
 function switchTab(tab){
   _clearNavStack(); saveScrollNow();
   if(BASE_TABS[tab]) _lastBaseTab = tab;
@@ -1158,17 +1422,28 @@ function switchTab(tab){
   if(isBlocked() || isDeviceBlacklisted()){ setBlocked(true); renderBlockedScreen(); return; }
   if(isKeyLocked()){ renderKeyBlockedScreen(); return; }
   if(isClosureDay()){ renderClosureScreen(); return; }
-  if(tab === 'my'){ setScreen('my'); renderMy(); return; }
+  
+  // ORDER 36: Prompt guest on 'My' tab
+  if(tab === 'my'){ 
+    if(!isSignedIn()){
+      if (currentScreen !== 'auth' && currentScreen !== 'force-change-pw' && currentScreen !== 'reset-code') {
+        appConfirm('You need to Sign Up or Sign In to access your profile, progress, and premium features.\n\nGo to Sign Up?').then(ok => {
+          if (ok) { renderSignUp(); } else { setScreen('my'); renderMy(); }
+        });
+        return;
+      }
+    }
+    setScreen('my'); renderMy(); return; 
+  }
+  
   const accessNow = checkAccess(); const signedIn = isSignedIn() && hasActiveSession();
   if(signedIn && accessNow.status === 'expired'){ renderPaymentFlow(tab); return; }
-  if(tab === 'university'){ if(!signedIn){ setScreen('university-info'); renderInfoLocked(accessNow); return; } setScreen('university-info'); renderUniversityInfo(); return; }
-  if(tab === 'book'){ if(!signedIn){ setScreen('book'); renderBooksHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
-  else if(tab === 'note'){ if(!signedIn){ setScreen('note'); renderNotesHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
-  else if(tab === 'exam'){ if(!signedIn){ setScreen('exam-home'); renderExamHome(); return; } if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
-  else if(tab === 'coc'){ 
-    if(!signedIn){ setScreen('coc-home'); renderCocHome(); return; } 
-    setScreen('coc-home'); renderCocHome(); 
-  }
+  if(tab === 'university'){ setScreen('university-info'); renderUniversityInfo(); return; }
+  if(tab === 'book'){ if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('book'); return; } setScreen('book'); renderBooksHome(); }
+  else if(tab === 'note'){ if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('note'); return; } setScreen('note'); renderNotesHome(); }
+  else if(tab === 'exam'){ if(isSemesterPickNeeded()){ setScreen('semester'); renderSemesterPicker('exam'); return; } setScreen('exam-home'); renderExamHome(); }
+  else if(tab === 'coc'){ setScreen('coc-home'); renderCocHome(); }
+  else if(tab === 'weekly'){ setScreen('weekly-home'); renderWeeklyHome(); } /* ORDER 49 */
 }
 function isSemesterPickNeeded(){ const s=localStorage.getItem(LS_SEMESTER); return !s||!CONFIG.SEMESTERS.includes(parseInt(s)); }
 function getCurrentSemester(){ return parseInt(localStorage.getItem(LS_SEMESTER)||'1'); }
@@ -1184,16 +1459,26 @@ function changeSemester(s){
 
 function getBookZoom(){ const z=parseFloat(localStorage.getItem(LS_BOOK_ZOOM)); return isFinite(z)?z:1; }
 function getNoteZoom(){ const z=parseFloat(localStorage.getItem(LS_NOTE_ZOOM)); return isFinite(z)?z:1; }
-function setBookZoom(z){ localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const wrap=document.getElementById('bookZoomWrap'); const lbl=document.getElementById('bookZoomPct'); const nz=getBookZoom(); if(wrap){ const iframe=wrap.querySelector('iframe'); if(iframe){ iframe.style.transform='scale('+nz+')'; iframe.style.transformOrigin='top left'; iframe.style.width=(100/nz)+'%'; iframe.style.height=(100/nz)+'%'; } } if(lbl) lbl.textContent=Math.round(nz*100)+'%'; }
+
+/* ORDER 3: Updated setBookZoom for PDF.js Canvas */
+function setBookZoom(z){ 
+  localStorage.setItem(LS_BOOK_ZOOM, String(Math.max(0.5, Math.min(3, z)))); 
+  const wrap=document.getElementById('bookZoomWrap'); 
+  const lbl=document.getElementById('bookZoomPct'); 
+  const nz=getBookZoom(); 
+  if(wrap){ 
+    wrap.style.transform='scale('+nz+')'; 
+    wrap.style.transformOrigin='top center';
+    wrap.style.width = (100/nz) + '%';
+    wrap.style.marginLeft = ((100 - (100/nz))/2) + '%';
+  } 
+  if(lbl) lbl.textContent=Math.round(nz*100)+'%'; 
+}
 function setNoteZoom(z){ localStorage.setItem(LS_NOTE_ZOOM, String(Math.max(0.5, Math.min(3, z)))); const el=document.getElementById('noteZoomBody'); const lbl=document.getElementById('noteZoomPct'); if(el) el.style.fontSize=(15*getNoteZoom())+'px'; if(lbl) lbl.textContent=Math.round(getNoteZoom()*100)+'%'; }
 
-/* ============ BOOKS — SHOW ALL, LOCK NON-TRIAL ============ */
+/* ============ BOOKS — GUEST TRIAL ACCESS ============ */
 function renderBooksHome(){
-  if(!isSignedIn() || !hasActiveSession()){
-    setScreen('book');
-    app.innerHTML = renderHeader('book')+'<div class="locked-box"><div class="icon">📚</div><h2>Register to View Modules</h2><p>Sign up or sign in to browse the Modules Library.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('book')+renderChatFab();
-    restoreScroll('book_book'); return;
-  }
+  /* ORDER 35: Removed hard login block */
   if(!isTrialContentAllowed('book')){ setScreen('book'); app.innerHTML=renderHeader('book')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('book')+renderBottomNav('book')+renderChatFab(); restoreScroll('book_book'); return; }
   const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester(); const tutorials=getTutorials();
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
@@ -1209,7 +1494,7 @@ function renderBookList(uni){
   if (uni) _lastUniSelection.book = uni;
   const el=document.getElementById('bookList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn() || !hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see modules</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
+  /* ORDER 35: Removed hard login block */
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allPdfs = c.pdfs || [];
@@ -1222,7 +1507,7 @@ function renderBookList(uni){
     const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
     const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
     const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
-    const borderColor = locked ? '#ff9800' : '#6a3093';
+    const borderColor = locked ? '#ff9800' : 'var(--primary-color)';
     const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
     const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
     return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+lockBadge+'</div>'+desc+'</div>';
@@ -1230,7 +1515,11 @@ function renderBookList(uni){
   el.innerHTML = listHtml;
 }
 function openBook(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  /* ORDER 36: Click prompt for guests */
+  if(!isSignedIn()||!hasActiveSession()){ 
+    appConfirm('Please sign up or log in to view this module.').then(ok => { if(ok) switchTab('my'); });
+    return; 
+  }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const p=c.pdfs&&c.pdfs[i];
   if(!p) return;
@@ -1247,9 +1536,9 @@ function openBook(uni,stream,sem,i){
   _screenStack.push('book'); _renderBookViewerDirect();
 }
 
-/* ============ NOTES — SHOW ALL, LOCK NON-TRIAL ============ */
+/* ============ NOTES — GUEST TRIAL ACCESS ============ */
 function renderNotesHome(){
-  if(!isSignedIn() || !hasActiveSession()){ setScreen('note'); app.innerHTML=renderHeader('note')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Notes</h2><p>Sign up or sign in to browse Notes.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
+  /* ORDER 35: Removed hard login block */
   if(!isTrialContentAllowed('note')){ setScreen('note'); app.innerHTML=renderHeader('note')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('note')+renderBottomNav('note')+renderChatFab(); restoreScroll('note_note'); return; }
   const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); const sem=getCurrentSemester();
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
@@ -1265,7 +1554,7 @@ function renderNoteList(uni){
   if (uni) _lastUniSelection.note = uni;
   const el=document.getElementById('noteList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see notes</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
+  /* ORDER 35: Removed hard login block */
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allNotes = c.notes || [];
@@ -1283,7 +1572,11 @@ function renderNoteList(uni){
   el.innerHTML = listHtml;
 }
 function openNote(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  /* ORDER 36: Click prompt for guests */
+  if(!isSignedIn()||!hasActiveSession()){ 
+    appConfirm('Please sign up or log in to view this note.').then(ok => { if(ok) switchTab('my'); });
+    return; 
+  }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const n=c.notes&&c.notes[i];
   if(!n) return;
@@ -1297,13 +1590,12 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-     }
+   }
 
- // ================= PART 5 STARTS HERE =================
+  // ================= PART 5 STARTS HERE =================
 
-/* ============ EXAMS — SHOW ALL, LOCK NON-TRIAL ============ */
+/* ============ EXAMS — GUEST TRIAL ACCESS ============ */
 function renderExamHome(){
-  if(!isSignedIn() || !hasActiveSession()){ setScreen('exam-home'); app.innerHTML = renderHeader('exam')+'<div class="locked-box"><div class="icon">📝</div><h2>Register to View Exams</h2><p>Sign up or sign in to browse exams.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   if(!isTrialContentAllowed('exam')){ setScreen('exam-home'); app.innerHTML=renderHeader('exam')+semesterChanger(getCurrentSemester())+renderTrialContentLocked('exam')+renderBottomNav('exam')+renderChatFab(); restoreScroll('exam_exam-home'); return; }
   const sem = getCurrentSemester(); const myStreamForGeneral = getUserStream(); const isTrial = checkAccess().status === 'trial';
   const generalSubjects = getGeneralSubjects();
@@ -1336,7 +1628,6 @@ function renderExamList(uni){
   if (uni) _lastUniSelection.exam = uni;
   const el=document.getElementById('examList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see exams</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('exam'); return; }
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allExams = c.exams || [];
@@ -1362,7 +1653,11 @@ function renderExamList(uni){
   el.innerHTML = html;
 }
 function startUniExam(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  /* ORDER 36: Guest Prompt */
+  if(!isSignedIn()||!hasActiveSession()){ 
+    appConfirm('Please sign up or log in to start this exam.').then(ok => { if(ok) switchTab('my'); });
+    return; 
+  }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const ex=c.exams[i];
   if(!ex) return;
@@ -1380,7 +1675,10 @@ function startUniExam(uni,stream,sem,i){
   if(hasQ&&hasFile){ appConfirm('This exam has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(ex.url,'_blank'); return; } const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); }); }
 }
 function startBuiltInExam(key){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(!isSignedIn()||!hasActiveSession()){ 
+    appConfirm('Please sign up or log in to start this practice exam.').then(ok => { if(ok) switchTab('my'); });
+    return; 
+  }
   const s=getGeneralSubjects()[key]; if(!s) return;
   if(checkAccess().status === 'trial' && !isTrialSubjectKey(key, s.name || '')){
     appAlert('🔒 This practice exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
@@ -1389,18 +1687,13 @@ function startBuiltInExam(key){
   startQuiz(s.name, s.questions||[], CONFIG.DEFAULT_EXAM_TIME_MINUTES);
 }
 
-/* ============ COC — SHOW ALL, LOCK NON-TRIAL, 1ST SEM ONLY ============ */
+/* ============ COC — GUEST TRIAL ACCESS ============ */
 function renderCocHome(){
-  if(!isSignedIn() || !hasActiveSession()){ 
-    setScreen('coc-home'); app.innerHTML = renderHeader('coc')+'<div class="locked-box"><div class="icon">🎯</div><h2>Register to View COC</h2><p>Sign up or sign in to browse COC materials.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; 
-  }
   if(!isTrialContentAllowed('coc')){ 
     setScreen('coc-home'); app.innerHTML=renderHeader('coc')+renderTrialContentLocked('coc')+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; 
   }
   const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); 
-  
-  // 🚨 FORCE SEMESTER 1 FOR COC
-  const sem = 1; 
+  const sem = 1; // FORCE SEMESTER 1 FOR COC
   
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
   let preSelect = _lastUniSelection.coc || '';
@@ -1409,8 +1702,6 @@ function renderCocHome(){
   const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{cocs:[]}; const has=c.cocs&&c.cocs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
   
   const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
-  
-  // 🚨 DISPLAY STATIC "1st Semester" AT THE TOP
   const staticSemesterPick = '<div class="semester-pick"><button class="active" style="opacity:1; cursor:default;">1st Semester</button></div>';
 
   app.innerHTML = renderHeader('coc') + staticSemesterPick + 
@@ -1424,11 +1715,8 @@ function renderCocList(uni){
   if (uni) _lastUniSelection.coc = uni;
   const el=document.getElementById('cocList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
-  if(!isSignedIn()||!hasActiveSession()){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center;"><div style="font-size:36px; margin-bottom:8px;">🔒</div><div style="color:#666; font-size:13.5px; margin-bottom:14px;">Register to see COC</div><button class="btn btn-primary" onclick="switchTab(\'my\')">Register / Sign In</button></div>'; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('coc'); return; }
   const myStream=getUserStream(); 
-  
-  // 🚨 FORCE SEMESTER 1 HERE TOO
   const sem = 1; 
   
   const c=getUniContent(uni,myStream,sem);
@@ -1455,7 +1743,10 @@ function renderCocList(uni){
   el.innerHTML = html;
 }
 function startUniCoc(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ switchTab('my'); return; }
+  if(!isSignedIn()||!hasActiveSession()){ 
+    appConfirm('Please sign up or log in to start this COC exam.').then(ok => { if(ok) switchTab('my'); });
+    return; 
+  }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const cx=c.cocs[i];
   if(!cx) return;
@@ -1473,45 +1764,282 @@ function startUniCoc(uni,stream,sem,i){
   if(hasQ&&hasFile){ appConfirm('This COC has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(cx.url,'_blank'); return; } const t=typeof cx.timeMinutes==='number'?cx.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(cx.name,cx.questions,t); }); }
 }
 
-/* ============ QUIZ ENGINE ============ */
-function prepareQuestions(qs){ return shuffle(qs).map(q=>{ const ct=q.options[q.answer]; const opts=shuffle(q.options); return {q:q.q,options:opts,answer:opts.indexOf(ct),explanation:q.explanation}; }); }
+/* ORDER 49: Weekly Exam (Placeholder) */
+function renderWeeklyHome() {
+  setScreen('weekly-home'); 
+  app.innerHTML = renderHeader('weekly') + '<div class="panel"><h2>Weekly Exam</h2><div class="empty-msg">Weekly Exams will appear here once added by admin.</div></div>' + renderBottomNav('weekly') + renderChatFab();
+}
+
+/* ============ NEW QUIZ ENGINE (Orders 12-24) ============ */
+function prepareQuestions(qs){ return qs.map(q=>{ 
+  if(q.options && q.options.length > 0) {
+    const ct=q.options[q.answer]; const opts=shuffle(q.options); 
+    return {q:q.q,options:opts,answer:opts.indexOf(ct),explanation:q.explanation}; 
+  } else {
+    // Short Answer
+    return {q:q.q, options: q.options || [q.answerText||''], answer: 0, explanation:q.explanation, isShort: true}; 
+  }
+}); }
+
 function startQuiz(name,rawQuestions,timeMinutes){
-  const returnScreen = (currentScreen === 'coc-home') ? 'coc-home' : 'exam-home';
-  _screenStack.push(returnScreen); setScreen('quiz');
-  if(quizState.timerId) clearInterval(quizState.timerId);
-  const totalSeconds=(timeMinutes&&timeMinutes>0)?timeMinutes*60:0;
-  quizState={ subjectName:name, rawQuestions, timeMinutes:timeMinutes||0, questions:prepareQuestions(rawQuestions), index:0, answers:[], revealed:{}, skipped:new Set(), examSecondsLeft:totalSeconds, examSecondsElapsed:0, seconds:0, timerId:null, returnScreen:returnScreen };
-  _startQuizTimer(totalSeconds); renderQuizScreen();
+  // Order 4: Prevent double click
+  if (quizState && quizState.subjectName === name && Date.now() - (quizState.startTime||0) < 1000) return; 
+
+  appConfirm('How do you want to take this exam?\n\n[OK] = Practice Mode (Instant feedback & explanation)\n[Cancel] = Exam Mode (Submit at the end)')
+    .then(isPractice => {
+      const returnScreen = (currentScreen === 'coc-home') ? 'coc-home' : 'exam-home';
+      _screenStack.push(returnScreen); setScreen('quiz');
+      if(quizState.timerId) clearInterval(quizState.timerId);
+      const totalSeconds=(timeMinutes&&timeMinutes>0)?timeMinutes*60:0;
+      
+      quizState={ 
+        subjectName:name, rawQuestions, timeMinutes:timeMinutes||0, 
+        questions:prepareQuestions(rawQuestions), 
+        answers: new Array(rawQuestions.length).fill(-1), 
+        revealed: {}, 
+        isPracticeMode: isPractice,
+        examSecondsLeft:totalSeconds, examSecondsElapsed:0, seconds:0, timerId:null, returnScreen:returnScreen, startTime: Date.now()
+      };
+      _startQuizTimer(totalSeconds); 
+      renderQuizScreen();
+    });
 }
+
+function scrollToQuestion(idx) {
+  const el = document.getElementById(`q_block_${idx}`);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
 function renderQuizScreen(){
-  const q=quizState.questions[quizState.index]; const total=quizState.questions.length; const sel=quizState.answers[quizState.index]; const isRev=!!quizState.revealed[quizState.index]; const to=sel===-1; const progress=((quizState.index+1)/total)*100;
-  const optionsHTML=q.options.map((opt,i)=>{ let style='',lbg='#eee',lc='#444'; if(isRev){ if(i===q.answer){ style='border-color:#4caf50; background:#e8f5e9;'; lbg='#4caf50'; lc='#fff'; } else if(i===sel&&!to){ style='border-color:#f44336; background:#ffebee;'; lbg='#f44336'; lc='#fff'; } else style='opacity:.55;'; } return '<div class="option" style="'+style+' cursor:'+(isRev?'default':'pointer')+';" onclick="'+(isRev?'':'selectOption('+i+')')+'"><div class="letter" style="background:'+lbg+'; color:'+lc+';">'+String.fromCharCode(65+i)+'</div><div>'+escapeHtml(opt)+'</div></div>'; }).join('');
-  let fb='';
-  if(isRev){ const ok=sel===q.answer; const cl=String.fromCharCode(65+q.answer); fb = to ? '<div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:#ffebee; border-left:4px solid #f44336; font-size:13.5px; font-weight:700; color:#c62828;">Time up! Correct: '+cl+'</div>' : '<div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:'+(ok?'#e8f5e9':'#ffebee')+'; border-left:4px solid '+(ok?'#4caf50':'#f44336')+'; font-size:13.5px; font-weight:700; color:'+(ok?'#2e7d32':'#c62828')+';">'+(ok?'Correct!':'Wrong — correct: '+cl)+'</div>'; if(q.explanation) fb += '<div style="margin-top:10px; padding:14px; border-radius:10px; background:#fff8e1; border-left:4px solid #ffc107; font-size:13.5px; line-height:1.7; color:#5d4037;"><div style="font-weight:800; color:#ff8f00; margin-bottom:6px; font-size:12px; text-transform:uppercase;">Explanation</div><div>'+escapeHtml(q.explanation)+'</div></div>'; }
-  const skCount=quizState.skipped.size; const skBadge = skCount ? '<span style="background:#fff3e0; color:#e65100; padding:2px 10px; border-radius:20px; font-size:10.5px; font-weight:800; margin-left:6px;">'+skCount+' skipped</span>' : '';
-  const otherSk=Array.from(quizState.skipped).filter(i=>i!==quizState.index).sort((a,b)=>a-b); const allRev=quizState.questions.every((_,i)=>quizState.revealed[i]);
-  let nav='';
-  if(!isRev) nav='<button class="btn btn-ghost" onclick="prevQuestion()" '+(quizState.index===0?'disabled':'')+'>Back</button><button class="btn btn-ghost" onclick="skipQuestion()" style="background:#fff3e0; color:#e65100;">Skip</button>';
-  else if(allRev) nav='<button class="btn btn-ghost" onclick="prevQuestion()" '+(quizState.index===0?'disabled':'')+'>Back</button><button class="btn btn-primary" onclick="finishExam()">Finish</button>';
-  else if(otherSk.length) nav='<button class="btn btn-ghost" onclick="prevQuestion()" '+(quizState.index===0?'disabled':'')+'>Back</button><button class="btn btn-primary" onclick="jumpToSkipped('+otherSk[0]+')" style="background:#ff9800;">Next Skipped ('+otherSk.length+')</button>';
-  else nav='<button class="btn btn-ghost" onclick="prevQuestion()" '+(quizState.index===0?'disabled':'')+'>Back</button><button class="btn btn-primary" onclick="nextQuestion()">Next</button>';
+  const total = quizState.questions.length;
   const timerInit = quizState.timeMinutes>0 ? formatTime(Math.max(0,quizState.examSecondsLeft)) : formatTime(quizState.examSecondsElapsed);
-  app.innerHTML=renderHeader(currentTab)+'<div class="quiz-top"><span>'+escapeHtml(quizState.subjectName)+'</span><span class="timer" id="timerEl">'+timerInit+'</span></div><div class="progress-track"><div class="progress-fill" style="width:'+progress+'%"></div></div><div class="question-card"><div class="q-number" style="margin-bottom:10px;">QUESTION '+(quizState.index+1)+' OF '+total+skBadge+'</div><div class="q-text">'+escapeHtml(q.q)+'</div>'+optionsHTML+fb+'<div class="nav-row">'+nav+'</div></div>'+renderBottomNav(currentTab)+renderChatFab();
+  
+  let html = renderHeader(currentTab);
+  
+  // Sticky Header
+  html += `<div class="sticky-quiz-header">
+    <div style="display:flex; justify-content:space-between; color:#fff; margin-bottom:10px; font-size:13px;">
+        <span>${escapeHtml(quizState.subjectName)} (${quizState.isPracticeMode?'Practice':'Exam'})</span>
+        <span class="timer" id="timerEl">${timerInit}</span>
+    </div>
+    <div class="quiz-nav-bar">
+      ${quizState.questions.map((_, i) => `<div class="quiz-nav-dot" id="dot_${i}" onclick="scrollToQuestion(${i})">${i+1}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // Render all questions
+  html += '<div id="quizContainer" style="padding-bottom: 80px;">';
+  quizState.questions.forEach((q, i) => {
+    html += `<div class="question-block" id="q_block_${i}">`;
+    html += `<div class="q-number">QUESTION ${i+1} OF ${total}</div>`;
+    html += `<div class="q-text">${escapeHtml(q.q)}</div>`;
+    
+    if (!q.isShort) {
+      // Multiple Choice
+      html += q.options.map((opt, j) => `<div class="option" id="opt_${i}_${j}" onclick="selectOption(${i}, ${j})"><div class="letter">${String.fromCharCode(65+j)}</div><div>${escapeHtml(opt)}</div></div>`).join('');
+    } else {
+      // Short Answer
+      html += `<div id="short_ans_${i}">
+        <input type="text" id="sa_input_${i}" class="field-input" placeholder="Type your answer here..." onkeypress="if(event.key==='Enter') submitShortAnswer(${i})">
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="submitShortAnswer(${i})">Submit Offline</button>
+          <button class="btn btn-telegram" style="flex:1;" onclick="aiGradeAnswer(${i})">🤖 Grade with AI</button>
+        </div>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="revealAnswer(${i})">🔍 Get Answer</button>
+      </div>`;
+    }
+    
+    html += `<div id="fb_${i}" style="display:none;"></div>`;
+    html += `</div>`;
+  });
+  html += '</div>';
+
+  html += `<button class="btn btn-primary btn-full" style="padding:16px; font-size:16px; margin-top:20px;" onclick="finishExam()">Submit Exam</button>`;
+  
+  html += renderBottomNav(currentTab)+renderChatFab();
+  app.innerHTML = html;
 }
-function selectOption(i){ if(quizState.revealed[quizState.index]) return; quizState.answers[quizState.index]=i; quizState.revealed[quizState.index]=true; quizState.skipped.delete(quizState.index); renderQuizScreen(); }
-function nextQuestion(){ if(quizState.index<quizState.questions.length-1){ quizState.index++; renderQuizScreen(); } }
-function prevQuestion(){ if(quizState.index>0){ quizState.index--; renderQuizScreen(); } }
-function skipQuestion(){ quizState.skipped.add(quizState.index); if(quizState.index<quizState.questions.length-1){ quizState.index++; renderQuizScreen(); return; } const o=Array.from(quizState.skipped).filter(i=>i!==quizState.index).sort((a,b)=>a-b); if(o.length){ quizState.index=o[0]; renderQuizScreen(); return; } renderQuizScreen(); }
-function jumpToSkipped(i){ quizState.index=i; renderQuizScreen(); }
+
+function selectOption(qIndex, optIndex) {
+  if (quizState.revealed[qIndex] || !quizState.isPracticeMode && quizState.answers[qIndex] !== -1) {
+     // If in exam mode and already selected, let them change it (but don't reveal).
+     if (quizState.isPracticeMode) return;
+  }
+  
+  const q = quizState.questions[qIndex];
+  quizState.answers[qIndex] = optIndex;
+  
+  // Highlight selected
+  q.options.forEach((_, j) => {
+    const el = document.getElementById(`opt_${qIndex}_${j}`);
+    if(el) el.classList.remove('selected', 'wrong-selected');
+  });
+  document.getElementById(`opt_${qIndex}_${optIndex}`).classList.add('selected');
+  
+  if (quizState.isPracticeMode) {
+    quizState.revealed[qIndex] = true;
+    const isCorrect = optIndex === q.answer;
+    
+    if (!isCorrect) document.getElementById(`opt_${qIndex}_${optIndex}`).classList.add('wrong-selected');
+    document.getElementById(`opt_${qIndex}_${q.answer}`).classList.add('selected');
+    
+    showFeedback(qIndex, isCorrect, isCorrect ? '✅ Correct!' : '❌ Incorrect');
+  }
+  
+  // Update dot
+  const dot = document.getElementById(`dot_${qIndex}`);
+  if (dot) { 
+    dot.classList.add(quizState.isPracticeMode ? (optIndex === q.answer ? 'answered' : 'wrong') : 'answered'); 
+  }
+}
+
+function checkSmartMatch(userStr, correctStr) {
+  if (!userStr || !correctStr) return false;
+  const u = userStr.toLowerCase().trim();
+  const c = correctStr.toLowerCase().trim();
+  if (u === c) return true;
+  
+  // Check if user answer is part of the correct answer (ignoring stop words)
+  const stopWords = ['the','a','is','of','in','and','to','for','it','on','with'];
+  const uWords = u.split(' ').filter(w => w.length > 2 && !stopWords.includes(w));
+  const cWords = c.split(' ').filter(w => w.length > 2 && !stopWords.includes(w));
+  
+  let matches = 0;
+  uWords.forEach(uw => { if (cWords.some(cw => cw.includes(uw) || uw.includes(cw))) matches++; });
+  
+  return matches >= 1 && uWords.length > 0;
+}
+
+function submitShortAnswer(qIndex) {
+  if (quizState.revealed[qIndex]) return;
+  const input = document.getElementById(`sa_input_${qIndex}`);
+  const val = input ? input.value.trim() : '';
+  if (!val) return appAlert('Please type an answer.');
+
+  const q = quizState.questions[qIndex];
+  const correctStr = q.options[q.answer];
+  
+  const isMatch = checkSmartMatch(val, correctStr);
+  
+  if (isMatch) {
+    quizState.answers[qIndex] = q.answer;
+    quizState.revealed[qIndex] = true;
+    document.getElementById(`dot_${qIndex}`).classList.add('answered');
+    showFeedback(qIndex, true, '✅ Correct! (Smart Match)');
+    if (input) input.disabled = true;
+  } else {
+    appConfirm(`The correct answer is: \n"${correctStr}"\n\nDid you get it right?`).then(isRight => {
+      quizState.revealed[qIndex] = true;
+      document.getElementById(`dot_${qIndex}`).classList.add(isRight ? 'answered' : 'wrong');
+      if (isRight) {
+        quizState.answers[qIndex] = q.answer;
+        showFeedback(qIndex, true, '✅ Correct (Self-Graded)');
+      } else {
+        showFeedback(qIndex, false, '❌ Incorrect');
+      }
+      if (input) input.disabled = true;
+    });
+  }
+}
+
+async function aiGradeAnswer(qIndex) {
+  if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+  
+  const input = document.getElementById(`sa_input_${qIndex}`);
+  const val = input ? input.value.trim() : '';
+  if (!val) return appAlert('Please type an answer first.');
+
+  const q = quizState.questions[qIndex];
+  const correctStr = q.options[q.answer];
+  
+  const btn = document.querySelector(`#short_ans_${qIndex} button.btn-telegram`);
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Grading...'; }
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/ai/grade', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ question: q.q, correctAnswer: correctStr, userAnswer: val })
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      quizState.revealed[qIndex] = true;
+      if (data.isCorrect) {
+        quizState.answers[qIndex] = q.answer;
+        document.getElementById(`dot_${qIndex}`).classList.add('answered');
+        showFeedback(qIndex, true, '🤖 Correct! (AI Verified)');
+      } else {
+        document.getElementById(`dot_${qIndex}`).classList.add('wrong');
+        showFeedback(qIndex, false, '🤖 Incorrect (AI Verified)');
+      }
+      if (input) input.disabled = true;
+    } else {
+      appAlert('AI grading failed. Please use Offline mode.');
+    }
+  } catch(e) {
+    appAlert('Network error with AI.');
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = '🤖 Grade with AI'; }
+  }
+}
+
+function revealAnswer(qIndex) {
+  const q = quizState.questions[qIndex];
+  const correctStr = q.options[q.answer];
+  quizState.answers[qIndex] = -1; // Mark as wrong/skipped
+  quizState.revealed[qIndex] = true;
+  
+  document.getElementById(`dot_${qIndex}`).classList.add('wrong');
+  showFeedback(qIndex, false, `🔍 The correct answer is: ${correctStr}`);
+  
+  const inputBox = document.getElementById(`short_ans_${qIndex}`);
+  if (inputBox) inputBox.style.display = 'none';
+}
+
+function showFeedback(qIndex, isCorrect, msg) {
+  const fb = document.getElementById(`fb_${qIndex}`);
+  if (!fb) return;
+  const q = quizState.questions[qIndex];
+  
+  let html = `<div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:${isCorrect ? '#e8f5e9' : '#ffebee'}; border-left:4px solid ${isCorrect ? '#4caf50' : '#f44336'}; font-size:13.5px; font-weight:700; color:${isCorrect ? '#2e7d32' : '#c62828'};">
+    ${msg}
+  </div>`;
+  
+  if (q.explanation) {
+    html += `<div style="margin-top:10px; padding:14px; border-radius:10px; background:#fff8e1; border-left:4px solid #ffc107; font-size:13.5px; line-height:1.7; color:#5d4037;">
+      <div style="font-weight:800; color:#ff8f00; margin-bottom:6px; font-size:12px; text-transform:uppercase;">Explanation</div>
+      <div>${escapeHtml(q.explanation)}</div>
+    </div>`;
+  }
+  fb.innerHTML = html;
+  fb.style.display = 'block';
+}
+
 function finishExam(autoTimeout){
   clearInterval(quizState.timerId); currentScreen = quizState.returnScreen || 'exam-home';
   updateScreenshotGuard();
   const total=quizState.questions.length;
-  for(let i=0;i<total;i++){ if(quizState.answers[i]===undefined || quizState.answers[i]===null) quizState.answers[i]=-1; }
+  
   let score=0; quizState.questions.forEach((q,i)=>{ if(quizState.answers[i]===q.answer) score++; });
-  const pct=Math.round((score/total)*100); const g=gradeFor(pct); saveHistory({subject:quizState.subjectName,score,total,date:Date.now()});
-  const reviewHTML=quizState.questions.map((q,i)=>{ const ua=quizState.answers[i]; const ok=ua===q.answer; const to=ua===-1; return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Timed out':(ua!==undefined&&q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>'; }).join('');
+  const pct=Math.round((score/total)*100); const g=gradeFor(pct); 
+  
+  // ORDER 37: Save full history for Review
+  saveHistory({
+    subject: quizState.subjectName,
+    score: score,
+    total: total,
+    date: Date.now(),
+    questions: quizState.questions,
+    userAnswers: quizState.answers
+  });
+
+  const reviewHTML=quizState.questions.map((q,i)=>{ 
+    const ua=quizState.answers[i]; const ok=ua===q.answer; const to=ua===-1; 
+    return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Not answered':(ua!==undefined&&q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>'; 
+  }).join('');
+  
   window._retakeName=quizState.subjectName; window._retakeQuestions=quizState.rawQuestions; window._retakeTime=quizState.timeMinutes;
+  
   app.innerHTML=renderHeader(currentTab)+'<div class="result-card">'+(autoTimeout?'<div style="background:#ffebee; color:#c62828; padding:10px; border-radius:10px; margin-bottom:16px; font-weight:700;">Time up!</div>':'')+'<div class="score-circle" style="background:'+g.color+'"><div class="pct">'+pct+'%</div><div class="grade">Grade '+g.letter+'</div></div><h2>'+(pct>=60?'Well done!':'Keep studying!')+'</h2><p class="sub">'+score+'/'+total+' · Time: '+formatTime(quizState.seconds)+'</p><button class="btn btn-primary btn-full" onclick="retakeExam()">Retake</button><button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="switchTab(\''+currentTab+'\')">Back</button><div class="review"><h3>Review</h3>'+reviewHTML+'</div></div>'+renderBottomNav(currentTab)+renderChatFab();
 }
 function retakeExam(){ startQuiz(window._retakeName, window._retakeQuestions, window._retakeTime); }
@@ -1526,22 +2054,40 @@ function saveHistory(e){
 function clearHistory(){ appConfirm('Clear local history?').then(ok=>{ if(!ok) return; localStorage.removeItem('fs_hub_history'); renderProgress(); }); }
 function computeStats(){ const h=getHistory(); let s=0,b=0,w=100; h.forEach(x=>{ const p=(x.score/x.total)*100; s+=p; if(p>b)b=p; if(p<w)w=p; }); return { total:h.length, avg:h.length?Math.round(s/h.length):0, best:Math.round(b), worst:h.length?Math.round(w):0 }; }
 
+/* ORDER 37: Progress Review */
 async function renderProgress(){
   setScreen('user-progress');
   app.innerHTML = renderHeader('my') + '<div class="panel"><h2>My Progress</h2><div class="empty-msg">Loading…</div></div>' + renderBottomNav('my') + renderChatFab();
+  
   let list = getHistory();
-  const r = await backendGetMyProgress();
-  if (r && r.ok && Array.isArray(r.progress) && r.progress.length) {
-    list = r.progress.map(x => ({ subject:x.subject, score:x.score, total:x.total, date:x.at }));
-  }
-  const rows = list.length ? list.map(x => {
+  
+  const rows = list.length ? list.map((x, i) => {
     const pct = Math.round((x.score / x.total) * 100);
-    return '<div class="history-item"><span>' + escapeHtml(x.subject) + '</span><span class="score-badge ' + (pct < 60 ? 'low' : '') + '">' + x.score + '/' + x.total + ' — ' + pct + '%</span></div>';
+    const hasReview = x.questions && x.userAnswers;
+    const clickable = hasReview ? 'onclick="reviewPastExam('+i+')" style="cursor:pointer; border:1px solid #e0e0e6; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:#fff;"' : 'style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"';
+    return '<div '+clickable+'><div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px;"><span style="font-weight:700; color:var(--primary-color);">' + escapeHtml(x.subject) + '</span> '+(hasReview?'<span style="font-size:10px; background:#e0e0e6; padding:2px 6px; border-radius:10px; color:#333;">Tap to Review</span>':'')+'</div><span class="score-badge ' + (pct < 60 ? 'low' : '') + '">' + x.score + '/' + x.total + ' — ' + pct + '%</span></div>';
   }).join('') : '<div class="empty-msg">No attempts yet.</div>';
+
   app.innerHTML = renderHeader('my') + '<div class="panel"><h2>My Progress</h2>' + rows +
     (list.length ? '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="clearHistory()">Clear (local only)</button>' : '') +
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
     renderBottomNav('my') + renderChatFab();
+}
+
+function reviewPastExam(index) {
+  const h = getHistory();
+  const attempt = h[index];
+  if(!attempt || !attempt.questions || !attempt.userAnswers) return;
+  setScreen('user-progress');
+  
+  const reviewHTML = attempt.questions.map((q, i) => {
+    const ua = attempt.userAnswers[i];
+    const ok = ua === q.answer;
+    const to = ua === -1 || ua === undefined;
+    return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Timed out / Skipped':(q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>';
+  }).join('');
+
+  app.innerHTML = renderHeader('my') + '<div class="panel"><h2>Review: '+escapeHtml(attempt.subject)+'</h2><div class="review" style="margin-top:16px;">'+reviewHTML+'</div><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="renderProgress()">Back to Progress</button></div>' + renderBottomNav('my') + renderChatFab();
 }
 
 /* ============ FORCE CHANGE PASSWORD ============ */
@@ -1578,11 +2124,10 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-                                                          }
- 
- // ================= PART 6 STARTS HERE =================
+   }
 
- 
+  // ================= PART 6A STARTS HERE =================
+
 /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
   if (!isAdminMode()) return;
@@ -1644,9 +2189,6 @@ async function submitResetWithCode() {
     renderSignIn();
   } catch (e) { err('Network error.'); }
 }
-/* =================================================== */
-/* The code you pasted earlier starts right below here */
-/* =================================================== */
  
  function renderMy(introMsg){
   const u=getCurrentUser(); const access=checkAccess(); const stats=computeStats(); const tutorials=getTutorials(); const theme=getTheme();
@@ -1668,6 +2210,10 @@ async function submitResetWithCode() {
   else if(access.status==='expired'){ licenseBox='<div style="background:#ffebee; border-left:4px solid #f44336; border-radius:10px; padding:14px; color:#c62828; font-weight:700;">Expired — contact admin to renew</div>'; }
   else { const tSub = escapeHtml(trialSubjectsDisplay()); const tUni = escapeHtml(trialUnisDisplay()); const tContent = (CONFIG.TRIAL_CONTENT||[]).map(k=>({book:'Modules',note:'Note',exam:'Exam',coc:'COC',info:'Info'})[k]||k).join(' + '); licenseBox='<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:14px; color:#856404; font-weight:700;">Trial — '+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left<br><span style="font-weight:600; font-size:12px;">Includes: '+escapeHtml(tContent)+'<br>Universities: '+tUni+'<br>Practice subjects: '+tSub+'</span></div>'; }
   const sessLeft = sessionDaysLeft(); const phone = (CONFIG.CONTACT_PHONE || '').trim();
+  
+  /* ORDER 10: Clickable Admin Boxes */
+  const adminDashBoxes = isAdminMode() ? '<div class="panel"><h2>Admin Dashboard</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box" style="cursor:pointer;" onclick="renderProgress()"><div class="num">'+stats.total+'</div><div class="label">Your Attempts</div></div><div class="stat-box" style="cursor:pointer;" onclick="renderProgress()"><div class="num">'+stats.avg+'%</div><div class="label">Your Avg</div></div><div class="stat-box" style="cursor:pointer;" onclick="renderProgress()"><div class="num">'+stats.best+'%</div><div class="label">Your Best</div></div></div></div>' : '';
+
   app.innerHTML=renderHeader('my')+intro+
     '<div class="panel"><h2>My Profile</h2><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:12px;"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Your ID:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
     '<div class="panel"><h2>Contact Admin</h2><p style="color:#666; font-size:13px; margin-bottom:12px;">Reach admin on Telegram'+(phone?' or call':'')+'.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a>'+(phone?'<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none;margin-top:8px;">📞 '+escapeHtml(phone)+'</a>':'')+'</div>'+
@@ -1682,11 +2228,12 @@ async function submitResetWithCode() {
     '<div class="panel"><h2>License</h2>'+licenseBox+'<button class="btn btn-full" style="margin-top:14px; padding:14px; font-size:15px; font-weight:800; '+(access.status==='licensed' ? 'background:#4caf50; color:#fff;' : 'background:#ff4757; color:#fff;')+'" onclick="showActivationStatus()">'+(access.status==='licensed' ? '✅ Active' : '❌ Inactive')+'</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderEnterKey()">Enter License Key</button></div>'+
     '<div class="panel"><h2>My Progress</h2><p style="color:#777; font-size:13px; margin-bottom:12px;">See all your exam attempts and scores.</p><button class="btn btn-primary btn-full" onclick="renderProgress()">📊 View My Progress</button></div>'+
     '<div class="panel"><h2>Tutorials</h2>'+renderTutorialCard('register',tutorials.register.title,tutorials.register.url)+renderTutorialCard('pay',tutorials.pay.title,tutorials.pay.url)+'</div>'+
-    (isAdminMode() ? '<div class="panel"><h2>Admin Dashboard</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box"><div class="num">'+stats.total+'</div><div class="label">Your Attempts</div></div><div class="stat-box"><div class="num">'+stats.avg+'%</div><div class="label">Your Avg</div></div><div class="stat-box"><div class="num">'+stats.best+'%</div><div class="label">Your Best</div></div></div></div>' : '')+
+    adminDashBoxes+
     '<div class="panel" style="text-align:center; padding:16px;"><p style="font-size:12px; color:#999; margin:0; cursor:pointer;" onclick="adminTap()">'+CONFIG.APP_NAME+' · By <strong>'+escapeHtml(CONFIG.OWNER_NAME)+'</strong></p>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;font-size:11px;" onclick="location.reload()">🔄 Reload App</button>'+
     (isAdminMode()?'<div style="margin-top:12px; background:#fff3cd; color:#856404; padding:8px 12px; border-radius:8px; font-size:11.5px; font-weight:700;">ADMIN MODE — '+escapeHtml(getCurrentUserPhone())+'</div>'+
     '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderAdminSettings()">⚙️ App Settings</button>'+
+    '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#e91e63;" onclick="pushLocalToKV()">🚀 Push Local to Cloud KV</button>'+ /* ORDER 29 */
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#4caf50;" onclick="renderAdminActivateUser()">🔑 Activate User</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#ff9800;" onclick="adminGenerateResetCode()">🔐 Generate Reset Code</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#0088cc;" onclick="renderAdminProgress()">📊 Users Progress</button>'+
@@ -1703,6 +2250,12 @@ async function submitResetWithCode() {
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminRegisteredPhones()">Registered Phones</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="syncNow()">Sync Now</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminLockedUsers()">🔓 Reset Key Attempts</button>'+
+    /* ORDER 42 & 44 & 48 */
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminPages()">📄 Custom Pages Manager</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminCustomSettings()">🔧 Custom Settings</button>'+
+    '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminNavManager()">📱 Navigation Manager</button>'+
+    /* ORDER 47: GOD MODE */
+    '<button class="btn btn-danger btn-full" style="margin-top:8px; background:#000; color:#00ff00; border:1px solid #00ff00;" onclick="repairAppData()">🚨 GOD MODE REPAIR</button>'+
     '<button class="btn btn-danger btn-full" style="margin-top:8px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button>':'')+'</div>'+
     renderBottomNav('my')+renderChatFab();
 }
@@ -1859,7 +2412,7 @@ async function renderAdminUsers(){
       '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — User Accounts</div>' +
       '<h2>User Accounts (' + merged.length + ')</h2>' + statsHTML + 
       '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUsers()">🔄 Refresh from Server</button>' +
-      rows +
+      '<div id="adminUserList">' + rows + '</div>' + 
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
     '</div>' + renderBottomNav('my') + renderChatFab();
  }
@@ -1985,9 +2538,28 @@ function renderAdminSettings(){
   const trialContent = Array.isArray(s.TRIAL_CONTENT) ? s.TRIAL_CONTENT : [];
   const chk = (k,label)=>{ const on = trialContent.indexOf(k) !== -1; return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(on?'#6a3093':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(on?'#f0e9f8':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stTrialContent_'+k+'" '+(on?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>'; };
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
-  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup"><h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea><h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://all-freshman1.pages.dev/www"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
+  
+  const appColors = s.APP_COLORS || DEFAULT_CONFIG.APP_COLORS;
+  
+  app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup">'+
+  
+  /* ORDER 43: App Colors */
+  '<h3>Branding & Colors</h3>'+
+  '<label class="field-label">Primary Color (Light Mode)</label><input type="color" id="stPrimaryColor" class="field-input" value="'+(appColors.primary||'#0a5c36')+'" style="height:50px;">'+
+  '<label class="field-label">Accent Color (Gold/Dark Mode)</label><input type="color" id="stAccentColor" class="field-input" value="'+(appColors.accent||'#b8860b')+'" style="height:50px;">'+
+  
+  /* ORDER 37: Global Screenshot Block */
+  '<h3>Security</h3>'+
+  '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(s.BLOCK_ALL_SCREENSHOTS?'#ff4757':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(s.BLOCK_ALL_SCREENSHOTS?'#ffebee':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stBlockScreenshots" '+(s.BLOCK_ALL_SCREENSHOTS?'checked':'')+' style="width:auto;margin:0;"> 🚫 Block Screenshots on ALL Screens (Admins Bypass)</label>'+
+  
+  '<h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea>'+
+  '<h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://all-freshman1.pages.dev/www">'+
+  '<button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveAdminSettings()">💾 Save Settings</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetAdminSettings()">↺ Reset to Defaults</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
+
 async function saveAdminSettings(){
+  if(!(await appConfirm('Are you sure you want to save all these settings to the cloud?'))) return;
+  
   const s=getSettings();
   s.APP_NAME=document.getElementById('stAppName').value.trim()||DEFAULT_CONFIG.APP_NAME;
   s.OWNER_NAME=document.getElementById('stOwner').value.trim()||DEFAULT_CONFIG.OWNER_NAME;
@@ -1995,6 +2567,15 @@ async function saveAdminSettings(){
   s.TELEGRAM_USERNAME=document.getElementById('stTelegram').value.trim().replace(/^@/,'');
   s.SUPPORT_GROUP=(document.getElementById('stSupportGroup').value||'').trim();
   s.PRICE_BIRR=parseInt(document.getElementById('stPrice').value)||DEFAULT_CONFIG.PRICE_BIRR;
+  
+  /* ORDER 43: Save Colors */
+  s.APP_COLORS = s.APP_COLORS || {};
+  s.APP_COLORS.primary = document.getElementById('stPrimaryColor').value;
+  s.APP_COLORS.accent = document.getElementById('stAccentColor').value;
+  
+  /* ORDER 37: Save Screenshot Block */
+  s.BLOCK_ALL_SCREENSHOTS = document.getElementById('stBlockScreenshots').checked;
+  
   const pmRows = document.querySelectorAll('#payMethodsList .pay-method-row');
   const payMethods = []; pmRows.forEach(r => { const name = (r.querySelector('.pmName').value||'').trim(); const number = (r.querySelector('.pmNumber').value||'').trim(); if (name && number) payMethods.push({name, number}); });
   if (payMethods.length === 0) { await appAlert('Add at least one payment method.'); return; }
@@ -2024,9 +2605,373 @@ async function saveAdminSettings(){
     console.log('Settings synced to cloud!');
   } catch(e) { console.log('Could not sync settings to cloud', e); }
 
+  applyTheme();
   await appAlert('✅ Settings saved.'); renderAdminSettings();
 }
-function resetAdminSettings(){ appConfirm('Reset ALL settings to factory defaults?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); appAlert('Settings reset.'); renderAdminSettings(); }); }
+function resetAdminSettings(){ appConfirm('Reset ALL settings to factory defaults?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_SETTINGS); reloadConfig(); applyTheme(); appAlert('Settings reset.'); renderAdminSettings(); }); }
+
+/* ORDER 42: Custom Pages Manager */
+function renderAdminPages() {
+  if (!isAdminMode()) return;
+  setScreen('admin-pages');
+  const pages = CONFIG.CUSTOM_PAGES || {};
+  const keys = Object.keys(pages);
+  let html = renderHeader('my') + '<div class="panel"><h2>📄 Custom Pages</h2>' +
+    '<p style="font-size:12px;color:#666;">Create pages like Privacy Policy, Terms, or About Us.</p>' +
+    '<label class="field-label">Page Title</label><input type="text" id="cpTitle" class="field-input" placeholder="e.g. Privacy Policy">' +
+    '<label class="field-label">Page Content (HTML allowed)</label><textarea id="cpBody" class="field-textarea" style="min-height:150px;"></textarea>' +
+    '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="adminAddPage()">+ Add Page</button>' +
+    '<h3 style="margin-top:20px;">Existing Pages ('+keys.length+')</h3>';
+    
+  keys.forEach(k => {
+    html += '<div style="background:#f7f7fa;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div style="font-weight:700;">' + escapeHtml(pages[k].title) + '</div>' +
+      '<button class="btn btn-danger" onclick="adminDeletePage(\''+escapeAttr(k)+'\')">X</button></div>';
+  });
+  html += '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+  app.innerHTML = html;
+}
+
+async function adminAddPage() {
+  const title = document.getElementById('cpTitle').value.trim();
+  const body = document.getElementById('cpBody').value.trim();
+  if(!title || !body) return appAlert('Enter title and body.');
+  if(!(await appConfirm('Save this page to the cloud?'))) return;
+  
+  const s = getSettings();
+  s.CUSTOM_PAGES = s.CUSTOM_PAGES || {};
+  s.CUSTOM_PAGES['page_'+Date.now()] = { title, body };
+  saveSettings(s); reloadConfig();
+  
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
+    appAlert('✅ Page saved!'); renderAdminPages();
+  } catch(e) { appAlert('Network error.'); }
+}
+
+async function adminDeletePage(key) {
+  if(!(await appConfirm('Delete this page?'))) return;
+  const s = getSettings();
+  if(s.CUSTOM_PAGES) delete s.CUSTOM_PAGES[key];
+  saveSettings(s); reloadConfig();
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
+    renderAdminPages();
+  } catch(e) {}
+}
+
+/* ORDER 44: Custom Settings */
+function renderAdminCustomSettings() {
+  if (!isAdminMode()) return;
+  setScreen('admin-custom-settings');
+  const cs = CONFIG.CUSTOM_SETTINGS || {};
+  const keys = Object.keys(cs);
+  let html = renderHeader('my') + '<div class="panel"><h2>🔧 Custom Settings</h2>' +
+    '<p style="font-size:12px;color:#666;">Add custom data for future features.</p>' +
+    '<label class="field-label">Setting Name (Key)</label><input type="text" id="csKey" class="field-input" placeholder="e.g. WHATSAPP_LINK">' +
+    '<label class="field-label">Setting Value</label><input type="text" id="csValue" class="field-input" placeholder="e.g. https://wa.me/...">' +
+    '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="adminAddCustomSetting()">+ Add Setting</button>' +
+    '<h3 style="margin-top:20px;">Existing Settings ('+keys.length+')</h3>';
+    
+  keys.forEach(k => {
+    html += '<div style="background:#f7f7fa;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div><strong>' + escapeHtml(k) + '</strong>: ' + escapeHtml(cs[k]) + '</div>' +
+      '<button class="btn btn-danger" onclick="adminDeleteCustomSetting(\''+escapeAttr(k)+'\')">X</button></div>';
+  });
+  html += '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+  app.innerHTML = html;
+}
+
+async function adminAddCustomSetting() {
+  const key = document.getElementById('csKey').value.trim().toUpperCase();
+  const val = document.getElementById('csValue').value.trim();
+  if(!key || !val) return appAlert('Enter key and value.');
+  if(!(await appConfirm('Save this setting?'))) return;
+  
+  const s = getSettings();
+  s.CUSTOM_SETTINGS = s.CUSTOM_SETTINGS || {};
+  s.CUSTOM_SETTINGS[key] = val;
+  saveSettings(s); reloadConfig();
+  
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
+    appAlert('✅ Setting saved!'); renderAdminCustomSettings();
+  } catch(e) { appAlert('Network error.'); }
+}
+
+async function adminDeleteCustomSetting(key) {
+  if(!(await appConfirm('Delete this setting?'))) return;
+  const s = getSettings();
+  if(s.CUSTOM_SETTINGS) delete s.CUSTOM_SETTINGS[key];
+  saveSettings(s); reloadConfig();
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
+    renderAdminCustomSettings();
+  } catch(e) {}
+}
+
+/* ORDER 48: Navigation Manager */
+function renderAdminNavManager() {
+  if (!isAdminMode()) return;
+  setScreen('admin-nav-manager');
+  const tabs = CONFIG.NAV_TABS || [];
+  
+  let html = renderHeader('my') + '<div class="panel"><h2>📱 Navigation Manager</h2>' +
+    '<p style="font-size:12px;color:#666;margin-bottom:15px;">Toggle tabs to show/hide them on the bottom bar.</p>';
+    
+  tabs.forEach((t, i) => {
+    html += '<div style="background:#f7f7fa;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div style="font-weight:700;">' + t.icon + ' ' + escapeHtml(t.label) + '</div>' +
+      '<button class="btn btn-ghost" style="padding:6px 12px;color:#c62828;" onclick="toggleNavTab('+i+')">Hide</button></div>';
+  });
+  
+  html += '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveNavSettings()">💾 Save Navigation</button>';
+  html += '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetNavSettings()">↺ Restore Default Tabs</button>';
+  html += '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
+  app.innerHTML = html;
+}
+
+window.toggleNavTab = function(index) {
+  const s = getSettings();
+  if(!s.NAV_TABS) s.NAV_TABS = JSON.parse(JSON.stringify(DEFAULT_CONFIG.NAV_TABS));
+  s.NAV_TABS.splice(index, 1);
+  saveSettings(s); reloadConfig(); renderAdminNavManager();
+};
+
+async function saveNavSettings() {
+  if(!(await appConfirm('Save navigation order?'))) return;
+  const s = getSettings();
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
+    appAlert('✅ Navigation saved!'); renderAdminNavManager();
+  } catch(e) { appAlert('Network error.'); }
+}
+
+async function resetNavSettings() {
+  if(!(await appConfirm('Restore all default tabs?'))) return;
+  const s = getSettings();
+  s.NAV_TABS = JSON.parse(JSON.stringify(DEFAULT_CONFIG.NAV_TABS));
+  saveSettings(s); reloadConfig();
+  try {
+    await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
+    appAlert('✅ Restored!'); renderAdminNavManager();
+  } catch(e) {}
+                          }
+
+
+  // ================= PART 6B STARTS HERE =================
+
+function adminResetBulkSelection(){ adminBulkMode = false; adminSelected.clear(); }
+function adminToggleBulkMode(type){ adminBulkMode = !adminBulkMode; adminSelected.clear(); renderAdminContentManager(type); }
+function adminToggleSelect(idx){ if (adminSelected.has(idx)) adminSelected.delete(idx); else adminSelected.add(idx); renderAdminContentManager(adminEditState.tab); }
+async function adminDeleteSelected(type){
+  if (adminSelected.size === 0) return appAlert('Nothing selected.');
+  if (!(await appConfirm('Delete ' + adminSelected.size + ' item(s)?'))) return;
+  const uni = adminEditState.uni; const stream = adminEditState.stream; const sem = adminEditState.semester || 1;
+  const c = getUniContent(uni, stream, sem);
+  let arr;
+  if (type === 'book') arr = c.pdfs;
+  else if (type === 'note') arr = c.notes;
+  else if (type === 'exam') arr = c.exams;
+  else if (type === 'coc') { c.cocs = c.cocs || []; arr = c.cocs; }
+  const indices = Array.from(adminSelected).sort((a,b)=>b-a);
+  indices.forEach(i => { if (i >= 0 && i < arr.length) arr.splice(i, 1); });
+  setUniContent(uni, stream, sem, c);
+  const count = indices.length;
+  adminResetBulkSelection();
+  await appAlert('✅ Deleted ' + count + ' item(s).');
+  renderAdminContentManager(type);
+}
+async function adminCopyMoveSelected(type, action){
+  if (adminSelected.size === 0) return appAlert('Select items first.');
+  const srcUni = adminEditState.uni;
+  const srcStream = adminEditState.stream;
+  const srcSem = adminEditState.semester || 1;
+  const srcLabel = srcUni + ' · ' + srcStream + ' · Sem ' + srcSem;
+  const uniOpts = CONFIG.UNIVERSITIES.map(u => '<option value="'+escapeHtml(u)+'" '+(u===srcUni?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:22px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;">' +
+    '<h2 style="font-size:17px;margin-bottom:6px;color:#333;">'+(action==='copy'?'📋 Copy':'📦 Move')+' '+adminSelected.size+' item(s)</h2>' +
+    '<p style="font-size:12.5px;color:#666;margin-bottom:14px;">From: <strong>'+escapeHtml(srcLabel)+'</strong></p>' +
+    '<label class="field-label">Target University</label>' +
+    '<select id="copyTargetUni" class="field-select" style="margin-bottom:10px;">'+uniOpts+'</select>' +
+    '<label class="field-label">Target Stream</label>' +
+    '<select id="copyTargetStream" class="field-select" style="margin-bottom:10px;">' +
+      '<option value="Natural" '+(srcStream==='Natural'?'selected':'')+'>Natural</option>' +
+      '<option value="Social" '+(srcStream==='Social'?'selected':'')+'>Social</option>' +
+    '</select>' +
+    '<label class="field-label">Target Semester</label>' +
+    '<select id="copyTargetSem" class="field-select" style="margin-bottom:10px;">' +
+      '<option value="1" '+(srcSem===1?'selected':'')+'>1st Semester</option>' +
+      '<option value="2" '+(srcSem===2?'selected':'')+'>2nd Semester</option>' +
+    '</select>' +
+    (action==='move'?'<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:8px;padding:10px;font-size:12px;color:#856404;margin-bottom:10px;"><strong>⚠️ Move</strong> removes them from source.</div>':'<div style="background:#e3f2fd;border-left:4px solid #2196f3;border-radius:8px;padding:10px;font-size:12px;color:#1565c0;margin-bottom:10px;"><strong>📋 Copy</strong> keeps them at source.</div>') +
+    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+      '<button class="btn btn-ghost" style="flex:1;" id="copyCancelBtn">Cancel</button>' +
+      '<button class="btn btn-primary" style="flex:1;" id="copyConfirmBtn">'+(action==='copy'?'Copy':'Move')+'</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('copyCancelBtn').onclick = () => overlay.remove();
+  document.getElementById('copyConfirmBtn').onclick = async () => {
+    const tUni = document.getElementById('copyTargetUni').value;
+    const tStream = document.getElementById('copyTargetStream').value;
+    const tSem = parseInt(document.getElementById('copyTargetSem').value) || 1;
+    if (tUni === srcUni && tStream === srcStream && tSem === srcSem) { return appAlert('Target is the same as source.'); }
+    const srcC = getUniContent(srcUni, srcStream, srcSem);
+    const tgtC = getUniContent(tUni, tStream, tSem);
+    let arrSrc, arrTgt;
+    if (type === 'book') { arrSrc = srcC.pdfs; arrTgt = tgtC.pdfs; }
+    else if (type === 'note') { arrSrc = srcC.notes; arrTgt = tgtC.notes; }
+    else if (type === 'exam') { arrSrc = srcC.exams; arrTgt = tgtC.exams; }
+    else if (type === 'coc') { srcC.cocs = srcC.cocs || []; tgtC.cocs = tgtC.cocs || []; arrSrc = srcC.cocs; arrTgt = tgtC.cocs; }
+    const indices = Array.from(adminSelected).sort((a,b)=>a-b);
+    const itemsToCopy = indices.map(i => JSON.parse(JSON.stringify(arrSrc[i]))).filter(Boolean);
+    itemsToCopy.forEach(it => arrTgt.push(it));
+    if (action === 'move') { indices.slice().sort((a,b)=>b-a).forEach(i => { if (i>=0 && i<arrSrc.length) arrSrc.splice(i,1); }); }
+    setUniContent(tUni, tStream, tSem, tgtC);
+    if (action === 'move') setUniContent(srcUni, srcStream, srcSem, srcC);
+    overlay.remove();
+    adminResetBulkSelection();
+    await appAlert('✅ ' + itemsToCopy.length + ' item(s) ' + (action==='copy'?'copied':'moved') + ' to ' + tUni + ' · ' + tStream + ' · Sem ' + tSem);
+    renderAdminContentManager(type);
+  };
+}
+function adminBulkToolbar(type, total){
+  if (total === 0) return '';
+  const cancelLbl = adminBulkMode ? '✕ Cancel' : '☑ Select Multiple';
+  let html = '<div style="display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 12px;">';
+  html += '<button class="btn btn-ghost" style="flex:1; min-width:110px; padding:10px; font-size:12px; border-radius:8px; font-weight:800;" onclick="adminToggleBulkMode(\''+type+'\')">'+cancelLbl+'</button>';
+  if (adminBulkMode) {
+    const n = adminSelected.size;
+    html += '<button class="btn" style="flex:1; min-width:100px; padding:10px; font-size:12px; border-radius:8px; font-weight:800; background:#0088cc; color:#fff; border:none; cursor:pointer; opacity:'+(n?1:0.5)+';" onclick="adminCopyMoveSelected(\''+type+'\',\'copy\')">📋 Copy ('+n+')</button>';
+    html += '<button class="btn" style="flex:1; min-width:100px; padding:10px; font-size:12px; border-radius:8px; font-weight:800; background:#ff9800; color:#fff; border:none; cursor:pointer; opacity:'+(n?1:0.5)+';" onclick="adminCopyMoveSelected(\''+type+'\',\'move\')">📦 Move ('+n+')</button>';
+    html += '<button class="btn" style="flex:1; min-width:100px; padding:10px; font-size:12px; border-radius:8px; font-weight:800; background:#ff4757; color:#fff; border:none; cursor:pointer; opacity:'+(n?1:0.5)+';" onclick="adminDeleteSelected(\''+type+'\')">🗑 Delete ('+n+')</button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+/* ORDER 46: Move Up / Down */
+window.moveContent = function(type, index, direction) {
+  const uni = adminEditState.uni;
+  const stream = adminEditState.stream;
+  const sem = adminEditState.semester || 1;
+  const c = getUniContent(uni, stream, sem);
+  let arr;
+  if (type === 'book') arr = c.pdfs;
+  else if (type === 'note') arr = c.notes;
+  else if (type === 'exam') arr = c.exams;
+  else if (type === 'coc') arr = c.cocs;
+
+  if (direction === 'up' && index > 0) {
+    [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+  } else if (direction === 'down' && index < arr.length - 1) {
+    [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+  }
+  setUniContent(uni, stream, sem, c);
+  renderAdminContentManager(type);
+};
+
+function adminRowActions(type, i, uni, stream, sem, deleteFnName){
+  if (adminBulkMode) { const checked = adminSelected.has(i) ? 'checked' : ''; return '<input type="checkbox" '+checked+' onchange="adminToggleSelect('+i+')" style="width:22px; height:22px; cursor:pointer; flex-shrink:0;">'; }
+  return '<div style="display:flex; gap:6px; flex-shrink:0; align-items:center;">' +
+    '<div style="display:flex; flex-direction:column; gap:2px;">' +
+      '<button class="btn btn-ghost" style="padding:2px 6px; font-size:10px;" onclick="moveContent(\''+type+'\','+i+',\'up\')">⬆️</button>' +
+      '<button class="btn btn-ghost" style="padding:2px 6px; font-size:10px;" onclick="moveContent(\''+type+'\','+i+',\'down\')">⬇️</button>' +
+    '</div>' +
+    '<button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-radius:6px;" onclick="adminEditState.editing={type:\''+type+'\',index:'+i+'};renderAdminContentManager(\''+type+'\')">✎ Edit</button>' +
+    '<button class="btn btn-danger" onclick="'+deleteFnName+'(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">X</button>' +
+  '</div>';
+}
+window.adminToggleBulkMode = adminToggleBulkMode;
+window.adminToggleSelect = adminToggleSelect;
+window.adminDeleteSelected = adminDeleteSelected;
+window.adminCopyMoveSelected = adminCopyMoveSelected;
+window.adminResetBulkSelection = adminResetBulkSelection;
+
+function adminToggleAddToUni(u){
+  if (!adminEditState.addToUnis) adminEditState.addToUnis = new Set([adminEditState.uni]);
+  if (adminEditState.addToUnis.has(u)) adminEditState.addToUnis.delete(u);
+  else adminEditState.addToUnis.add(u);
+  renderAdminContentManager(adminEditState.tab);
+}
+function adminToggleAllAddToUnis(){
+  if (!adminEditState.addToUnis) adminEditState.addToUnis = new Set();
+  if (adminEditState.addToUnis.size === CONFIG.UNIVERSITIES.length) adminEditState.addToUnis.clear();
+  else adminEditState.addToUnis = new Set(CONFIG.UNIVERSITIES);
+  renderAdminContentManager(adminEditState.tab);
+}
+function adminUniPickerHTML(){
+  if (!adminEditState.addToUnis || !adminEditState.addToUnis.size) adminEditState.addToUnis = new Set([adminEditState.uni]);
+  const allOn = adminEditState.addToUnis.size === CONFIG.UNIVERSITIES.length;
+  const togglerLbl = allOn ? '◻ Uncheck All' : '☑ Check All';
+  return '<div style="background:#f0f9ff; border:2px solid #0088cc; border-radius:10px; padding:12px; margin-bottom:12px;">' +
+    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+      '<div style="font-weight:800; font-size:12px; color:#1565c0;">📚 Add to these universities:</div>' +
+      '<button type="button" onclick="adminToggleAllAddToUnis()" style="background:transparent; border:1px solid #0088cc; color:#0088cc; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">' + togglerLbl + '</button>' +
+    '</div>' +
+    '<div class="uni-check-list">' +
+      CONFIG.UNIVERSITIES.map(u => '<label><input type="checkbox" ' + (adminEditState.addToUnis.has(u) ? 'checked' : '') + ' onchange="adminToggleAddToUni(\'' + escapeAttr(u) + '\')"> ' + escapeHtml(u) + '</label>').join('') +
+    '</div>' +
+    '<div style="font-size:11px; color:#1565c0; margin-top:6px; font-weight:700;">' + adminEditState.addToUnis.size + ' selected</div>' +
+  '</div>';
+}
+window.adminToggleAddToUni = adminToggleAddToUni;
+window.adminToggleAllAddToUnis = adminToggleAllAddToUnis;
+
+function goBack() {
+  if (_screenStack.length > 0) { const prev = _screenStack.pop(); _goingBack = true; try { _renderScreenByName(prev); } finally { setTimeout(() => { _goingBack = false; }, 100); } return; }
+  renderMy();
+}
+
+/* ORDER 31, 32, 33: 3-Method Tabs */
+function renderMethodTabs(prefix, hasText = true) {
+  if(!hasText) {
+    setTimeout(()=>setAddMethod('url', prefix), 50);
+    return `
+      <div class="method-tabs">
+        <button type="button" class="method-tab active" onclick="setAddMethod('url', '${prefix}')">🔗 URL Link</button>
+        <button type="button" class="method-tab" onclick="setAddMethod('file', '${prefix}')">📁 Upload File</button>
+      </div>
+      <input type="hidden" id="${prefix}_methodHidden" value="url">
+      <div id="${prefix}_method_url"><input type="url" id="${prefix}_url" placeholder="https://..." class="field-input" style="margin-bottom:8px;"></div>
+      <div id="${prefix}_method_file" style="display:none;"><input type="file" id="${prefix}_file" class="field-input" style="margin-bottom:8px; padding:8px; background:#fafafa;"></div>
+    `;
+  }
+  
+  setTimeout(()=>setAddMethod('text', prefix), 50);
+  return `
+    <div class="method-tabs">
+      <button type="button" class="method-tab active" onclick="setAddMethod('text', '${prefix}')">📝 Text</button>
+      <button type="button" class="method-tab" onclick="setAddMethod('url', '${prefix}')">🔗 URL</button>
+      <button type="button" class="method-tab" onclick="setAddMethod('file', '${prefix}')">📁 File</button>
+    </div>
+    <input type="hidden" id="${prefix}_methodHidden" value="text">
+    <div id="${prefix}_method_url" style="display:none;"><input type="url" id="${prefix}_url" placeholder="https://..." class="field-input" style="margin-bottom:8px;"></div>
+    <div id="${prefix}_method_file" style="display:none;"><input type="file" id="${prefix}_file" class="field-input" style="margin-bottom:8px; padding:8px; background:#fafafa;"></div>
+  `;
+}
+
+window.setAddMethod = function(method, prefix) {
+  document.getElementById(prefix+'_method_text').style.display = method === 'text' ? 'block' : 'none';
+  document.getElementById(prefix+'_method_url').style.display = method === 'url' ? 'block' : 'none';
+  document.getElementById(prefix+'_method_file').style.display = method === 'file' ? 'block' : 'none';
+  document.getElementById(prefix+'_methodHidden').value = method;
+};
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    if (file.size > 2 * 1024 * 1024) { 
+      return reject(new Error("File is too large! Max size is 2MB. Please use a URL for large files."));
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+    reader.readAsDataURL(file);
+  });
+}
 
 function renderAdminContentManager(tab){
   if(!isAdminMode()){ renderMy(); return; }
@@ -2056,16 +3001,30 @@ function renderAdminContentManager(tab){
 function renderAdminBookList(uni,stream,sem,pdfs){
   const editing=adminEditState.editing;
   const editorForm=(p,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Module Name</label><input type="text" id="editBookName" class="field-input" value="'+escapeAttr(p.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editBookChapter" class="field-input" value="'+escapeAttr(p.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editBookYear" class="field-input" value="'+escapeAttr(p.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Description</label><textarea id="editBookDesc" class="field-textarea" style="min-height:80px; margin-bottom:8px;">'+escapeHtml(p.description||'')+'</textarea><label class="field-label">URL</label><input type="url" id="editBookUrl" class="field-input" value="'+escapeAttr(p.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'book\')">Cancel</button></div></div>';
-  return '<h3>Add Module</h3>'+adminUniPickerHTML()+'<label class="field-label">Module Name</label><input type="text" id="pdfName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter (optional)</label><input type="text" id="pdfChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year (optional)</label><input type="text" id="pdfYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Description (optional)</label><textarea id="pdfDesc" placeholder="Short description" class="field-textarea" style="min-height:80px; margin-bottom:8px;"></textarea><label class="field-label">URL</label><input type="url" id="pdfUrl" placeholder="https://..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Module</button>'+adminBulkToolbar('book', pdfs.length)+(pdfs.length?'<h3 style="margin-top:8px;">Current ('+pdfs.length+')</h3>'+pdfs.map((p,i)=>{ const isEdit=editing&&editing.type==='book'&&editing.index===i; if(isEdit) return editorForm(p,i); const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : ''; const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : ''; const bg = adminBulkMode && adminSelected.has(i) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+chapter+year+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(p.name)+'</span></div></div>'+adminRowActions('book', i, uni, stream, sem, 'adminDeleteBook')+'</div>'; }).join(''):'');
+  return '<h3>Add Module</h3>'+adminUniPickerHTML()+'<label class="field-label">Module Name</label><input type="text" id="pdfName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter (optional)</label><input type="text" id="pdfChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year (optional)</label><input type="text" id="pdfYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Description (optional)</label><textarea id="pdfDesc" placeholder="Short description" class="field-textarea" style="min-height:80px; margin-bottom:8px;"></textarea>'+
+  '<label class="field-label">Upload Method</label>'+renderMethodTabs('pdf', false)+
+  '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="adminAddBook(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Module</button>'+adminBulkToolbar('book', pdfs.length)+(pdfs.length?'<h3 style="margin-top:8px;">Current ('+pdfs.length+')</h3>'+pdfs.map((p,i)=>{ const isEdit=editing&&editing.type==='book'&&editing.index===i; if(isEdit) return editorForm(p,i); const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : ''; const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : ''; const bg = adminBulkMode && adminSelected.has(i) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+chapter+year+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(p.name)+'</span></div></div>'+adminRowActions('book', i, uni, stream, sem, 'adminDeleteBook')+'</div>'; }).join(''):'');
 }
 async function adminAddBook(uni,stream,sem){
+  if(!(await appConfirm('Are you sure you want to add this module?'))) return;
   const n=(document.getElementById('pdfName').value||'').trim();
   const ch=(document.getElementById('pdfChapter').value||'').trim();
   const y=(document.getElementById('pdfYear').value||'').trim();
   const d=(document.getElementById('pdfDesc').value||'').trim();
-  const u=(document.getElementById('pdfUrl').value||'').trim();
+  const method = document.getElementById('pdf_methodHidden').value;
+  
   if(!n) return appAlert('Enter module name');
-  if(!u) return appAlert('Paste URL');
+  
+  let u = '';
+  if(method === 'url') {
+      u = (document.getElementById('pdf_url').value||'').trim();
+      if(!u) return appAlert('Paste URL');
+  } else if(method === 'file') {
+      const fileInput = document.getElementById('pdf_file');
+      if(fileInput.files.length === 0) return appAlert('Select a file');
+      try { u = await readFileAsBase64(fileInput.files[0]); } catch(e) { return appAlert(e.message); }
+  }
+
   const targets = adminEditState.addToUnis && adminEditState.addToUnis.size ? Array.from(adminEditState.addToUnis) : [uni];
   let count = 0;
   targets.forEach(tUni => {
@@ -2077,19 +3036,40 @@ async function adminAddBook(uni,stream,sem){
   await appAlert('✅ Added to ' + count + ' university(ies).');
   renderAdminContentManager('book');
 }
-async function adminSaveBook(uni,stream,sem,i){ const n=(document.getElementById('editBookName').value||'').trim(); const ch=(document.getElementById('editBookChapter').value||'').trim(); const y=(document.getElementById('editBookYear').value||'').trim(); const d=(document.getElementById('editBookDesc').value||'').trim(); const u=(document.getElementById('editBookUrl').value||'').trim(); if(!n) return appAlert('Enter name'); if(!u) return appAlert('Paste URL'); const c=getUniContent(uni,stream,sem); if(!c.pdfs[i]) return; c.pdfs[i]={name:n, chapter:ch, year:y, description:d, url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Module updated!'); renderAdminContentManager('book'); }
-function adminDeleteBook(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.pdfs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }); }
+async function adminSaveBook(uni,stream,sem,i){ 
+  if(!(await appConfirm('Save changes to this module?'))) return;
+  const n=(document.getElementById('editBookName').value||'').trim(); const ch=(document.getElementById('editBookChapter').value||'').trim(); const y=(document.getElementById('editBookYear').value||'').trim(); const d=(document.getElementById('editBookDesc').value||'').trim(); const u=(document.getElementById('editBookUrl').value||'').trim(); if(!n) return appAlert('Enter name'); if(!u) return appAlert('Paste URL'); const c=getUniContent(uni,stream,sem); if(!c.pdfs[i]) return; c.pdfs[i]={name:n, chapter:ch, year:y, description:d, url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Module updated!'); renderAdminContentManager('book'); 
+}
+function adminDeleteBook(uni,stream,sem,i){ appConfirm('Delete this module?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.pdfs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('book'); }); }
 
 function renderAdminNoteList(uni,stream,sem,notes){
   const editing=adminEditState.editing;
-  return '<h3>Add Note</h3>'+adminUniPickerHTML()+'<label class="field-label">Title</label><input type="text" id="noteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><label class="field-label">Body (HTML allowed)</label><textarea id="noteBody" placeholder="HTML allowed" class="field-textarea" style="margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="noteUrl" placeholder="https://..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Note</button>'+adminBulkToolbar('note', notes.length)+(notes.length?'<h3 style="margin-top:8px;">Current ('+notes.length+')</h3>'+notes.map((n,i)=>{ const isEdit=editing&&editing.type==='note'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Title</label><input type="text" id="editNoteTitle" class="field-input" value="'+escapeAttr(n.title)+'" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="editNoteBody" class="field-textarea" style="min-height:140px; font-family:monospace; margin-bottom:8px;">'+escapeHtml(n.body||'')+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editNoteUrl" class="field-input" value="'+escapeAttr(n.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'note\')">Cancel</button></div></div>'; } const bg = adminBulkMode && adminSelected.has(i) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1; min-width:0;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div>'+adminRowActions('note', i, uni, stream, sem, 'adminDeleteNote')+'</div>'; }).join(''):'');
+  return '<h3>Add Note</h3>'+adminUniPickerHTML()+'<label class="field-label">Title</label><input type="text" id="noteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;">'+
+  '<label class="field-label">Upload Method</label>'+renderMethodTabs('note', true)+
+  '<div id="note_method_text"><label class="field-label">Body (HTML allowed)</label><textarea id="noteBody" placeholder="HTML allowed" class="field-textarea" style="margin-bottom:10px;"></textarea></div>'+
+  '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="adminAddNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Note</button>'+adminBulkToolbar('note', notes.length)+(notes.length?'<h3 style="margin-top:8px;">Current ('+notes.length+')</h3>'+notes.map((n,i)=>{ const isEdit=editing&&editing.type==='note'&&editing.index===i; if(isEdit){ return '<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Title</label><input type="text" id="editNoteTitle" class="field-input" value="'+escapeAttr(n.title)+'" style="margin-bottom:8px;"><label class="field-label">Body</label><textarea id="editNoteBody" class="field-textarea" style="min-height:140px; font-family:monospace; margin-bottom:8px;">'+escapeHtml(n.body||'')+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editNoteUrl" class="field-input" value="'+escapeAttr(n.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveNote(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'note\')">Cancel</button></div></div>'; } const bg = adminBulkMode && adminSelected.has(i) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="font-weight:700; font-size:13.5px; flex:1; min-width:0;">'+escapeHtml(n.title)+(n.url?' 📎':'')+'</div>'+adminRowActions('note', i, uni, stream, sem, 'adminDeleteNote')+'</div>'; }).join(''):'');
 }
 async function adminAddNote(uni,stream,sem){
+  if(!(await appConfirm('Are you sure you want to add this note?'))) return;
   const t=(document.getElementById('noteTitle').value||'').trim();
-  const b=(document.getElementById('noteBody').value||'').trim();
-  const u=(document.getElementById('noteUrl').value||'').trim();
   if(!t) return appAlert('Enter title');
-  if(!b&&!u) return appAlert('Write body or attach URL');
+  
+  const method = document.getElementById('note_methodHidden').value;
+  let b = '', u = '';
+  
+  if(method === 'text') {
+      b = (document.getElementById('noteBody').value||'').trim();
+      if(!b) return appAlert('Write body text');
+  } else if(method === 'url') {
+      u = (document.getElementById('note_url').value||'').trim();
+      if(!u) return appAlert('Paste URL');
+  } else if(method === 'file') {
+      const fileInput = document.getElementById('note_file');
+      if(fileInput.files.length === 0) return appAlert('Select a file');
+      try { u = await readFileAsBase64(fileInput.files[0]); } catch(e) { return appAlert(e.message); }
+      b = '<div style="text-align:center;">Uploaded File Attached Below</div>';
+  }
+
   const targets = adminEditState.addToUnis && adminEditState.addToUnis.size ? Array.from(adminEditState.addToUnis) : [uni];
   let count = 0;
   targets.forEach(tUni => {
@@ -2101,25 +3081,46 @@ async function adminAddNote(uni,stream,sem){
   await appAlert('✅ Added to ' + count + ' university(ies).');
   renderAdminContentManager('note');
 }
-async function adminSaveNote(uni,stream,sem,i){ const t=(document.getElementById('editNoteTitle').value||'').trim(); const b=(document.getElementById('editNoteBody').value||'').trim(); const u=(document.getElementById('editNoteUrl').value||'').trim(); if(!t) return appAlert('Enter title'); const c=getUniContent(uni,stream,sem); if(!c.notes[i]) return; c.notes[i]={title:t,body:b,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Note updated!'); renderAdminContentManager('note'); }
-function adminDeleteNote(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.notes.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }); }
-function formatQuestionsForEdit(qs){ return qs.map((q,i)=>{ const lines=[(i+1)+'. '+q.q]; q.options.forEach((opt,j)=>lines.push(String.fromCharCode(65+j)+') '+opt)); lines.push('Answer: '+String.fromCharCode(65+q.answer)); if(q.explanation) lines.push('Explanation: '+q.explanation); lines.push(''); return lines.join('\n'); }).join('\n'); }
+async function adminSaveNote(uni,stream,sem,i){ 
+  if(!(await appConfirm('Save changes to this note?'))) return;
+  const t=(document.getElementById('editNoteTitle').value||'').trim(); const b=(document.getElementById('editNoteBody').value||'').trim(); const u=(document.getElementById('editNoteUrl').value||'').trim(); if(!t) return appAlert('Enter title'); const c=getUniContent(uni,stream,sem); if(!c.notes[i]) return; c.notes[i]={title:t,body:b,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Note updated!'); renderAdminContentManager('note'); 
+}
+function adminDeleteNote(uni,stream,sem,i){ appConfirm('Delete this note?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.notes.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('note'); }); }
+
+function formatQuestionsForEdit(qs){ return qs.map((q,i)=>{ const lines=[(i+1)+'. '+q.q]; if(q.options) q.options.forEach((opt,j)=>lines.push(String.fromCharCode(65+j)+') '+opt)); lines.push('Answer: '+(q.options?(String.fromCharCode(65+q.answer)):(q.answerText||''))); if(q.explanation) lines.push('Explanation: '+q.explanation); lines.push(''); return lines.join('\n'); }).join('\n'); }
 function renderAdminExamList(uni,stream,sem,exams){
   const editing=adminEditState.editing;
   const editorForm=(ex,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">Exam Name</label><input type="text" id="editExamName" class="field-input" value="'+escapeAttr(ex.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editExamChapter" class="field-input" value="'+escapeAttr(ex.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editExamYear" class="field-input" value="'+escapeAttr(ex.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="editExamTime" class="field-input" value="'+(ex.timeMinutes||0)+'" min="0" max="240" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="editExamText" class="field-textarea" style="min-height:220px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(ex.questions||[]))+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editExamUrl" class="field-input" value="'+escapeAttr(ex.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'exam\')">Cancel</button></div></div>';
-  return '<h3>Add Exam</h3>'+adminUniPickerHTML()+'<label class="field-label">Exam Name</label><input type="text" id="examName" placeholder="Mid Exam 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="examChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="examYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="examTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="examText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="examUrl" placeholder="https://..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Exam</button>'+adminBulkToolbar('exam', exams.length)+(exams.length?'<h3 style="margin-top:8px;">Current ('+exams.length+')</h3>'+sortExamsByYear(exams).map(ex=>{ const oi=exams.indexOf(ex); const isEdit=editing&&editing.type==='exam'&&editing.index===oi; if(isEdit) return editorForm(ex,oi); const bg = adminBulkMode && adminSelected.has(oi) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(ex.chapter?'<span class="chapter-tag">'+escapeHtml(ex.chapter)+'</span>':'')+(ex.year?'<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(ex.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(ex.name)+'</span></div><div style="font-size:11px; color:#888;">'+(ex.questions||[]).length+' Q'+(ex.url?' 📎':'')+' · '+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div>'+adminRowActions('exam', oi, uni, stream, sem, 'adminDeleteExam')+'</div>'; }).join(''):'');
+  return '<h3>Add Exam</h3>'+adminUniPickerHTML()+'<label class="field-label">Exam Name</label><input type="text" id="examName" placeholder="Mid Exam 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="examChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="examYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="examTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;">'+
+  '<label class="field-label">Upload Method</label>'+renderMethodTabs('exam', true)+
+  '<div id="exam_method_text"><label class="field-label">Questions</label><textarea id="examText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea></div>'+
+  '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="adminAddExam(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add Exam</button>'+adminBulkToolbar('exam', exams.length)+(exams.length?'<h3 style="margin-top:8px;">Current ('+exams.length+')</h3>'+sortExamsByYear(exams).map(ex=>{ const oi=exams.indexOf(ex); const isEdit=editing&&editing.type==='exam'&&editing.index===oi; if(isEdit) return editorForm(ex,oi); const bg = adminBulkMode && adminSelected.has(oi) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(ex.chapter?'<span class="chapter-tag">'+escapeHtml(ex.chapter)+'</span>':'')+(ex.year?'<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(ex.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(ex.name)+'</span></div><div style="font-size:11px; color:#888;">'+(ex.questions||[]).length+' Q'+(ex.url?' 📎':'')+' · '+(ex.timeMinutes>0?ex.timeMinutes+' min':'no limit')+'</div></div>'+adminRowActions('exam', oi, uni, stream, sem, 'adminDeleteExam')+'</div>'; }).join(''):'');
 }
 async function adminAddExam(uni,stream,sem){
+  if(!(await appConfirm('Are you sure you want to add this exam?'))) return;
   const n=document.getElementById('examName').value.trim();
   const ch=(document.getElementById('examChapter').value||'').trim();
   const y=(document.getElementById('examYear').value||'').trim();
   const tm=parseInt(document.getElementById('examTime').value)||0;
-  const tx=document.getElementById('examText').value.trim();
-  const u=(document.getElementById('examUrl').value||'').trim();
   if(!n) return appAlert('Enter exam name');
-  if(!tx&&!u) return appAlert('Paste questions or URL');
-  const qs=tx?parseQuestions(tx):[];
-  if(!qs.length&&!u) return appAlert('No valid questions and no URL');
+  
+  const method = document.getElementById('exam_methodHidden').value;
+  let qs = [], u = '';
+  
+  if(method === 'text') {
+      const tx=document.getElementById('examText').value.trim();
+      if(!tx) return appAlert('Paste questions');
+      qs = parseQuestions(tx);
+      if(qs.length === 0) return appAlert('No valid questions found');
+  } else if(method === 'url') {
+      u = (document.getElementById('exam_url').value||'').trim();
+      if(!u) return appAlert('Paste URL');
+  } else if(method === 'file') {
+      const fileInput = document.getElementById('exam_file');
+      if(fileInput.files.length === 0) return appAlert('Select a file');
+      try { u = await readFileAsBase64(fileInput.files[0]); } catch(e) { return appAlert(e.message); }
+  }
+
   const targets = adminEditState.addToUnis && adminEditState.addToUnis.size ? Array.from(adminEditState.addToUnis) : [uni];
   let count = 0;
   targets.forEach(tUni => {
@@ -2131,25 +3132,45 @@ async function adminAddExam(uni,stream,sem){
   await appAlert('✅ Added to ' + count + ' university(ies).');
   renderAdminContentManager('exam');
 }
-async function adminSaveExam(uni,stream,sem,i){ const n=(document.getElementById('editExamName').value||'').trim(); const ch=(document.getElementById('editExamChapter').value||'').trim(); const y=(document.getElementById('editExamYear').value||'').trim(); const tm=parseInt(document.getElementById('editExamTime').value)||0; const tx=document.getElementById('editExamText').value.trim(); const u=(document.getElementById('editExamUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,sem); if(!c.exams[i]) return; c.exams[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Exam updated!'); renderAdminContentManager('exam'); }
-function adminDeleteExam(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.exams.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('exam'); }); }
+async function adminSaveExam(uni,stream,sem,i){ 
+  if(!(await appConfirm('Save changes to this exam?'))) return;
+  const n=(document.getElementById('editExamName').value||'').trim(); const ch=(document.getElementById('editExamChapter').value||'').trim(); const y=(document.getElementById('editExamYear').value||'').trim(); const tm=parseInt(document.getElementById('editExamTime').value)||0; const tx=document.getElementById('editExamText').value.trim(); const u=(document.getElementById('editExamUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,sem); if(!c.exams[i]) return; c.exams[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('Exam updated!'); renderAdminContentManager('exam'); 
+}
+function adminDeleteExam(uni,stream,sem,i){ appConfirm('Delete this exam?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.exams.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('exam'); }); }
 
 function renderAdminCocList(uni,stream,sem,cocs){
   const editing=adminEditState.editing;
   const editorForm=(cx,i)=>'<div style="background:#fff8e1; border:2px solid #ffc107; border-radius:10px; padding:12px; margin-bottom:8px;"><label class="field-label">COC Name</label><input type="text" id="editCocName" class="field-input" value="'+escapeAttr(cx.name)+'" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="editCocChapter" class="field-input" value="'+escapeAttr(cx.chapter||'')+'" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="editCocYear" class="field-input" value="'+escapeAttr(cx.year||'')+'" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="editCocTime" class="field-input" value="'+(cx.timeMinutes||0)+'" min="0" max="240" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="editCocText" class="field-textarea" style="min-height:220px; font-family:monospace; margin-bottom:10px;">'+escapeHtml(formatQuestionsForEdit(cx.questions||[]))+'</textarea><label class="field-label">Attachment URL</label><input type="url" id="editCocUrl" class="field-input" value="'+escapeAttr(cx.url||'')+'" style="margin-bottom:8px;"><div style="display:flex; gap:6px;"><button class="btn btn-primary" style="flex:1;" onclick="adminSaveCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+','+i+')">Save</button><button class="btn btn-ghost" style="flex:1;" onclick="adminEditState.editing=null;renderAdminContentManager(\'coc\')">Cancel</button></div></div>';
-  return '<h3>Add COC</h3>'+adminUniPickerHTML()+'<label class="field-label">COC Name</label><input type="text" id="cocName" placeholder="COC Basic 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="cocChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="cocYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="cocTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;"><label class="field-label">Questions</label><textarea id="cocText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea><label class="field-label">Attachment URL (optional)</label><input type="url" id="cocUrl" placeholder="https://..." class="field-input" style="margin-bottom:8px;"><button class="btn btn-primary btn-full" onclick="adminAddCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add COC</button>'+adminBulkToolbar('coc', cocs.length)+(cocs.length?'<h3 style="margin-top:8px;">Current ('+cocs.length+')</h3>'+sortExamsByYear(cocs).map(cx=>{ const oi=cocs.indexOf(cx); const isEdit=editing&&editing.type==='coc'&&editing.index===oi; if(isEdit) return editorForm(cx,oi); const bg = adminBulkMode && adminSelected.has(oi) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(cx.chapter?'<span class="chapter-tag">'+escapeHtml(cx.chapter)+'</span>':'')+(cx.year?'<span style="background:#e65100; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(cx.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(cx.name)+'</span></div><div style="font-size:11px; color:#888;">'+(cx.questions||[]).length+' Q'+(cx.url?' 📎':'')+'</div></div>'+adminRowActions('coc', oi, uni, stream, sem, 'adminDeleteCoc')+'</div>'; }).join(''):'');
+  return '<h3>Add COC</h3>'+adminUniPickerHTML()+'<label class="field-label">COC Name</label><input type="text" id="cocName" placeholder="COC Basic 2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Chapter</label><input type="text" id="cocChapter" placeholder="Chapter 1" class="field-input" style="margin-bottom:8px;"><label class="field-label">Year</label><input type="text" id="cocYear" placeholder="2024" class="field-input" style="margin-bottom:8px;"><label class="field-label">Time (min)</label><input type="number" id="cocTime" value="30" min="0" max="240" class="field-input" style="margin-bottom:12px;">'+
+  '<label class="field-label">Upload Method</label>'+renderMethodTabs('coc', true)+
+  '<div id="coc_method_text"><label class="field-label">Questions</label><textarea id="cocText" placeholder="Paste questions..." class="field-textarea" style="min-height:180px; font-family:monospace; margin-bottom:10px;"></textarea></div>'+
+  '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="adminAddCoc(\''+escapeAttr(uni)+'\',\''+stream+'\','+sem+')">Add COC</button>'+adminBulkToolbar('coc', cocs.length)+(cocs.length?'<h3 style="margin-top:8px;">Current ('+cocs.length+')</h3>'+sortExamsByYear(cocs).map(cx=>{ const oi=cocs.indexOf(cx); const isEdit=editing&&editing.type==='coc'&&editing.index===oi; if(isEdit) return editorForm(cx,oi); const bg = adminBulkMode && adminSelected.has(oi) ? '#e0f2fe' : '#f7f7fa'; return '<div style="background:'+bg+'; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;"><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">'+(cx.chapter?'<span class="chapter-tag">'+escapeHtml(cx.chapter)+'</span>':'')+(cx.year?'<span style="background:#e65100; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(cx.year)+'</span>':'')+'<span style="font-weight:700; font-size:13.5px;">'+escapeHtml(cx.name)+'</span></div><div style="font-size:11px; color:#888;">'+(cx.questions||[]).length+' Q'+(cx.url?' 📎':'')+'</div></div>'+adminRowActions('coc', oi, uni, stream, sem, 'adminDeleteCoc')+'</div>'; }).join(''):'');
 }
 async function adminAddCoc(uni,stream,sem){
+  if(!(await appConfirm('Are you sure you want to add this COC?'))) return;
   const n=document.getElementById('cocName').value.trim();
   const ch=(document.getElementById('cocChapter').value||'').trim();
   const y=(document.getElementById('cocYear').value||'').trim();
   const tm=parseInt(document.getElementById('cocTime').value)||0;
-  const tx=document.getElementById('cocText').value.trim();
-  const u=(document.getElementById('cocUrl').value||'').trim();
   if(!n) return appAlert('Enter COC name');
-  if(!tx&&!u) return appAlert('Paste questions or URL');
-  const qs=tx?parseQuestions(tx):[];
-  if(!qs.length&&!u) return appAlert('No valid questions and no URL');
+  
+  const method = document.getElementById('coc_methodHidden').value;
+  let qs = [], u = '';
+  
+  if(method === 'text') {
+      const tx=document.getElementById('cocText').value.trim();
+      if(!tx) return appAlert('Paste questions');
+      qs = parseQuestions(tx);
+      if(qs.length === 0) return appAlert('No valid questions found');
+  } else if(method === 'url') {
+      u = (document.getElementById('coc_url').value||'').trim();
+      if(!u) return appAlert('Paste URL');
+  } else if(method === 'file') {
+      const fileInput = document.getElementById('coc_file');
+      if(fileInput.files.length === 0) return appAlert('Select a file');
+      try { u = await readFileAsBase64(fileInput.files[0]); } catch(e) { return appAlert(e.message); }
+  }
+
   const targets = adminEditState.addToUnis && adminEditState.addToUnis.size ? Array.from(adminEditState.addToUnis) : [uni];
   let count = 0;
   targets.forEach(tUni => {
@@ -2162,8 +3183,11 @@ async function adminAddCoc(uni,stream,sem){
   await appAlert('✅ Added to ' + count + ' university(ies).');
   renderAdminContentManager('coc');
 }
-async function adminSaveCoc(uni,stream,sem,i){ const n=(document.getElementById('editCocName').value||'').trim(); const ch=(document.getElementById('editCocChapter').value||'').trim(); const y=(document.getElementById('editCocYear').value||'').trim(); const tm=parseInt(document.getElementById('editCocTime').value)||0; const tx=document.getElementById('editCocText').value.trim(); const u=(document.getElementById('editCocUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,sem); c.cocs=c.cocs||[]; if(!c.cocs[i]) return; c.cocs[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('COC updated!'); renderAdminContentManager('coc'); }
-function adminDeleteCoc(uni,stream,sem,i){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.cocs=c.cocs||[]; c.cocs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('coc'); }); }
+async function adminSaveCoc(uni,stream,sem,i){ 
+  if(!(await appConfirm('Save changes to this COC?'))) return;
+  const n=(document.getElementById('editCocName').value||'').trim(); const ch=(document.getElementById('editCocChapter').value||'').trim(); const y=(document.getElementById('editCocYear').value||'').trim(); const tm=parseInt(document.getElementById('editCocTime').value)||0; const tx=document.getElementById('editCocText').value.trim(); const u=(document.getElementById('editCocUrl').value||'').trim(); if(!n) return appAlert('Enter name'); const qs=tx?parseQuestions(tx):[]; if(!qs.length&&!u) return appAlert('Need questions or URL'); const c=getUniContent(uni,stream,sem); c.cocs=c.cocs||[]; if(!c.cocs[i]) return; c.cocs[i]={name:n,chapter:ch,year:y,timeMinutes:tm,questions:qs,url:u}; setUniContent(uni,stream,sem,c); adminEditState.editing=null; await appAlert('COC updated!'); renderAdminContentManager('coc'); 
+}
+function adminDeleteCoc(uni,stream,sem,i){ appConfirm('Delete this COC?').then(ok=>{ if(!ok) return; const c=getUniContent(uni,stream,sem); c.cocs=c.cocs||[]; c.cocs.splice(i,1); setUniContent(uni,stream,sem,c); renderAdminContentManager('coc'); }); }
 
 function renderAdminBulkAdd(){
   if(!isAdminMode()){ renderMy(); return; }
@@ -2190,9 +3214,9 @@ function renderAdminBulkAdd(){
   '<label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:14px;">'+
   '<button onclick="adminBulkState.semester=1;renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(semester===1?'#6a3093':'#e0e0e6')+'; background:'+(semester===1?'#6a3093':'#fff')+'; color:'+(semester===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button>'+
   '<button onclick="adminBulkState.semester=2;renderAdminBulkAdd()" style="flex:1; padding:10px; border:2px solid '+(semester===2?'#6a3093':'#e0e0e6')+'; background:'+(semester===2?'#6a3093':'#fff')+'; color:'+(semester===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div>'+
-  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module</h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;"><input type="url" id="bulkBookUrl" placeholder="URL" class="field-input" style="margin-bottom:8px;"></div>'+
-  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note</h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;"><textarea id="bulkNoteBody" placeholder="Body" class="field-textarea" style="margin-bottom:8px;"></textarea></div>'+
-  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam</h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;"><textarea id="bulkExamText" placeholder="Questions" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea></div>'+
+  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📚 Module</h3><input type="text" id="bulkBookName" placeholder="Module name" class="field-input" style="margin-bottom:8px;">'+renderMethodTabs('bulkBook', false)+'</div>'+
+  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📝 Note</h3><input type="text" id="bulkNoteTitle" placeholder="Title" class="field-input" style="margin-bottom:8px;">'+renderMethodTabs('bulkNote', true)+'<div id="bulkNote_method_text"><textarea id="bulkNoteBody" placeholder="Body" class="field-textarea" style="margin-bottom:8px;"></textarea></div></div>'+
+  '<div style="border:2px solid #e0e0e6;border-radius:12px;padding:14px;margin-bottom:14px;background:#fafafa;"><h3 style="margin-top:0;">📋 Exam</h3><input type="text" id="bulkExamName" placeholder="Exam name" class="field-input" style="margin-bottom:8px;">'+renderMethodTabs('bulkExam', true)+'<div id="bulkExam_method_text"><textarea id="bulkExamText" placeholder="Questions" class="field-textarea" style="min-height:160px;font-family:monospace;margin-bottom:8px;"></textarea></div></div>'+
   '<button class="btn btn-primary btn-full" style="background:#4caf50;" onclick="adminSubmitBulk()">📦 Submit</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
 function adminBulkToggleUni(u){
@@ -2211,29 +3235,63 @@ window.adminBulkToggleUni = adminBulkToggleUni;
 window.adminBulkToggleAll = adminBulkToggleAll;
 async function adminSubmitBulk(){
   if(!isAdminMode()) return;
+  if(!(await appConfirm('Are you sure you want to add all this bulk content?'))) return;
+  
   const targetUnis = adminBulkState.targetUnis && adminBulkState.targetUnis.size ? Array.from(adminBulkState.targetUnis) : [];
   if (!targetUnis.length) return appAlert('Select at least one university.');
   const stream = adminBulkState.stream || 'Natural';
   const semester = adminBulkState.semester || 1;
+  
   const bookName = (document.getElementById('bulkBookName').value||'').trim();
-  const bookUrl = (document.getElementById('bulkBookUrl').value||'').trim();
   const noteTitle = (document.getElementById('bulkNoteTitle').value||'').trim();
-  const noteBody = (document.getElementById('bulkNoteBody').value||'').trim();
   const examName = (document.getElementById('bulkExamName').value||'').trim();
-  const examText = (document.getElementById('bulkExamText').value||'').trim();
+  
+  let bookUrl = '';
+  const bMethod = document.getElementById('bulkBook_methodHidden').value;
+  if(bookName) {
+      if(bMethod==='url') bookUrl = (document.getElementById('bulkBook_url').value||'').trim();
+      else if(bMethod==='file') {
+          const fi = document.getElementById('bulkBook_file');
+          if(fi.files.length > 0) try { bookUrl = await readFileAsBase64(fi.files[0]); } catch(e) { return appAlert('Module File: ' + e.message); }
+      }
+  }
+
+  let noteBody = '', noteUrl = '';
+  const nMethod = document.getElementById('bulkNote_methodHidden').value;
+  if(noteTitle) {
+      if(nMethod==='text') noteBody = (document.getElementById('bulkNoteBody').value||'').trim();
+      else if(nMethod==='url') { noteUrl = (document.getElementById('bulkNote_url').value||'').trim(); noteBody='<a href="'+noteUrl+'" target="_blank">🔗 Open Link</a>'; }
+      else if(nMethod==='file') {
+          const fi = document.getElementById('bulkNote_file');
+          if(fi.files.length > 0) try { const b64 = await readFileAsBase64(fi.files[0]); noteBody = '<img src="'+b64+'" style="max-width:100%;"/>'; } catch(e) { return appAlert('Note File: ' + e.message); }
+      }
+  }
+
+  let examQs = [], examUrl = '';
+  const eMethod = document.getElementById('bulkExam_methodHidden').value;
+  if(examName) {
+      if(eMethod==='text') { const tx = (document.getElementById('bulkExamText').value||'').trim(); examQs = tx ? parseQuestions(tx) : []; }
+      else if(eMethod==='url') examUrl = (document.getElementById('bulkExam_url').value||'').trim();
+      else if(eMethod==='file') {
+          const fi = document.getElementById('bulkExam_file');
+          if(fi.files.length > 0) try { examUrl = await readFileAsBase64(fi.files[0]); } catch(e) { return appAlert('Exam File: ' + e.message); }
+      }
+  }
+
   let hasSomething = false;
   if(bookName && bookUrl) hasSomething = true;
-  if(noteTitle && noteBody) hasSomething = true;
-  if(examName && examText) hasSomething = true;
+  if(noteTitle && (noteBody || noteUrl)) hasSomething = true;
+  if(examName && (examQs.length > 0 || examUrl)) hasSomething = true;
+  
   if(!hasSomething) return appAlert('Fill at least one section with valid data.');
+  
   let addedCount = 0;
-  let parsedQs = examText ? parseQuestions(examText) : [];
   targetUnis.forEach(targetUni => {
       let c = getUniContent(targetUni, stream, semester);
       let added = 0;
       if(bookName && bookUrl){ c.pdfs.push({name: bookName, url: bookUrl}); added++; }
-      if(noteTitle && noteBody){ c.notes.push({title: noteTitle, body: noteBody}); added++; }
-      if(examName && parsedQs.length > 0){ c.exams.push({name: examName, questions: parsedQs, timeMinutes: 30}); added++; }
+      if(noteTitle && (noteBody || noteUrl)){ c.notes.push({title: noteTitle, body: noteBody, url: noteUrl}); added++; }
+      if(examName && (examQs.length > 0 || examUrl)){ c.exams.push({name: examName, questions: examQs, url: examUrl, timeMinutes: 30}); added++; }
       if (added > 0) { setUniContent(targetUni, stream, semester, c); addedCount++; }
   });
   if(addedCount > 0) { await appAlert('✅ Added content to ' + addedCount + ' university(ies)!'); renderAdminContentManager('exam'); }
@@ -2283,7 +3341,10 @@ function renderAdminGeneralExams(){
 async function adminAddGeneralSubject(){ const name=(document.getElementById('newGenName').value||'').trim(); if(!name) return appAlert('Enter name.'); const key = 'custom_'+Date.now().toString(36); const subjects = getGeneralSubjects(); subjects[key] = { name, semester:1, stream:'Both', questions: [], notes: [] }; saveGeneralSubjects(subjects); adminGeneralState.editing = key; renderAdminGeneralExams(); }
 function adminEditGeneralSubject(key){ adminGeneralState.editing=key; renderAdminGeneralExams(); }
 function adminDeleteGeneralSubject(key){ appConfirm('Delete this subject?').then(ok=>{ if(!ok) return; const subjects=getGeneralSubjects(); delete subjects[key]; saveGeneralSubjects(subjects); renderAdminGeneralExams(); }); }
-async function adminSaveGeneralSubject(key){ const subjects = getGeneralSubjects(); if(!subjects[key]) return; const name = (document.getElementById('genSubName').value||'').trim() || subjects[key].name; const text = document.getElementById('genSubQ').value||''; const qs = parseQuestions(text); subjects[key] = { ...subjects[key], name, questions: qs }; saveGeneralSubjects(subjects); await appAlert('Saved '+qs.length+' questions.'); adminGeneralState.editing = null; renderAdminGeneralExams(); }
+async function adminSaveGeneralSubject(key){ 
+  if(!(await appConfirm('Save changes to this subject?'))) return;
+  const subjects = getGeneralSubjects(); if(!subjects[key]) return; const name = (document.getElementById('genSubName').value||'').trim() || subjects[key].name; const text = document.getElementById('genSubQ').value||''; const qs = parseQuestions(text); subjects[key] = { ...subjects[key], name, questions: qs }; saveGeneralSubjects(subjects); await appAlert('Saved '+qs.length+' questions.'); adminGeneralState.editing = null; renderAdminGeneralExams(); 
+}
 
 function exportContentForShipping(){
   setScreen('admin-content');
@@ -2295,7 +3356,10 @@ function exportContentForShipping(){
 async function copyExport(){ const ta=document.querySelector('textarea[readonly]'); ta.select(); document.execCommand('copy'); await appAlert('Copied!'); }
 function clearDraftContent(){ appConfirm('Clear ALL draft content?').then(ok=>{ if(!ok) return; localStorage.removeItem(LS_CONTENT_DRAFT); appAlert('Cleared'); renderAdminContentManager('exam'); }); }
 function renderAdminTutorials(){ if(!isAdminMode()){ renderMy(); return; } setScreen('admin-tutorials'); const t=getTutorials(); app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Edit Tutorial Videos</h2><label class="field-label">Register Title</label><input type="text" id="tutRegTitle" class="field-input" value="'+escapeAttr(t.register.title)+'"><label class="field-label">Register URL</label><input type="url" id="tutRegUrl" class="field-input" value="'+escapeAttr(t.register.url)+'"><label class="field-label">Pay Title</label><input type="text" id="tutPayTitle" class="field-input" value="'+escapeAttr(t.pay.title)+'"><label class="field-label">Pay URL</label><input type="url" id="tutPayUrl" class="field-input" value="'+escapeAttr(t.pay.url)+'"><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="saveTutorialSettings()">Save</button><button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab(); }
-async function saveTutorialSettings(){ saveTutorials({register:{title:document.getElementById('tutRegTitle').value.trim()||'Guide Videos',url:document.getElementById('tutRegUrl').value.trim()},pay:{title:document.getElementById('tutPayTitle').value.trim()||'How to pay and get premium',url:document.getElementById('tutPayUrl').value.trim()}}); await appAlert('Saved!'); renderAdminTutorials(); }
+async function saveTutorialSettings(){ 
+  if(!(await appConfirm('Save tutorial videos?'))) return;
+  saveTutorials({register:{title:document.getElementById('tutRegTitle').value.trim()||'Guide Videos',url:document.getElementById('tutRegUrl').value.trim()},pay:{title:document.getElementById('tutPayTitle').value.trim()||'How to pay and get premium',url:document.getElementById('tutPayUrl').value.trim()}}); await appAlert('Saved!'); renderAdminTutorials(); 
+}
 
 let adminNotifBulkMode = false;
 let adminNotifSelected = new Set();
@@ -2331,8 +3395,11 @@ function renderAdminNotifications(){
   }).join('') : '<div class="empty-msg">No notifications.</div>';
   app.innerHTML=renderHeader('my')+'<div class="panel"><h2>Send Notification</h2><label class="field-label">Target</label><select id="notifTarget" class="field-select"><option value="all">All Users</option><option value="custom">Specific ID(s)</option></select><label class="field-label">Message</label><textarea id="notifMsg" class="field-textarea"></textarea><button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="sendAdminNotif()">Send</button><h3 style="margin-top:20px;">Existing ('+list.length+')</h3>'+bulkBar+listHtml+'<button class="btn btn-ghost btn-full" style="margin-top:16px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-async function sendAdminNotif(){ const target=document.getElementById('notifTarget').value; const msg=document.getElementById('notifMsg').value.trim(); if(!msg) return appAlert('Enter message'); const list=getNotifications(); list.push({id:'n_'+Date.now(),target:target,message:msg,at:Date.now()}); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} await appAlert('Added!'); renderAdminNotifications(); }
-function deleteAdminNotif(idx){ appConfirm('Delete?').then(ok=>{ if(!ok) return; const list=getNotifications(); if(idx<0||idx>=list.length) return; list.splice(idx,1); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} renderAdminNotifications(); }); }
+async function sendAdminNotif(){ 
+  if(!(await appConfirm('Send this notification to users?'))) return;
+  const target=document.getElementById('notifTarget').value; const msg=document.getElementById('notifMsg').value.trim(); if(!msg) return appAlert('Enter message'); const list=getNotifications(); list.push({id:'n_'+Date.now(),target:target,message:msg,at:Date.now()}); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} await appAlert('Added!'); renderAdminNotifications(); 
+}
+function deleteAdminNotif(idx){ appConfirm('Delete this notification?').then(ok=>{ if(!ok) return; const list=getNotifications(); if(idx<0||idx>=list.length) return; list.splice(idx,1); try{ const s=JSON.parse(localStorage.getItem(LS_SYNCED_CONTENT)||'{}'); s.notifications=list; localStorage.setItem(LS_SYNCED_CONTENT,JSON.stringify(s)); }catch(e){} renderAdminNotifications(); }); }
 
 let adminTapCount = 0, adminTapTimer = null;
 async function adminTap() {
@@ -2657,6 +3724,8 @@ async function openUserEditor(){
 }
 
 async function saveUserEdit(phone){
+  if(!(await appConfirm('Save all changes for this user?'))) return;
+  
   const name = document.getElementById('ueName').value.trim();
   const university = document.getElementById('ueUni').value;
   const stream = document.getElementById('ueStream').value;
@@ -2722,20 +3791,38 @@ function renderAdminUniversityInfo(){
     '<select class="field-select" onchange="adminEditState.uni=this.value;renderAdminUniversityInfo()" style="margin-bottom:12px;">'+uniOpts+'</select>'+
     '<label class="field-label">Title</label>'+
     '<input type="text" id="uiTitle" class="field-input" placeholder="Registration dates" style="margin-bottom:8px;">'+
-    '<label class="field-label">Body (HTML allowed)</label>'+
-    '<textarea id="uiBody" class="field-textarea" style="margin-bottom:8px;"></textarea>'+
+    '<label class="field-label">Upload Method</label>'+renderMethodTabs('ui', true)+
+    '<div id="ui_method_text"><label class="field-label">Body (HTML allowed)</label><textarea id="uiBody" class="field-textarea" style="margin-bottom:8px;"></textarea></div>'+
     '<label class="field-label">Stream</label>'+
     '<select id="uiStream" class="field-select" style="margin-bottom:10px;"><option value="Both">Both</option><option value="Natural">Natural</option><option value="Social">Social</option></select>'+
     '<button class="btn btn-primary btn-full" onclick="adminAddUniInfo()">+ Add Item</button>'+
     '<h3 style="margin-top:16px;">Current ('+items.length+')</h3>'+rows+
     '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button></div>'+renderBottomNav('my')+renderChatFab();
 }
-function adminAddUniInfo(){
+async function adminAddUniInfo(){
+  if(!(await appConfirm('Add this info item?'))) return;
   const uni = adminEditState.uni;
   const title = (document.getElementById('uiTitle').value||'').trim();
-  const body = (document.getElementById('uiBody').value||'').trim();
   const stream = document.getElementById('uiStream').value;
   if(!title) return appAlert('Enter title.');
+  
+  const method = document.getElementById('ui_methodHidden').value;
+  let body = '', url = '';
+  
+  if(method === 'text') {
+      body = (document.getElementById('uiBody').value||'').trim();
+  } else if(method === 'url') {
+      url = (document.getElementById('ui_url').value||'').trim();
+      body = '<a href="'+url+'" target="_blank" style="color:#0088cc; font-weight:bold;">🔗 Click here to open link</a>';
+  } else if(method === 'file') {
+      const fileInput = document.getElementById('ui_file');
+      if(fileInput.files.length === 0) return appAlert('Select a file');
+      try { 
+        const b64 = await readFileAsBase64(fileInput.files[0]); 
+        body = '<div style="text-align:center;"><img src="'+b64+'" style="max-width:100%; border-radius:10px;"/></div>';
+      } catch(e) { return appAlert(e.message); }
+  }
+
   const items = getUniInfoFor(uni);
   items.push({title, body, stream, at:Date.now()});
   saveUniInfoFor(uni, items);
@@ -2743,7 +3830,7 @@ function adminAddUniInfo(){
 }
 function adminSaveUniInfo(i){ appAlert('Inline editing coming soon — delete & re-add for now.'); }
 function adminDeleteUniInfo(i){
-  appConfirm('Delete item?').then(ok=>{
+  appConfirm('Delete this info item?').then(ok=>{
     if(!ok) return;
     const uni = adminEditState.uni;
     const items = getUniInfoFor(uni);
@@ -2755,11 +3842,6 @@ function adminDeleteUniInfo(i){
 
 function renderUniversityInfo(){
   setScreen('university-info');
-  if(!isSignedIn() || !hasActiveSession()){
-    app.innerHTML = renderHeader('university')+'<div class="locked-box"><div class="icon">🏛️</div><h2>Register to View Info</h2><p>Sign up to see university info, dates, and guides.</p><button class="btn btn-primary btn-full" onclick="switchTab(\'my\')">Register / Sign In</button></div>'+renderBottomNav('university')+renderChatFab();
-    restoreScroll('university_university-info');
-    return;
-  }
   if(!isTrialContentAllowed('info')){
     app.innerHTML = renderHeader('university')+renderTrialContentLocked('info')+renderBottomNav('university')+renderChatFab();
     restoreScroll('university_university-info');
@@ -2848,6 +3930,7 @@ async function fetchSettingsFast(){
   fetchSettingsFast().then(changed => {
     if(changed){
       try {
+        applyTheme(); // Apply colors instantly
         if(currentScreen === 'my') renderMy();
         else if(BASE_SCREENS.has(currentScreen)) _renderScreenByName(currentScreen);
       } catch(e){}
@@ -2875,12 +3958,12 @@ Object.assign(window, {
   submitSignUp, submitSignIn, pickStream, togglePassword, showPostAuthWarning,
   renderBlockedScreen, renderKeyBlockedScreen, renderClosureScreen,
   renderPaymentFlow, renderPlayStoreContact, copyPaymentInfo, renderPendingScreen,
-  renderBooksHome, renderNotesHome, renderExamHome, renderCocHome,
+  renderBooksHome, renderNotesHome, renderExamHome, renderCocHome, renderWeeklyHome,
   renderBookList, renderNoteList, renderExamList, renderCocList,
   openBook, openNote, setBookZoom, getBookZoom, setNoteZoom, getNoteZoom,
   startUniExam, startBuiltInExam, startUniCoc, startQuiz,
   selectOption, nextQuestion, prevQuestion, skipQuestion,
-  jumpToSkipped, finishExam, retakeExam, renderProgress, clearHistory,
+  jumpToSkipped, finishExam, retakeExam, renderProgress, clearHistory, reviewPastExam,
   renderUniversityInfo, renderSelectedUniInfo, renderInfoLocked,
   renderAdminUniversityInfo, adminAddUniInfo, adminSaveUniInfo, adminDeleteUniInfo,
   openNotifPanel, closeNotifPanel, markSeen,
@@ -2891,7 +3974,7 @@ Object.assign(window, {
   renderAdminUsers, renderAdminUserEditor, openUserEditor, saveUserEdit, openUserEditorFor,
   adminDeleteUser, adminActivateThisUser, renderAdminProgress,
   renderAdminRegisteredPhones, confirmRemovePhone,
-  adminTap, syncNow, exportContentForShipping, copyExport, clearDraftContent,
+  adminTap, syncNow, pushLocalToKV, repairAppData, exportContentForShipping, copyExport, clearDraftContent,
   saveTutorialSettings, renderEnterKey, submitLicenseKey, goBack,
   renderAdminActivateUser, adminPickUserForActivation, adminGenerateActivationKey, adminCopyKey,
   adminShowMasterKey, renderAdminBulkAdd, adminSubmitBulk, adminBulkToggleUni, adminBulkToggleAll,
@@ -2920,7 +4003,8 @@ Object.assign(window, {
   renderForceChangePassword, submitForceChangePassword,
   adminGenerateResetCode, renderResetWithCode, submitResetWithCode,
   adminUnbindDevice, renderAdminLockedUsers, adminUnlockSelected,
-  setSessionToken, getSessionToken, setAdminToken, getAdminToken
+  setSessionToken, getSessionToken, setAdminToken, getAdminToken,
+  renderAdminPages, adminAddPage, adminDeletePage, renderAdminCustomSettings, adminAddCustomSetting, adminDeleteCustomSetting, renderAdminNavManager, saveNavSettings, resetNavSettings
 });
 </script>
 
