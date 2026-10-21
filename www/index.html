@@ -14,6 +14,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   /* ORDER 43: Dynamic Variables for Admin Branding */
   :root {
@@ -40,8 +41,22 @@
   body.dark { background: var(--bg-dark) !important; color:#ffffff !important; animation: none; }
   
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
-  body:not(.admin-mode) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  body:not(.admin-mode) input, body:not(.admin-mode) textarea { -webkit-user-select: text; user-select: text; }
+  
+  /* STRICT COPY PROTECTION: Non-admins cannot select or copy any text */
+  body:not(.admin-mode) * { 
+    -webkit-user-select: none !important; 
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important; 
+    -webkit-touch-callout: none !important; 
+  }
+  
+  /* Allow typing in inputs but prevent copy/paste menus */
+  body:not(.admin-mode) input, body:not(.admin-mode) textarea { 
+    -webkit-user-select: text !important; 
+    user-select: text !important; 
+  }
+  
   body.blur-sensitive .container { filter: blur(22px) grayscale(1); }
   body.blur-sensitive::after { content: "Protected Content"; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(30,60,114,.85); color: #fff; font-size: 18px; font-weight: 700; z-index: 99999; }
   .container { width:100%; max-width:800px; }
@@ -252,11 +267,11 @@ if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'h
     try { localStorage.setItem('app_zoom', v); } catch(e){}
     document.documentElement.style.zoom = v;
   }
-window.setAppZoom = function(v){ applyZoom(v); if (typeof window.renderMy === 'function') window.renderMy(); };
-window.getAppZoom = function(){ return parseFloat(localStorage.getItem('app_zoom') || '1.0'); };
-window._applySavedZoom = function(){ applyZoom(localStorage.getItem('app_zoom') || '1.0'); };
-applyZoom(localStorage.getItem('app_zoom') || '1.0');
-}) ();
+  window.setAppZoom = function(v){ applyZoom(v); if (typeof window.renderMy === 'function') window.renderMy(); };
+  window.getAppZoom = function(){ return parseFloat(localStorage.getItem('app_zoom') || '1.0'); };
+  window._applySavedZoom = function(){ applyZoom(localStorage.getItem('app_zoom') || '1.0'); };
+  applyZoom(localStorage.getItem('app_zoom') || '1.0');
+})();
 
 const DEFAULT_CONFIG = {
   TRIAL_DAYS: 3, LICENSE_DAYS: 365, SESSION_DAYS: 365, PRICE_BIRR: 200, OWNER_NAME: "Mohammed Abdi",
@@ -282,8 +297,11 @@ const DEFAULT_CONFIG = {
     "Addis Ababa University","Addis Ababa Science and Technology University","Adama Science and Technology University","Adigrat University","Aksum University","Ambo University","Arba Minch University","Arsi University","Assosa University","Bahir Dar University","Bonga University","Bule Hora University","Debark University","Debre Berhan University","Debre Markos University","Debre Tabor University","Dilla University","Dire Dawa University","Ethiopian Civil Service University","Gambella University","Haramaya University","Hawassa University","Injibara University","Jigjiga University","Jimma University","Kebri Dehar University","Kotebe Metropolitan University","Madda Walabu University","Mekelle University","Mettu University","Mizan-Tepi University","Oda Bultum University","Raya University","Salale University","Semera University","University of Gondar","Wachemo University","Werabe University","Wolaita Sodo University","Woldia University","Wolkite University","Wollo University"
   ],
   
-  /* ORDER 37: Global Screenshot Block Config */
-  BLOCK_ALL_SCREENSHOTS: false,
+  /* ORDER 37: Granular Screenshot Block Config */
+  SCREENSHOT_PERMISSIONS: {
+    book: false, note: false, exam: true, coc: false, university: false, my: true, quiz: true, admin_block: false
+  },
+  TUTORIAL_VISIBILITY: 'all', /* 'all', 'trial_only', 'hide_trial', 'hide_all' */
   
   /* ORDER 48: Dynamic Navigation Tabs */
   NAV_TABS: [
@@ -344,6 +362,7 @@ function getSettings(){
       if (stored.EBIRR) m.push({name:'E-Birr', number:stored.EBIRR});
       merged.PAYMENT_METHODS = m.length ? m : DEFAULT_CONFIG.PAYMENT_METHODS;
     }
+    if (!merged.SCREENSHOT_PERMISSIONS) merged.SCREENSHOT_PERMISSIONS = DEFAULT_CONFIG.SCREENSHOT_PERMISSIONS;
     return merged;
   } catch(e){ return { ...DEFAULT_CONFIG }; }
 }
@@ -493,8 +512,7 @@ function applyTheme(){
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
 
-
- // ================= PART 2 STARTS HERE =================
+   // ================= PART 2 STARTS HERE =================
 
 const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
@@ -679,8 +697,7 @@ function isTrialCocAllowed(name){ const kws = Array.isArray(CONFIG.TRIAL_COC_KEY
 
 function renderTrialContentLocked(kind){ const names = { book:'Modules Library', note:'Notes', exam:'Exams', coc:'COC', info:'University Info' }; const nm = names[kind] || 'This content'; const accessNow = checkAccess(); const daysTxt = accessNow.daysLeft ? (accessNow.daysLeft + ' day' + (accessNow.daysLeft===1?'':'s') + ' left') : ''; return '<div class="locked-box"><div class="icon">🔒</div><h2>'+nm+' Not in Trial</h2><p>Trial gives access to limited content only.<br>'+escapeHtml(daysTxt)+'<br>Contact admin to unlock full access.</p><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+kind+'\')">Unlock Full Access</button></div>'; }
 function renderTrialLockedUniversity(kind){ return '<div style="background:#fff; border-radius:12px; padding:40px 20px; text-align:center;"><div style="font-size:40px; margin-bottom:10px;">🔒</div><div style="font-weight:800; font-size:15px; color:#c62828; margin-bottom:8px;">Locked — Trial limitation</div><div style="color:#666; font-size:13px; line-height:1.7; margin-bottom:16px;">Trial gives access to <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only.<br>Pick one from the dropdown above, or unlock full access.</div><button class="btn btn-primary btn-full" onclick="renderPaymentFlow(\''+(kind||'book')+'\')">Unlock Full Access</button></div>'; }
-const SS_ALLOWED_SCREENS = ['my','exam-home','quiz','auth'];
- 
+
 function setScreen(name){
   if (_navReady && !_goingBack && !_navSilent && currentScreen && currentScreen !== name) scrollMemory[currentScreen] = window.scrollY || document.documentElement.scrollTop || 0;
   if (!_goingBack && _navReady && !_navSilent) { 
@@ -695,13 +712,65 @@ function setScreen(name){
   if(window.AndroidNative && typeof window.AndroidNative.allowScreenshot==='function'){ try{ window.AndroidNative.allowScreenshot(isScreenshotAllowed()); }catch(e){} }
 }
 
-/* ORDER 37 & 40: Global Screenshot Block with Supreme Admin Bypass */
-function isScreenshotAllowed(){ 
-  if(isAdminMode()) return true; 
-  if(CONFIG.BLOCK_ALL_SCREENSHOTS) return false;
-  return SS_ALLOWED_SCREENS.includes(currentScreen); 
+/* ORDER 37: Granular Screenshot Block Config */
+function isScreenshotAllowed() { 
+  if(isAdminMode()) {
+    if(CONFIG.SCREENSHOT_PERMISSIONS && CONFIG.SCREENSHOT_PERMISSIONS.admin_block) return false;
+    return true;
+  }
+  
+  const perms = CONFIG.SCREENSHOT_PERMISSIONS || DEFAULT_CONFIG.SCREENSHOT_PERMISSIONS;
+  
+  if (currentScreen === 'quiz') return perms.quiz === true;
+  if (currentScreen === 'book-viewer') return perms.book === true;
+  if (currentScreen === 'note-viewer') return perms.note === true;
+  
+  if (currentTab === 'book') return perms.book === true;
+  if (currentTab === 'note') return perms.note === true;
+  if (currentTab === 'exam') return perms.exam === true;
+  if (currentTab === 'coc') return perms.coc === true;
+  if (currentTab === 'university') return perms.university === true;
+  if (currentTab === 'my') return perms.my === true;
+  
+  return false; 
 }
 function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!isScreenshotAllowed()); }
+
+/* ORDER 42: Auth Choice Dialog (Cancel / Sign In / Sign Up) */
+function showAuthChoice(msg) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+      <div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:20px;">${escapeHtml(msg)}</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button id="authCancel" class="btn btn-ghost btn-full">Cancel</button>
+        <button id="authSignIn" class="btn btn-primary btn-full" style="background:#0a5c36;">Sign In</button>
+        <button id="authSignUp" class="btn btn-telegram btn-full">Sign Up</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('authCancel').onclick = () => overlay.remove();
+  document.getElementById('authSignIn').onclick = () => { overlay.remove(); renderSignIn(); };
+  document.getElementById('authSignUp').onclick = () => { overlay.remove(); renderSignUp(); };
+}
+
+/* Fix for crashes from leftover calls */
+function jumpToSkipped(){}
+
+/* Copy & Paste Protection */
+document.addEventListener('contextmenu', e => {
+  if (!isAdminMode()) { e.preventDefault(); appAlert('Copying and right-click are disabled.'); }
+});
+document.addEventListener('copy', e => {
+  if (!isAdminMode()) { 
+    const active = document.activeElement;
+    if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+        e.preventDefault(); 
+        appAlert('Copying is disabled for security.'); 
+    }
+  }
+});
 
 const META_KEYS = new Set(['_blacklist','blacklist','notifications','tutorials','users','settings','registeredPhones','universityInfo','generalSubjects','version','updated']);
 function normalizeLibrary(lib){ if(!lib||typeof lib!=='object') return {}; const out={}; Object.keys(lib).forEach(uni=>{ if(META_KEYS.has(uni)) return; out[uni]={}; CONFIG.STREAMS.forEach(stream=>{ const s=(lib[uni]&&lib[uni][stream])||null; if(!s){ out[uni][stream]={"1":{pdfs:[],notes:[],exams:[],cocs:[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; return; } if(s.pdfs||s.notes||s.exams||s.cocs){ out[uni][stream]={"1":{pdfs:s.pdfs||[],notes:s.notes||[],exams:s.exams||[],cocs:s.cocs||[]},"2":{pdfs:[],notes:[],exams:[],cocs:[]}}; } else { const s1=s["1"]||{}; const s2=s["2"]||{}; out[uni][stream]={"1":{pdfs:s1.pdfs||[],notes:s1.notes||[],exams:s1.exams||[],cocs:s1.cocs||[]},"2":{pdfs:s2.pdfs||[],notes:s2.notes||[],exams:s2.exams||[],cocs:s2.cocs||[]}}; } }); }); return out; }
@@ -856,9 +925,8 @@ const SUBJECTS = {
 
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
-  
 
- // ================= PART 3 STARTS HERE =================
+   // ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
 var adminBulkMode = false;
@@ -1228,18 +1296,96 @@ function renderBottomNav(activeTab){
   return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.icon+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
 }
 
+/* Floating Buttons: AI (My Tab), Screenshot (My, Exam, Quiz), Chat (My Tab) */
 function renderChatFab(){
-  const tg = (CONFIG.TELEGRAM_USERNAME || '').trim(); const group = (CONFIG.SUPPORT_GROUP || '').trim();
-  const link = group ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,'')) : (tg ? 'https://t.me/' + tg : '#');
-  return '<div class="chat-menu"><a href="'+escapeAttr(link)+'" target="_blank" rel="noopener" class="chat-fab">CHAT</a></div>';
+  let html = '<div class="chat-menu">';
+  
+  // AI Button (Only on My Tab)
+  if (currentTab === 'my') {
+    html += '<button onclick="manualAITranslator()" class="chat-fab" style="background:linear-gradient(135deg,#b8860b,#ffd700); color:#000; margin-bottom:10px; font-size:12px; font-weight:900;">✨ AI</button>';
+  }
+  
+  // Screenshot Button (My tab, Exam Home, and Quiz)
+  if (currentTab === 'my' || currentScreen === 'exam-home' || currentScreen === 'quiz') {
+    html += '<button onclick="takeAppScreenshot()" class="chat-fab" style="background:linear-gradient(135deg,#6a3093,#4a2568); margin-bottom:10px; font-size:12px; font-weight:900;">📷</button>';
+  }
+  
+  // Chat Button (Only on My Tab)
+  if (currentTab === 'my') {
+    const tg = (CONFIG.TELEGRAM_USERNAME || '').trim();
+    const group = (CONFIG.SUPPORT_GROUP || '').trim();
+    const link = group ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,'')) : (tg ? 'https://t.me/' + tg : '#');
+    html += '<a href="'+escapeAttr(link)+'" target="_blank" rel="noopener" class="chat-fab">CHAT</a>';
+  }
+  
+  html += '</div>';
+  return html;
 }
+
+function takeAppScreenshot() {
+  const target = document.getElementById('app');
+  if(!target) return;
+  showToast('⏳ Taking screenshot...');
+  html2canvas(target, { useCORS: true, scale: 2, backgroundColor: getTheme()==='dark' ? '#000000' : null }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'AllFreshmanET_'+Date.now()+'.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('📷 Screenshot saved to your phone!');
+  }).catch(err => {
+    appAlert('Screenshot failed: ' + err.message);
+  });
+}
+
+async function manualAITranslator() {
+  if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+  const text = await appPrompt('Enter the word or sentence you want to translate/explain:');
+  if (!text) return;
+  const lang = await appPrompt('Which language do you want?\n\n(Type: Amharic, Afaan Oromoo, Tigrinya, or English)');
+  if (!lang) return;
+  
+  const popup = document.createElement('div');
+  popup.className = 'ai-popup open';
+  popup.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3>✨ AI Translation</h3><button onclick="this.closest(\'.ai-popup\').remove()" class="btn btn-ghost" style="padding:4px 8px;">Close</button></div><div id="ai-trans-result" style="font-size:14px; line-height:1.6; color:#333;">Translating...</div>';
+  document.body.appendChild(popup);
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/ai/translate', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ text: text, language: lang })
+    });
+    const data = await res.json();
+    const resultBox = document.getElementById('ai-trans-result');
+    if (data.ok) resultBox.innerHTML = data.result.replace(/\n/g, '<br>');
+    else resultBox.innerHTML = '<span style="color:red;">Translation failed. Try again.</span>';
+  } catch(e) {
+    document.getElementById('ai-trans-result').innerHTML = '<span style="color:red;">Network error.</span>';
+  }
+}
+
 function openSupportGroup(){ const g=(CONFIG.SUPPORT_GROUP||'').trim(); if(!g) return appAlert('Support group not configured. Contact admin.'); let url=g; if(!/^https?:\/\//i.test(url)) url='https://t.me/'+url.replace(/^@/,''); window.open(url,'_blank'); }
 
 function openNotifPanel(){ const list=getMyNotifications(); const seen=getSeenNotifs(); const html = list.length ? list.slice().reverse().map(n=>{ const isUnread=!seen.includes(n.id); return '<div class="notif-item '+(isUnread?'unread':'')+'" onclick="markSeen(\''+escapeAttr(n.id)+'\')"><div class="nt">'+new Date(n.at||Date.now()).toLocaleString()+'</div><div class="nb">'+escapeHtml(n.message)+'</div></div>'; }).join('') : '<div class="empty-msg">No notifications yet.</div>'; const panel=document.createElement('div'); panel.className='notif-panel open'; panel.id='notifPanel'; panel.innerHTML='<div class="notif-drawer"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;"><h2 style="margin:0;">Notifications</h2><button class="btn btn-ghost" style="padding:8px 14px;" onclick="closeNotifPanel()">Close</button></div>'+html+'</div>'; panel.addEventListener('click',e=>{ if(e.target===panel) closeNotifPanel(); }); document.body.appendChild(panel); setTimeout(()=>{ list.forEach(n=>markNotifSeen(n.id)); },1200); }
 function closeNotifPanel(){ const p=document.getElementById('notifPanel'); if(p) p.remove(); }
 function markSeen(id){ markNotifSeen(id); }
 
-function renderTutorialCard(kind,title,url){ const embed=embedUrl(url); if(embed){ const isIframe=/youtube|vimeo/.test(embed); const media=isIframe?'<div class="video-frame"><iframe src="'+escapeAttr(embed)+'" allowfullscreen loading="lazy"></iframe></div>':'<div class="video-frame"><video src="'+escapeAttr(embed)+'" controls playsinline></video></div>'; return '<div class="tutorial-card" style="flex-direction:column; align-items:stretch;"><div class="t-title" style="margin-bottom:10px;">'+escapeHtml(title)+'</div>'+media+'</div>'; } return '<div class="tutorial-card" onclick="appAlert(\'Video not uploaded yet. Contact admin.\')"><div class="t-icon">▶</div><div class="t-body"><div class="t-title">'+escapeHtml(title)+'</div><div class="t-sub">Tap to watch (video coming soon)</div></div></div>'; }
+/* Tutorial Visibility Logic */
+function renderTutorialCard(kind,title,url){ 
+  const vis = CONFIG.TUTORIAL_VISIBILITY || 'all';
+  const isTrial = checkAccess().status === 'trial';
+  
+  if(vis === 'hide_all') return '';
+  if(vis === 'trial_only' && !isTrial) return '';
+  if(vis === 'hide_trial' && isTrial) return '';
+
+  const embed=embedUrl(url); 
+  if(embed){ 
+    const isIframe=/youtube|vimeo/.test(embed); 
+    const media=isIframe?'<div class="video-frame"><iframe src="'+escapeAttr(embed)+'" allowfullscreen loading="lazy"></iframe></div>':'<div class="video-frame"><video src="'+escapeAttr(embed)+'" controls playsinline></video></div>'; 
+    return '<div class="tutorial-card" style="flex-direction:column; align-items:stretch;"><div class="t-title" style="margin-bottom:10px;">'+escapeHtml(title)+'</div>'+media+'</div>'; 
+  } 
+  return '<div class="tutorial-card" onclick="appAlert(\'Video not uploaded yet. Contact admin.\')"><div class="t-icon">▶</div><div class="t-body"><div class="t-title">'+escapeHtml(title)+'</div><div class="t-sub">Tap to watch (video coming soon)</div></div></div>'; 
+}
 
 function renderSignUp(){
   setScreen('auth');
@@ -1304,56 +1450,6 @@ async function submitSignUp(){
   }
  }
 
-/* ORDER 22: Long Press (3 seconds) to Translate */
-let _pressTimer, _startX, _startY;
-document.addEventListener('touchstart', (e) => {
-  if (e.target.closest('input, textarea, button, .tab, .btn, .chat-fab')) return;
-  _startX = e.touches[0].clientX;
-  _startY = e.touches[0].clientY;
-  _pressTimer = setTimeout(() => {
-    let word = '';
-    // Extract word under touch
-    if (document.caretRangeFromPoint) {
-      const range = document.caretRangeFromPoint(_startX, _startY);
-      if (range && range.startContainer.nodeType === 3) {
-        const text = range.startContainer.textContent;
-        const offset = range.startOffset;
-        let start = offset, end = offset;
-        while (start > 0 && /\S/.test(text[start - 1])) start--;
-        while (end < text.length && /\S/.test(text[end])) end++;
-        word = text.substring(start, end).trim();
-      }
-    } else if (document.caretPositionFromPoint) {
-      const range = document.caretPositionFromPoint(_startX, _startY);
-      if (range && range.offsetNode.nodeType === 3) {
-        const text = range.offsetNode.textContent;
-        const offset = range.offset;
-        let start = offset, end = offset;
-        while (start > 0 && /\S/.test(text[start - 1])) start--;
-        while (end < text.length && /\S/.test(text[end])) end++;
-        word = text.substring(start, end).trim();
-      }
-    }
-    
-    if (!word) {
-      word = window.getSelection().toString().trim();
-    }
-
-    if (word && word.length > 1) {
-      translateText(word);
-    } else {
-      appAlert('Hold down directly on a word for 3 seconds to translate.');
-    }
-  }, 3000);
-}, { passive: true });
-
-document.addEventListener('touchend', () => clearTimeout(_pressTimer));
-document.addEventListener('touchmove', (e) => {
-  if (Math.abs(e.touches[0].clientX - _startX) > 10 || Math.abs(e.touches[0].clientY - _startY) > 10) {
-    clearTimeout(_pressTimer); 
-  }
-});
-
 async function translateText(text) {
   if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
   const lang = await appPrompt('Which language do you want?\n\n(Type: Amharic, Afaan Oromoo, Tigrinya, or English)');
@@ -1376,10 +1472,9 @@ async function translateText(text) {
   } catch(e) {
     document.getElementById('ai-trans-result').innerHTML = '<span style="color:red;">Network error.</span>';
   }
-      }  
+  }
 
-
-   // ================= PART 4 STARTS HERE =================
+     // ================= PART 4 STARTS HERE =================
 
  function renderSignIn(){
   setScreen('auth');
@@ -1477,13 +1572,11 @@ function switchTab(tab){
   if(isKeyLocked()){ renderKeyBlockedScreen(); return; }
   if(isClosureDay()){ renderClosureScreen(); return; }
   
-  // ORDER 36: Prompt guest on 'My' tab
+  // ORDER 36: Prompt guest on 'My' tab using the new Auth Choice
   if(tab === 'my'){ 
     if(!isSignedIn()){
       if (currentScreen !== 'auth' && currentScreen !== 'force-change-pw' && currentScreen !== 'reset-code') {
-        appConfirm('You need to Sign Up or Sign In to access your profile, progress, and premium features.\n\nGo to Sign Up?').then(ok => {
-          if (ok) { renderSignUp(); } else { setScreen('my'); renderMy(); }
-        });
+        showAuthChoice('You need to Sign Up or Sign In to access your profile, progress, and premium features.');
         return;
       }
     }
@@ -1571,7 +1664,7 @@ function renderBookList(uni){
 function openBook(uni,stream,sem,i){
   /* ORDER 36: Click prompt for guests */
   if(!isSignedIn()||!hasActiveSession()){ 
-    appConfirm('Please sign up or log in to view this module.').then(ok => { if(ok) switchTab('my'); });
+    showAuthChoice('Please sign up or log in to view this module.');
     return; 
   }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
@@ -1628,7 +1721,7 @@ function renderNoteList(uni){
 function openNote(uni,stream,sem,i){
   /* ORDER 36: Click prompt for guests */
   if(!isSignedIn()||!hasActiveSession()){ 
-    appConfirm('Please sign up or log in to view this note.').then(ok => { if(ok) switchTab('my'); });
+    showAuthChoice('Please sign up or log in to view this note.');
     return; 
   }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
@@ -1644,16 +1737,15 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-      }
+  }
 
+     // ================= PART 5 STARTS HERE =================
 
-  
-   // ================= PART 5 STARTS HERE =================
-
-/* Fix for "nextQuestion is not defined" crash */
+/* Fix for crashes from leftover calls */
 function nextQuestion(){}
 function prevQuestion(){}
 function skipQuestion(){}
+function jumpToSkipped(){}
 
 /* ============ EXAMS — GUEST TRIAL ACCESS ============ */
 function renderExamHome(){
@@ -1714,14 +1806,21 @@ function renderExamList(uni){
   el.innerHTML = html;
 }
 function startUniExam(uni,stream,sem,i){
-  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  if(isTrialLockedUniversity(uni)){ 
+    if(!isSignedIn()){ showAuthChoice('This university is locked in Trial. Sign up or Sign In to unlock.'); return; }
+    appAlert('Trial: this university is not unlocked.'); return; 
+  }
   const c=getUniContent(uni,stream,sem); const ex=c.exams[i];
   if(!ex) return;
   if(checkAccess().status === 'trial'){
     const kwSet = Array.isArray(CONFIG.TRIAL_EXAM_KEYWORDS) && CONFIG.TRIAL_EXAM_KEYWORDS.length > 0;
     const allowed = kwSet ? isTrialExamAllowed(ex.name || '') === true : isTrialSubjectKey('', ex.name || '');
     if(!allowed){
-      appAlert('🔒 This exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      if(!isSignedIn()){ 
+        appAlert('🔒 This exam is not in your trial.\n\nSign up or Sign In to unlock full content.').then(()=>showAuthChoice('Please choose an option to continue:')); 
+      } else {
+        appAlert('🔒 This exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium')); 
+      }
       return;
     }
   }
@@ -1733,7 +1832,11 @@ function startUniExam(uni,stream,sem,i){
 function startBuiltInExam(key){
   const s=getGeneralSubjects()[key]; if(!s) return;
   if(checkAccess().status === 'trial' && !isTrialSubjectKey(key, s.name || '')){
-    appAlert('🔒 This practice exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+    if(!isSignedIn()){ 
+      appAlert('🔒 This practice exam is not in your trial.\n\nSign up or Sign In to unlock full content.').then(()=>showAuthChoice('Please choose an option to continue:')); 
+    } else {
+      appAlert('🔒 This practice exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium')); 
+    }
     return;
   }
   startQuiz(s.name, s.questions||[], CONFIG.DEFAULT_EXAM_TIME_MINUTES);
@@ -1786,14 +1889,21 @@ function renderCocList(uni){
   el.innerHTML = html;
 }
 function startUniCoc(uni,stream,sem,i){
-  if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
+  if(isTrialLockedUniversity(uni)){ 
+    if(!isSignedIn()){ showAuthChoice('This university is locked in Trial. Sign up or Sign In to unlock.'); return; }
+    appAlert('Trial: this university is not unlocked.'); return; 
+  }
   const c=getUniContent(uni,stream,sem); const cx=c.cocs[i];
   if(!cx) return;
   if(checkAccess().status === 'trial'){
     const kwSet = Array.isArray(CONFIG.TRIAL_COC_KEYWORDS) && CONFIG.TRIAL_COC_KEYWORDS.length > 0;
     const allowed = kwSet ? isTrialCocAllowed(cx.name || '') === true : isTrialSubjectKey('', cx.name || '');
     if(!allowed){
-      appAlert('🔒 This COC is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
+      if(!isSignedIn()){ 
+        appAlert('🔒 This COC is not in your trial.\n\nSign up or Sign In to unlock full content.').then(()=>showAuthChoice('Please choose an option to continue:')); 
+      } else {
+        appAlert('🔒 This COC is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium')); 
+      }
       return;
     }
   }
@@ -1808,7 +1918,7 @@ function renderWeeklyHome() {
   app.innerHTML = renderHeader('weekly') + '<div class="panel"><h2>Weekly Exam</h2><div class="empty-msg">Weekly Exams will appear here once added by admin.</div></div>' + renderBottomNav('weekly') + renderChatFab();
 }
 
-/* ============ NEW QUIZ ENGINE (Orders 12-24) ============ */
+/* ============ NEW QUIZ ENGINE ============ */
 function prepareQuestions(qs){ return qs.map(q=>{ 
   if(q.options && q.options.length > 0) {
     const ct=q.options[q.answer]; const opts=shuffle(q.options); 
@@ -1834,14 +1944,17 @@ function startQuiz(name,rawQuestions,timeMinutes){
         <div style="font-size:11px; font-weight:normal; opacity:0.8; margin-top:4px;">See the answer and explanation instantly.</div>
       </button>
       
-      <button id="modeExam" class="btn btn-ghost btn-full" style="padding:16px; border:2px solid #ccc;">
+      <button id="modeExam" class="btn btn-ghost btn-full" style="padding:16px; border:2px solid #ccc; margin-bottom:12px;">
         <div style="font-size:15px; font-weight:800; color:#333;">Exam Mode</div>
         <div style="font-size:11px; font-weight:normal; color:#666; margin-top:4px;">Submit at the end to see your score and answers.</div>
       </button>
+
+      <button id="modeCancel" class="btn btn-ghost btn-full" style="padding:12px; color:#c62828;">Cancel</button>
     </div>
   `;
   document.body.appendChild(overlay);
 
+  document.getElementById('modeCancel').onclick = () => overlay.remove();
   document.getElementById('modePractice').onclick = () => { overlay.remove(); initQuiz(name, rawQuestions, timeMinutes, true); };
   document.getElementById('modeExam').onclick = () => { overlay.remove(); initQuiz(name, rawQuestions, timeMinutes, false); };
 }
@@ -2142,10 +2255,9 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-  }
-  
+                                                                                                                                                                                                                                                                                                             }
 
-   // ================= PART 6A STARTS HERE =================
+     // ================= PART 6A STARTS HERE =================
 
 /* ============ ADMIN: GENERATE RESET CODE ============ */
 async function adminGenerateResetCode() {
@@ -2234,7 +2346,7 @@ async function submitResetWithCode() {
   const adminDashBoxes = isAdminMode() ? '<div class="panel"><h2>Admin Dashboard</h2><div class="stat-grid" style="margin-bottom:0;"><div class="stat-box" style="cursor:pointer;" onclick="renderProgress()"><div class="num">'+stats.total+'</div><div class="label">Your Attempts</div></div><div class="stat-box" style="cursor:pointer;" onclick="renderProgress()"><div class="num">'+stats.avg+'%</div><div class="label">Your Avg</div></div><div class="stat-box" style="cursor:pointer;" onclick="renderProgress()"><div class="num">'+stats.best+'%</div><div class="label">Your Best</div></div></div></div>' : '';
 
   app.innerHTML=renderHeader('my')+intro+
-    '<div class="panel"><h2>My Profile</h2><div style="background:#f7f7fa; border-radius:10px; padding:14px; font-size:13px; line-height:1.8; margin-bottom:12px;"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Your ID:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
+    '<div class="panel"><h2>My Profile</h2><div class="profile-info-box"><div><strong>Name:</strong> '+escapeHtml(u.name||'-')+'</div><div><strong>Phone:</strong> '+escapeHtml(u.phone||'-')+'</div><div><strong>University:</strong> '+escapeHtml(u.university||'-')+' <span class="stream-badge">'+escapeHtml(u.stream||'-')+'</span></div><div><strong>Your ID:</strong> <code>'+getDeviceHash()+'</code></div><div><strong>Session expires in:</strong> <span class="session-badge">'+sessLeft+' day'+(sessLeft===1?'':'s')+' left</span></div></div><p style="font-size:12px; color:#999; margin-bottom:14px;">To change university, stream, or password — contact admin.</p><button class="btn btn-danger btn-full" onclick="doLogout()">Logout</button></div>'+
     '<div class="panel"><h2>Contact Admin</h2><p style="color:#666; font-size:13px; margin-bottom:12px;">Reach admin on Telegram'+(phone?' or call':'')+'.</p><a href="https://t.me/'+escapeAttr(CONFIG.TELEGRAM_USERNAME)+'" target="_blank" rel="noopener" class="btn btn-telegram btn-full" style="display:block; text-align:center; text-decoration:none;">📨 @'+escapeHtml(CONFIG.TELEGRAM_USERNAME)+'</a>'+(phone?'<a href="tel:'+escapeAttr(phone)+'" class="btn btn-ghost btn-full" style="display:block; text-align:center; text-decoration:none;margin-top:8px;">📞 '+escapeHtml(phone)+'</a>':'')+'</div>'+
     '<div class="panel"><h2>Theme</h2><div style="display:flex; gap:8px;"><button onclick="setTheme(\'light\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='light'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='light'?'#6a3093':'#fff')+'; color:'+(theme==='light'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">☀️ Light</button><button onclick="setTheme(\'dark\');renderMy()" style="flex:1; padding:14px; border:2px solid '+(theme==='dark'?'#6a3093':'#e0e0e6')+'; background:'+(theme==='dark'?'#6a3093':'#fff')+'; color:'+(theme==='dark'?'#fff':'#555')+'; border-radius:10px; font-weight:800; cursor:pointer;">🌙 Dark</button></div></div>'+
     
@@ -2462,6 +2574,11 @@ async function adminDeleteUser(phone){
 }
 
 function renderEnterKey(){
+  if(!isSignedIn()){
+    showAuthChoice('You must be registered and signed in to enter a license key.');
+    return;
+  }
+  
   setScreen('enter-key');
   const locked = isKeyLocked();
   const lockInfo = locked ? (()=>{ const r=keyLockRemaining(); return '<div class="key-attempt-warn danger">Try again in '+r.d+'d '+r.h+'h '+r.m+'m</div>'; })() : '';
@@ -2560,6 +2677,8 @@ function renderAdminSettings(){
   const pmList = (Array.isArray(s.PAYMENT_METHODS) && s.PAYMENT_METHODS.length) ? s.PAYMENT_METHODS : DEFAULT_CONFIG.PAYMENT_METHODS;
   
   const appColors = s.APP_COLORS || DEFAULT_CONFIG.APP_COLORS;
+  const shots = s.SCREENSHOT_PERMISSIONS || DEFAULT_CONFIG.SCREENSHOT_PERMISSIONS;
+  const shotChk = (k, label) => '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(shots[k]?'#4caf50':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(shots[k]?'#e8f5e9':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stShot_'+k+'" '+(shots[k]?'checked':'')+' style="width:auto;margin:0;"> '+label+'</label>';
   
   app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup">'+
   
@@ -2567,8 +2686,18 @@ function renderAdminSettings(){
   '<label class="field-label">Primary Color (Light Mode)</label><input type="color" id="stPrimaryColor" class="field-input" value="'+(appColors.primary||'#0a5c36')+'" style="height:50px;">'+
   '<label class="field-label">Accent Color (Gold/Dark Mode)</label><input type="color" id="stAccentColor" class="field-input" value="'+(appColors.accent||'#b8860b')+'" style="height:50px;">'+
   
-  '<h3>Security</h3>'+
-  '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(s.BLOCK_ALL_SCREENSHOTS?'#ff4757':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(s.BLOCK_ALL_SCREENSHOTS?'#ffebee':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stBlockScreenshots" '+(s.BLOCK_ALL_SCREENSHOTS?'checked':'')+' style="width:auto;margin:0;"> 🚫 Block Screenshots on ALL Screens (Admins Bypass)</label>'+
+  '<h3>Tutorial Visibility</h3>'+
+  '<label class="field-label">Show Tutorials</label>'+
+  '<select id="stTutVis" class="field-select">'+
+    '<option value="all" '+(s.TUTORIAL_VISIBILITY==='all'?'selected':'')+'>Show to All</option>'+
+    '<option value="trial_only" '+(s.TUTORIAL_VISIBILITY==='trial_only'?'selected':'')+'>Show to Trial Users Only</option>'+
+    '<option value="hide_trial" '+(s.TUTORIAL_VISIBILITY==='hide_trial'?'selected':'')+'>Hide from Trial Users</option>'+
+    '<option value="hide_all" '+(s.TUTORIAL_VISIBILITY==='hide_all'?'selected':'')+'>Hide from All</option>'+
+  '</select>'+
+  
+  '<h3>Screenshot Permissions</h3>'+
+  '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(shots.admin_block?'#ff4757':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:12px;background:'+(shots.admin_block?'#ffebee':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stShot_admin" '+(shots.admin_block?'checked':'')+' style="width:auto;margin:0;"> 🚫 Block Screenshots for Admin Too</label>'+
+  shotChk('book','📚 Allow Modules')+shotChk('note','📝 Allow Notes')+shotChk('exam','📋 Allow Exams')+shotChk('coc','🎯 Allow COC')+shotChk('university','🏛️ Allow Info')+shotChk('my','👤 Allow My Tab')+shotChk('quiz','✍️ Allow During Quiz')+
   
   '<h3>Payment Methods (1–6)</h3><label class="field-label">Price (Birr)</label><input type="number" id="stPrice" class="field-input" value="'+escapeAttr(s.PRICE_BIRR)+'"><label class="field-label">Methods</label><div id="payMethodsList">'+ pmList.map(m=>renderPaymentMethodRow(m)).join('') +'</div><button type="button" class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="addPaymentMethod()">+ Add Payment Method</button><h3>Rules</h3><label class="field-label">Trial Days</label><input type="number" id="stTrialDays" class="field-input" value="'+escapeAttr(s.TRIAL_DAYS)+'" min="0" max="365"><label class="field-label">License Days</label><input type="number" id="stLicenseDays" class="field-input" value="'+escapeAttr(s.LICENSE_DAYS)+'" min="1" max="3650"><label class="field-label">Session Days</label><input type="number" id="stSessionDays" class="field-input" value="'+escapeAttr(s.SESSION_DAYS)+'" min="1" max="3650"><label class="field-label">Key Max Attempts</label><input type="number" id="stKeyMax" class="field-input" value="'+escapeAttr(s.KEY_MAX_ATTEMPTS)+'" min="2" max="10"><h3>Trial Configuration</h3><label class="field-label">Trial Universities</label><div style="max-height:220px; overflow-y:auto; border:2px solid #e0e0e6; border-radius:10px; padding:8px; margin-bottom:4px; background:#fafafa;">'+ trialUniCheckboxes(s.UNIVERSITIES, s.TRIAL_UNIVERSITIES) +'</div><label class="field-label" style="margin-top:16px;">Trial Content</label>'+chk('book','📚 Modules')+chk('note','📝 Note')+chk('exam','📋 Exam')+chk('coc','🎯 COC')+chk('info','🏛️ University Info')+'<label class="field-label" style="margin-top:16px;">Trial Subjects (comma separated)</label><input type="text" id="stTrialSubjects" class="field-input" value="'+escapeAttr((s.TRIAL_SUBJECTS||[]).join(', '))+'" placeholder="english, math"><label class="field-label" style="margin-top:16px;">Trial Book Keywords (comma separated)</label><input type="text" id="stTrialBookKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_BOOK_KEYWORDS||[]).join(', '))+'" placeholder="math, physics, chapter 1"><label class="field-label" style="margin-top:16px;">Trial Note Keywords (comma separated)</label><input type="text" id="stTrialNoteKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_NOTE_KEYWORDS||[]).join(', '))+'" placeholder="grammar, vocabulary"><label class="field-label" style="margin-top:16px;">Trial Exam Keywords (comma separated)</label><input type="text" id="stTrialExamKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_EXAM_KEYWORDS||[]).join(', '))+'" placeholder="mid, final"><label class="field-label" style="margin-top:16px;">Trial COC Keywords (comma separated)</label><input type="text" id="stTrialCocKeywords" class="field-input" value="'+escapeAttr((s.TRIAL_COC_KEYWORDS||[]).join(', '))+'" placeholder="coc1, coc2"><h3>Universities</h3><label class="field-label">University Names (one per line)</label><textarea id="stUniversities" class="field-textarea" style="min-height:200px; font-family:monospace;">'+escapeHtml((s.UNIVERSITIES||[]).join('\n'))+'</textarea>'+
   '<h3>Security</h3><label class="field-label">Admin Password</label><input type="text" id="stAdminPw" class="field-input" value="'+escapeAttr(s.ADMIN_PASSWORD)+'"><label class="field-label">Content URL</label><input type="url" id="stContentUrl" class="field-input" value="'+escapeAttr(s.CONTENT_URL)+'" placeholder="https://all-freshman1.pages.dev/www">'+
@@ -2590,7 +2719,13 @@ async function saveAdminSettings(){
   s.APP_COLORS.primary = document.getElementById('stPrimaryColor').value;
   s.APP_COLORS.accent = document.getElementById('stAccentColor').value;
   
-  s.BLOCK_ALL_SCREENSHOTS = document.getElementById('stBlockScreenshots').checked;
+  s.TUTORIAL_VISIBILITY = document.getElementById('stTutVis').value;
+  
+  s.SCREENSHOT_PERMISSIONS = s.SCREENSHOT_PERMISSIONS || {};
+  ['book','note','exam','coc','university','my','quiz'].forEach(k => {
+    s.SCREENSHOT_PERMISSIONS[k] = document.getElementById('stShot_'+k).checked;
+  });
+  s.SCREENSHOT_PERMISSIONS.admin_block = document.getElementById('stShot_admin').checked;
   
   const pmRows = document.querySelectorAll('#payMethodsList .pay-method-row');
   const payMethods = []; pmRows.forEach(r => { const name = (r.querySelector('.pmName').value||'').trim(); const number = (r.querySelector('.pmNumber').value||'').trim(); if (name && number) payMethods.push({name, number}); });
@@ -2830,10 +2965,9 @@ window.resetNavSettings = async function() {
     await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
     appAlert('✅ Restored!'); renderAdminNavManager();
   } catch(e) {}
-    }
+          }
 
-
-   // ================= PART 6B STARTS HERE =================
+     // ================= PART 6B STARTS HERE =================
 
 function adminResetBulkSelection(){ adminBulkMode = false; adminSelected.clear(); }
 function adminToggleBulkMode(type){ adminBulkMode = !adminBulkMode; adminSelected.clear(); renderAdminContentManager(type); }
@@ -3029,10 +3163,15 @@ function renderMethodTabs(prefix, hasText = true) {
 }
 
 window.setAddMethod = function(method, prefix) {
-  document.getElementById(prefix+'_method_text').style.display = method === 'text' ? 'block' : 'none';
-  document.getElementById(prefix+'_method_url').style.display = method === 'url' ? 'block' : 'none';
-  document.getElementById(prefix+'_method_file').style.display = method === 'file' ? 'block' : 'none';
-  document.getElementById(prefix+'_methodHidden').value = method;
+  const elText = document.getElementById(prefix+'_method_text');
+  const elUrl = document.getElementById(prefix+'_method_url');
+  const elFile = document.getElementById(prefix+'_method_file');
+  const elHidden = document.getElementById(prefix+'_methodHidden');
+  
+  if (elText) elText.style.display = method === 'text' ? 'block' : 'none';
+  if (elUrl) elUrl.style.display = method === 'url' ? 'block' : 'none';
+  if (elFile) elFile.style.display = method === 'file' ? 'block' : 'none';
+  if (elHidden) elHidden.value = method;
 };
 
 function readFileAsBase64(file) {
@@ -3069,7 +3208,7 @@ function renderAdminContentManager(tab){
   
   const cocTabHTML = sem === 1 ? '<button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button>' : '';
 
-  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabHTML+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
+  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabHTML+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
 }
 
 function renderAdminBookList(uni,stream,sem,pdfs){
