@@ -26,10 +26,14 @@
     --accent-color: #b8860b;
   }
 
+  /* FIX: Prevents horizontal layout shift when modals open */
+  html { scrollbar-gutter: stable; } 
+
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
   
   /* ORDER 7: Animated Light Mode */
-  body { min-height:100vh; background: var(--bg-light); background-size: 400% 400%; animation: gradientBG 15s ease infinite; display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#ffffff; transition: background .3s, color .3s; touch-action: pan-y; }
+  /* FIX: Added overflow-x: hidden to prevent side-scrolling */
+  body { min-height:100vh; background: var(--bg-light); background-size: 400% 400%; animation: gradientBG 15s ease infinite; display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#ffffff; transition: background .3s, color .3s; touch-action: pan-y; overflow-x: hidden; }
   
   @keyframes gradientBG {
     0% { background-position: 0% 50%; }
@@ -248,6 +252,21 @@
   body.dark .pay-method-row input { background:#0f0f1e !important; color:#e0e0e0 !important; border-color:#333 !important; }
   body.dark #appDialogOverlay > div { background:#16162a !important; }
   body.dark #appDialogOverlay div[style*="color:#333"] { color:#e0e0e0 !important; }
+
+  /* NEW OVERLAY FIX FOR AI PANEL AND MODALS */
+  .overlay-modal {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.75); z-index: 99999;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay-content {
+    background: #fff; border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3); color: #222;
+    max-height: 90vh; overflow-y: auto; position: relative;
+  }
+  body.dark .overlay-content { background: #111; color: #fff; border: 1px solid #333; }
   
   @media (max-width:520px) { .app-header h1 { font-size:17px; } .subjects-grid { grid-template-columns:1fr 1fr; } .q-text { font-size:15.5px; } }
 </style>
@@ -512,7 +531,7 @@ function applyTheme(){
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
 
-   // ================= PART 2 STARTS HERE =================
+  // ================= PART 2 STARTS HERE =================
 
 const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
@@ -739,10 +758,11 @@ function updateScreenshotGuard(){ document.body.classList.toggle('no-select',!is
 /* ORDER 42: Auth Choice Dialog (Cancel / Sign In / Sign Up) */
 function showAuthChoice(msg) {
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  // UPDATED: Using the overlay classes from Part 1 for proper fixed positioning & dark mode
+  overlay.className = 'overlay-modal';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:22px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
-      <div style="font-size:15px;color:#333;line-height:1.6;margin-bottom:20px;">${escapeHtml(msg)}</div>
+    <div class="overlay-content" style="max-width:380px; text-align:center;">
+      <div style="font-size:15px;line-height:1.6;margin-bottom:20px;">${escapeHtml(msg)}</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button id="authCancel" class="btn btn-ghost btn-full">Cancel</button>
         <button id="authSignIn" class="btn btn-primary btn-full" style="background:#0a5c36;">Sign In</button>
@@ -926,7 +946,8 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
-   // ================= PART 3 STARTS HERE =================
+
+// ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
 var adminBulkMode = false;
@@ -1004,21 +1025,20 @@ function renderCustomTab(tabId) {
   app.innerHTML = renderHeader(tabId) + '<div class="panel"><h2>'+escapeHtml(data.title)+'</h2><div style="font-size:14px; line-height:1.7;">'+data.body+'</div></div>' + renderBottomNav(tabId) + renderChatFab();
 }
 
+// UPDATED: Uses .overlay-modal to prevent page shift and support dark mode natively
 function appDialog(type, message, defaultValue){
   return new Promise((resolve) => {
     const existing = document.getElementById('appDialogOverlay'); if(existing) existing.remove();
     const overlay = document.createElement('div'); overlay.id = 'appDialogOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.className = 'overlay-modal';
+    
     let inner = '';
-    const isDark = getTheme() === 'dark';
-    const textColor = isDark ? '#fff' : '#333';
-    const bgColor = isDark ? '#222' : '#fff';
     
-    if(type === 'alert') inner = '<div style="font-size:15px;color:'+textColor+';line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><button id="appDlgOk" class="btn btn-primary btn-full">OK</button>';
-    else if(type === 'confirm') inner = '<div style="font-size:15px;color:'+textColor+';line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
-    else if(type === 'prompt') inner = '<div style="font-size:15px;color:'+textColor+';line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><input type="text" id="appDlgInput" class="field-input" value="'+escapeAttr(defaultValue||'')+'" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" inputmode="text" style="margin-bottom:16px;"><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
+    if(type === 'alert') inner = '<div style="font-size:15px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><button id="appDlgOk" class="btn btn-primary btn-full">OK</button>';
+    else if(type === 'confirm') inner = '<div style="font-size:15px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
+    else if(type === 'prompt') inner = '<div style="font-size:15px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(message)+'</div><input type="text" id="appDlgInput" class="field-input" value="'+escapeAttr(defaultValue||'')+'" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" inputmode="text" style="margin-bottom:16px;"><div style="display:flex;gap:8px;"><button id="appDlgCancel" class="btn btn-ghost" style="flex:1;">Cancel</button><button id="appDlgOk" class="btn btn-primary" style="flex:1;">OK</button></div>';
     
-    overlay.innerHTML = '<div style="background:'+bgColor+';border-radius:16px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'+inner+'</div>';
+    overlay.innerHTML = '<div class="overlay-content" style="max-width:380px;">'+inner+'</div>';
     document.body.appendChild(overlay);
     const okBtn = document.getElementById('appDlgOk'); const cancelBtn = document.getElementById('appDlgCancel'); const inputEl = document.getElementById('appDlgInput');
     const cleanup = () => { overlay.remove(); };
@@ -1155,9 +1175,10 @@ async function adminCopyMoveSelected(type, action){
   const srcLabel = srcUni + ' · ' + srcStream + ' · Sem ' + srcSem;
   const uniOpts = CONFIG.UNIVERSITIES.map(u => '<option value="'+escapeHtml(u)+'" '+(u===srcUni?'selected':'')+'>'+escapeHtml(u)+'</option>').join('');
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
-  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:22px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;">' +
-    '<h2 style="font-size:17px;margin-bottom:6px;color:#333;">'+(action==='copy'?'📋 Copy':'📦 Move')+' '+adminSelected.size+' item(s)</h2>' +
+  overlay.className = 'overlay-modal';
+  
+  overlay.innerHTML = '<div class="overlay-content" style="max-width:460px;">' +
+    '<h2 style="font-size:17px;margin-bottom:6px;color:var(--primary-color);">'+(action==='copy'?'📋 Copy':'📦 Move')+' '+adminSelected.size+' item(s)</h2>' +
     '<p style="font-size:12.5px;color:#666;margin-bottom:14px;">From: <strong>'+escapeHtml(srcLabel)+'</strong></p>' +
     '<label class="field-label">Target University</label>' +
     '<select id="copyTargetUni" class="field-select" style="margin-bottom:10px;">'+uniOpts+'</select>' +
@@ -1337,16 +1358,27 @@ function takeAppScreenshot() {
   });
 }
 
+// UPDATED: Proper fixed overlay for AI + SHOWS REAL ERROR IF FAILS
 async function manualAITranslator() {
   if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+  
   const text = await appPrompt('Enter the word or sentence you want to translate/explain:');
   if (!text) return;
+  
   const lang = await appPrompt('Which language do you want?\n\n(Type: Amharic, Afaan Oromoo, Tigrinya, or English)');
   if (!lang) return;
   
   const popup = document.createElement('div');
-  popup.className = 'ai-popup open';
-  popup.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3>✨ AI Translation</h3><button onclick="this.closest(\'.ai-popup\').remove()" class="btn btn-ghost" style="padding:4px 8px;">Close</button></div><div id="ai-trans-result" style="font-size:14px; line-height:1.6; color:#333;">Translating...</div>';
+  popup.className = 'overlay-modal';
+  popup.innerHTML = `
+    <div class="overlay-content" style="max-width:400px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:10px;">
+            <h3 style="margin:0; color:var(--primary-color);">✨ AI Translation</h3>
+            <button onclick="this.closest('.overlay-modal').remove()" class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Close</button>
+        </div>
+        <div id="ai-trans-result" style="font-size:15px; line-height:1.6; min-height:80px; margin-bottom:20px; color:inherit;">⏳ Translating...</div>
+        <button onclick="this.closest('.overlay-modal').remove()" class="btn btn-primary btn-full">OK</button>
+    </div>`;
   document.body.appendChild(popup);
 
   try {
@@ -1356,10 +1388,50 @@ async function manualAITranslator() {
     });
     const data = await res.json();
     const resultBox = document.getElementById('ai-trans-result');
-    if (data.ok) resultBox.innerHTML = data.result.replace(/\n/g, '<br>');
-    else resultBox.innerHTML = '<span style="color:red;">Translation failed. Try again.</span>';
+    if (data.ok) {
+        resultBox.innerHTML = data.result.replace(/\n/g, '<br>');
+    } else {
+        // SHOW THE REAL ERROR FROM BACKEND
+        resultBox.innerHTML = '<span style="color:red; font-weight:bold;">Failed: ' + (data.err || 'Unknown error') + '</span>';
+    }
   } catch(e) {
-    document.getElementById('ai-trans-result').innerHTML = '<span style="color:red;">Network error.</span>';
+    document.getElementById('ai-trans-result').innerHTML = '<span style="color:red; font-weight:bold;">Network error: ' + e.message + '</span>';
+  }
+}
+
+// UPDATED: Same fix for translateText
+async function translateText(text) {
+  if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+  const lang = await appPrompt('Which language do you want?\n\n(Type: Amharic, Afaan Oromoo, Tigrinya, or English)');
+  if (!lang) return;
+  
+  const popup = document.createElement('div');
+  popup.className = 'overlay-modal';
+  popup.innerHTML = `
+    <div class="overlay-content" style="max-width:400px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:10px;">
+            <h3 style="margin:0; color:var(--primary-color);">✨ AI Translation</h3>
+            <button onclick="this.closest('.overlay-modal').remove()" class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Close</button>
+        </div>
+        <div id="ai-trans-result" style="font-size:15px; line-height:1.6; min-height:80px; margin-bottom:20px; color:inherit;">⏳ Translating...</div>
+        <button onclick="this.closest('.overlay-modal').remove()" class="btn btn-primary btn-full">OK</button>
+    </div>`;
+  document.body.appendChild(popup);
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/ai/translate', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ text: text, language: lang })
+    });
+    const data = await res.json();
+    const resultBox = document.getElementById('ai-trans-result');
+    if (data.ok) {
+        resultBox.innerHTML = data.result.replace(/\n/g, '<br>');
+    } else {
+        resultBox.innerHTML = '<span style="color:red; font-weight:bold;">Failed: ' + (data.err || 'Unknown error') + '</span>';
+    }
+  } catch(e) {
+    document.getElementById('ai-trans-result').innerHTML = '<span style="color:red; font-weight:bold;">Network error: ' + e.message + '</span>';
   }
 }
 
@@ -1447,30 +1519,6 @@ async function submitSignUp(){
     ok('✓ Account created!'); setTimeout(()=>{ showPostAuthWarning(()=>{ _clearNavStack(); switchTab('book'); }); }, 400);
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
-  }
- }
-
-async function translateText(text) {
-  if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
-  const lang = await appPrompt('Which language do you want?\n\n(Type: Amharic, Afaan Oromoo, Tigrinya, or English)');
-  if (!lang) return;
-  
-  const popup = document.createElement('div');
-  popup.className = 'ai-popup open';
-  popup.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3>✨ AI Translation</h3><button onclick="this.closest(\'.ai-popup\').remove()" class="btn btn-ghost" style="padding:4px 8px;">Close</button></div><div id="ai-trans-result" style="font-size:14px; line-height:1.6; color:#333;">Translating...</div>';
-  document.body.appendChild(popup);
-
-  try {
-    const res = await fetch(BACKEND_URL + '/api/ai/translate', {
-      method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ text: text, language: lang })
-    });
-    const data = await res.json();
-    const resultBox = document.getElementById('ai-trans-result');
-    if (data.ok) resultBox.innerHTML = data.result.replace(/\n/g, '<br>');
-    else resultBox.innerHTML = '<span style="color:red;">Translation failed. Try again.</span>';
-  } catch(e) {
-    document.getElementById('ai-trans-result').innerHTML = '<span style="color:red;">Network error.</span>';
   }
   }
 
@@ -1737,9 +1785,9 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-  }
+      }
 
-     // ================= PART 5 STARTS HERE =================
+  // ================= PART 5 STARTS HERE =================
 
 /* Fix for crashes from leftover calls */
 function nextQuestion(){}
@@ -1928,15 +1976,15 @@ function prepareQuestions(qs){ return qs.map(q=>{
   }
 }); }
 
+// UPDATED: Fixed the custom overlay for Exam Mode selection to prevent layout shift and support dark mode
 function startQuiz(name,rawQuestions,timeMinutes){
   if (quizState && quizState.subjectName === name && Date.now() - (quizState.startTime||0) < 1000) return; 
 
-  // Unmissable Mode Selection Overlay
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.className = 'overlay-modal';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
-      <h2 style="font-size:18px;margin-bottom:10px;color:#333;">Choose Exam Mode</h2>
+    <div class="overlay-content" style="max-width:380px; text-align:center;">
+      <h2 style="font-size:18px;margin-bottom:10px;color:var(--primary-color);">Choose Exam Mode</h2>
       <p style="font-size:13px;color:#666;margin-bottom:20px;">How do you want to take this exam?</p>
       
       <button id="modePractice" class="btn btn-primary btn-full" style="margin-bottom:12px; background:#0a5c36; padding:16px;">
@@ -1945,8 +1993,8 @@ function startQuiz(name,rawQuestions,timeMinutes){
       </button>
       
       <button id="modeExam" class="btn btn-ghost btn-full" style="padding:16px; border:2px solid #ccc; margin-bottom:12px;">
-        <div style="font-size:15px; font-weight:800; color:#333;">Exam Mode</div>
-        <div style="font-size:11px; font-weight:normal; color:#666; margin-top:4px;">Submit at the end to see your score and answers.</div>
+        <div style="font-size:15px; font-weight:800;">Exam Mode</div>
+        <div style="font-size:11px; font-weight:normal; opacity:0.8; margin-top:4px;">Submit at the end to see your score and answers.</div>
       </button>
 
       <button id="modeCancel" class="btn btn-ghost btn-full" style="padding:12px; color:#c62828;">Cancel</button>
@@ -1969,7 +2017,7 @@ function initQuiz(name, rawQuestions, timeMinutes, isPractice) {
     questions:prepareQuestions(rawQuestions), 
     answers: new Array(rawQuestions.length).fill(-1), 
     revealed: {}, 
-    isPracticeMode: isPractice,
+    isPracticeMode: isPractice, 
     examSecondsLeft:totalSeconds, examSecondsElapsed:0, seconds:0, timerId:null, returnScreen:returnScreen, startTime: Date.now()
   };
   _startQuizTimer(totalSeconds); 
@@ -2255,7 +2303,7 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-                                                                                                                                                                                                                                                                                                             }
+    }
 
      // ================= PART 6A STARTS HERE =================
 
@@ -2965,9 +3013,13 @@ window.resetNavSettings = async function() {
     await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
     appAlert('✅ Restored!'); renderAdminNavManager();
   } catch(e) {}
-          }
+    }
 
-     // ================= PART 6B STARTS HERE =================
+
+  
+
+
+   // ================= PART 6B STARTS HERE =================
 
 function adminResetBulkSelection(){ adminBulkMode = false; adminSelected.clear(); }
 function adminToggleBulkMode(type){ adminBulkMode = !adminBulkMode; adminSelected.clear(); renderAdminContentManager(type); }
@@ -3163,15 +3215,10 @@ function renderMethodTabs(prefix, hasText = true) {
 }
 
 window.setAddMethod = function(method, prefix) {
-  const elText = document.getElementById(prefix+'_method_text');
-  const elUrl = document.getElementById(prefix+'_method_url');
-  const elFile = document.getElementById(prefix+'_method_file');
-  const elHidden = document.getElementById(prefix+'_methodHidden');
-  
-  if (elText) elText.style.display = method === 'text' ? 'block' : 'none';
-  if (elUrl) elUrl.style.display = method === 'url' ? 'block' : 'none';
-  if (elFile) elFile.style.display = method === 'file' ? 'block' : 'none';
-  if (elHidden) elHidden.value = method;
+  document.getElementById(prefix+'_method_text').style.display = method === 'text' ? 'block' : 'none';
+  document.getElementById(prefix+'_method_url').style.display = method === 'url' ? 'block' : 'none';
+  document.getElementById(prefix+'_method_file').style.display = method === 'file' ? 'block' : 'none';
+  document.getElementById(prefix+'_methodHidden').value = method;
 };
 
 function readFileAsBase64(file) {
@@ -3208,7 +3255,7 @@ function renderAdminContentManager(tab){
   
   const cocTabHTML = sem === 1 ? '<button onclick="adminEditState.tab=\'coc\';adminEditState.editing=null;renderAdminContentManager(\'coc\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='coc'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='coc'?'#6a3093':'#fff')+'; color:'+(tab==='coc'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">COC ('+(c.cocs||[]).length+')</button>' : '';
 
-  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabHTML+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
+  app.innerHTML=renderHeader(tab)+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — Content Manager</div><h2>Content Manager</h2><label class="field-label">Working University (source for edit/delete)</label><select onchange="adminEditState.uni=this.value;adminEditState.editing=null;adminEditState.addToUnis=new Set([this.value]);renderAdminContentManager(\''+tab+'\')" class="field-select">'+uniOpts+'</select><label class="field-label">Stream</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.stream=\'Natural\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Natural'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Natural'?'#6a3093':'#fff')+'; color:'+(stream==='Natural'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Natural</button><button onclick="adminEditState.stream=\'Social\';adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(stream==='Social'?'#6a3093':'#e0e0e6')+'; background:'+(stream==='Social'?'#6a3093':'#fff')+'; color:'+(stream==='Social'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">Social</button></div><label class="field-label">Semester</label><div style="display:flex; gap:8px; margin-bottom:12px;"><button onclick="adminEditState.semester=1;adminEditState.editing=null;renderAdminContentManager(\''+tab+'\')" style="flex:1; padding:10px; border:2px solid '+(sem===1?'#6a3093':'#e0e0e6')+'; background:'+(sem===1?'#6a3093':'#fff')+'; color:'+(sem===1?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">1st Sem</button><button onclick="adminEditState.semester=2;adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; padding:10px; border:2px solid '+(sem===2?'#6a3093':'#e0e0e6')+'; background:'+(sem===2?'#6a3093':'#fff')+'; color:'+(sem===2?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer;">2nd Sem</button></div><div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;"><button onclick="adminEditState.tab=\'book\';adminEditState.editing=null;renderAdminContentManager(\'book\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='book'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='book'?'#6a3093':'#fff')+'; color:'+(tab==='book'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Modules ('+(c.pdfs||[]).length+')</button><button onclick="adminEditState.tab=\'note\';adminEditState.editing=null;renderAdminContentManager(\'note\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='note'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='note'?'#6a3093':'#fff')+'; color:'+(tab==='note'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Notes ('+(c.notes||[]).length+')</button><button onclick="adminEditState.tab=\'exam\';adminEditState.editing=null;renderAdminContentManager(\'exam\')" style="flex:1; min-width:70px; padding:10px 6px; border:2px solid '+(tab==='exam'?'#6a3093':'#e0e0e6')+'; background:'+(tab==='exam'?'#6a3093':'#fff')+'; color:'+(tab==='exam'?'#fff':'#555')+'; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px;">Exams ('+(c.exams||[]).length+')</button>'+cocTabHTML+'</div>'+(tab==='book'?renderAdminBookList(uni,stream,sem,c.pdfs||[]):'')+(tab==='note'?renderAdminNoteList(uni,stream,sem,c.notes||[]):'')+(tab==='exam'?renderAdminExamList(uni,stream,sem,c.exams||[]):'')+(tab==='coc'?renderAdminCocList(uni,stream,sem,c.cocs||[]):'')+'<div style="border-top:1px solid #eee; margin-top:20px; padding-top:16px;"><button class="btn btn-primary btn-full" onclick="exportContentForShipping()">Export Content JSON</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="clearDraftContent()">Clear Draft</button><button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="goBack()">Back</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button></div></div>'+renderBottomNav(tab)+renderChatFab();
 }
 
 function renderAdminBookList(uni,stream,sem,pdfs){
