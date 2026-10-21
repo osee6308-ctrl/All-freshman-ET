@@ -17,7 +17,9 @@
 <style>
   /* ORDER 43: Dynamic Variables for Admin Branding */
   :root {
-    --bg-light: linear-gradient(135deg, #0a5c36, #1e8449 50%, #b8860b);
+    /* Green/Gold/Blue/Yellow mix */
+    --bg-light: linear-gradient(135deg, #0a5c36, #1e8449, #1e3c72, #b8860b, #ffd700);
+    /* Peep Black Dark Mode */
     --bg-dark: #000000;
     --primary-color: #0a5c36;
     --accent-color: #b8860b;
@@ -25,11 +27,17 @@
 
   * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui,-apple-system,sans-serif; }
   
-  /* ORDER 7: Green/Gold Light Mode */
-  body { min-height:100vh; background: var(--bg-light); display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#ffffff; transition: background .3s, color .3s; touch-action: pan-y; }
+  /* ORDER 7: Animated Light Mode */
+  body { min-height:100vh; background: var(--bg-light); background-size: 400% 400%; animation: gradientBG 15s ease infinite; display:flex; justify-content:center; align-items:flex-start; padding:12px 12px 100px; color:#ffffff; transition: background .3s, color .3s; touch-action: pan-y; }
   
-  /* ORDER 8: Deep Black Dark Mode */
-  body.dark { background: var(--bg-dark) !important; color:#ffffff !important; }
+  @keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* ORDER 8: Peep Black Dark Mode */
+  body.dark { background: var(--bg-dark) !important; color:#ffffff !important; animation: none; }
   
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
   body:not(.admin-mode) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -44,11 +52,14 @@
   .hdr-actions { display:flex; gap:6px; flex-shrink:0; }
   .hdr-btn { position:relative; background:rgba(255,255,255,.18); border:none; color:#fff; width:42px; height:42px; border-radius:50%; cursor:pointer; font-size:19px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .hdr-btn .dot { position:absolute; top:6px; right:6px; min-width:16px; height:16px; padding:0 4px; background:#ff4757; color:#fff; border-radius:20px; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #2a5298; }
-  .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 4px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:9000; gap:2px; overflow-x:auto; }
+  
+  /* FIXED: Bottom Nav perfectly fits all tabs */
+  .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 2px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:9000; gap:2px; }
   body.dark .bottom-nav { background:rgba(10,10,10,.96); }
-  .bottom-nav .tab { flex:1; padding:8px 2px; border:none; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; font-size:9.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:10px; transition:.15s; min-width:60px; }
-  .bottom-nav .tab .ico { font-size:17px; line-height:1; }
+  .bottom-nav .tab { flex:1 1 0; padding:8px 1px; border:none; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; font-size:9px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:10px; transition:.15s; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bottom-nav .tab .ico { font-size:18px; line-height:1; }
   .bottom-nav .tab.active { background:rgba(255,255,255,.15); color:#fff; }
+  
   .panel { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-bottom:16px; transition: background .3s, color .3s; color: #222; }
   body.dark .panel { background:#111111; color:#ffffff; border: 1px solid #333; }
   .panel h2 { font-size:19px; margin-bottom:12px; color:var(--primary-color); }
@@ -290,7 +301,7 @@ const DEFAULT_CONFIG = {
   
   /* ORDER 43: App Branding (Colors) */
   APP_COLORS: {
-    lightBg: 'linear-gradient(135deg, #0a5c36, #1e8449 50%, #b8860b)',
+    lightBg: 'linear-gradient(135deg, #0a5c36, #1e8449, #1e3c72, #b8860b, #ffd700)',
     darkBg: '#000000',
     primary: '#0a5c36',
     accent: '#b8860b'
@@ -482,7 +493,8 @@ function applyTheme(){
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
 
-  // ================= PART 2 STARTS HERE =================
+
+ // ================= PART 2 STARTS HERE =================
 
 const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
@@ -844,8 +856,9 @@ const SUBJECTS = {
 
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
+  
 
-  // ================= PART 3 STARTS HERE =================
+ // ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
 var adminBulkMode = false;
@@ -868,7 +881,7 @@ let _navReady = false;
 let _viewerState = null;
 let _lastBaseTab = 'book';
 const BASE_TABS = { book:1, note:1, exam:1, coc:1, university:1, my:1, weekly:1 };
-const BASE_SCREENS = new Set(['book','note','exam-home','coc-home','university-info','my','weekly-home']);
+const BASE_SCREENS = new Set(['book','note','exam-home','coc-home','university-info','my','weekly-home', 'custom-tab']);
 const _screenStack = [];
 let _goingBack = false;
 const _lastUniSelection = { book: '', note: '', exam: '', coc: '', university: '' };
@@ -881,7 +894,7 @@ function _renderScreenByName(name){
     case 'note': renderNotesHome(); break;
     case 'exam-home': renderExamHome(); break;
     case 'coc-home': renderCocHome(); break;
-    case 'weekly-home': renderWeeklyHome(); break; /* ORDER 49 */
+    case 'weekly-home': renderWeeklyHome(); break;
     case 'university-info': renderUniversityInfo(); break;
     case 'admin-settings': renderAdminSettings(); break;
     case 'admin-activate': renderAdminActivateUser(); break;
@@ -898,16 +911,29 @@ function _renderScreenByName(name){
     case 'admin-tutorials': renderAdminTutorials(); break;
     case 'admin-notifications': renderAdminNotifications(); break;
     case 'admin-locked-users': renderAdminLockedUsers(); break;
-    case 'admin-pages': renderAdminPages(); break; /* ORDER 42 */
-    case 'admin-custom-settings': renderAdminCustomSettings(); break; /* ORDER 44 */
-    case 'admin-nav-manager': renderAdminNavManager(); break; /* ORDER 48 */
+    case 'admin-pages': renderAdminPages(); break; 
+    case 'admin-custom-settings': renderAdminCustomSettings(); break; 
+    case 'admin-nav-manager': renderAdminNavManager(); break; 
     case 'semester': renderSemesterPicker(_lastBaseTab); break;
     case 'book-viewer': if (_viewerState && _viewerState.type === 'book') _renderBookViewerDirect(); else renderBooksHome(); break;
     case 'note-viewer': if (_viewerState && _viewerState.type === 'note') _renderNoteViewerDirect(); else renderNotesHome(); break;
-    default: switchTab(_lastBaseTab); return;
+    default: 
+      // Handle Custom Tabs
+      if (name && name.startsWith('custom_')) {
+        renderCustomTab(name);
+      } else {
+        switchTab(_lastBaseTab);
+      }
+      return;
   }
   const y = scrollMemory[name] || 0;
   setTimeout(()=>{ try { window.scrollTo(0, y); } catch(e){} }, 30);
+}
+
+function renderCustomTab(tabId) {
+  setScreen('custom-tab');
+  const data = (CONFIG.CUSTOM_TABS && CONFIG.CUSTOM_TABS[tabId]) || { title: 'Custom Tab', body: '<div class="empty-msg">No content added yet. Go to Admin -> Nav Manager -> Edit to add content.</div>' };
+  app.innerHTML = renderHeader(tabId) + '<div class="panel"><h2>'+escapeHtml(data.title)+'</h2><div style="font-size:14px; line-height:1.7;">'+data.body+'</div></div>' + renderBottomNav(tabId) + renderChatFab();
 }
 
 function appDialog(type, message, defaultValue){
@@ -1278,26 +1304,53 @@ async function submitSignUp(){
   }
  }
 
-/* ORDER 22: Tap-to-Translate / Meaning */
-document.addEventListener('selectionchange', () => {
-  const selection = window.getSelection().toString().trim();
-  let tooltip = document.getElementById('ai-translate-tooltip');
-  if (selection.length > 2) {
-    if (!tooltip) {
-      tooltip = document.createElement('div');
-      tooltip.id = 'ai-translate-tooltip';
-      tooltip.style.cssText = 'position:absolute; background:#0a5c36; color:#fff; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; z-index:99999; box-shadow:0 4px 10px rgba(0,0,0,0.3);';
-      tooltip.innerHTML = '✨ AI Meaning / Translate';
-      tooltip.onclick = () => { translateText(selection); window.getSelection().removeAllRanges(); tooltip.remove(); };
-      document.body.appendChild(tooltip);
+/* ORDER 22: Long Press (3 seconds) to Translate */
+let _pressTimer, _startX, _startY;
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('input, textarea, button, .tab, .btn, .chat-fab')) return;
+  _startX = e.touches[0].clientX;
+  _startY = e.touches[0].clientY;
+  _pressTimer = setTimeout(() => {
+    let word = '';
+    // Extract word under touch
+    if (document.caretRangeFromPoint) {
+      const range = document.caretRangeFromPoint(_startX, _startY);
+      if (range && range.startContainer.nodeType === 3) {
+        const text = range.startContainer.textContent;
+        const offset = range.startOffset;
+        let start = offset, end = offset;
+        while (start > 0 && /\S/.test(text[start - 1])) start--;
+        while (end < text.length && /\S/.test(text[end])) end++;
+        word = text.substring(start, end).trim();
+      }
+    } else if (document.caretPositionFromPoint) {
+      const range = document.caretPositionFromPoint(_startX, _startY);
+      if (range && range.offsetNode.nodeType === 3) {
+        const text = range.offsetNode.textContent;
+        const offset = range.offset;
+        let start = offset, end = offset;
+        while (start > 0 && /\S/.test(text[start - 1])) start--;
+        while (end < text.length && /\S/.test(text[end])) end++;
+        word = text.substring(start, end).trim();
+      }
     }
-    const range = window.getSelection().getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    tooltip.style.top = (rect.top + window.scrollY - 40) + 'px';
-    tooltip.style.left = (rect.left + window.scrollX) + 'px';
-    tooltip.style.display = 'block';
-  } else if (tooltip) {
-    tooltip.style.display = 'none';
+    
+    if (!word) {
+      word = window.getSelection().toString().trim();
+    }
+
+    if (word && word.length > 1) {
+      translateText(word);
+    } else {
+      appAlert('Hold down directly on a word for 3 seconds to translate.');
+    }
+  }, 3000);
+}, { passive: true });
+
+document.addEventListener('touchend', () => clearTimeout(_pressTimer));
+document.addEventListener('touchmove', (e) => {
+  if (Math.abs(e.touches[0].clientX - _startX) > 10 || Math.abs(e.touches[0].clientY - _startY) > 10) {
+    clearTimeout(_pressTimer); 
   }
 });
 
@@ -1323,9 +1376,10 @@ async function translateText(text) {
   } catch(e) {
     document.getElementById('ai-trans-result').innerHTML = '<span style="color:red;">Network error.</span>';
   }
- }
+      }  
 
-  // ================= PART 4 STARTS HERE =================
+
+   // ================= PART 4 STARTS HERE =================
 
  function renderSignIn(){
   setScreen('auth');
@@ -1590,9 +1644,16 @@ function openNote(uni,stream,sem,i){
   }
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
-   }
+      }
 
-  // ================= PART 5 STARTS HERE =================
+
+  
+   // ================= PART 5 STARTS HERE =================
+
+/* Fix for "nextQuestion is not defined" crash */
+function nextQuestion(){}
+function prevQuestion(){}
+function skipQuestion(){}
 
 /* ============ EXAMS — GUEST TRIAL ACCESS ============ */
 function renderExamHome(){
@@ -1653,11 +1714,6 @@ function renderExamList(uni){
   el.innerHTML = html;
 }
 function startUniExam(uni,stream,sem,i){
-  /* ORDER 36: Guest Prompt */
-  if(!isSignedIn()||!hasActiveSession()){ 
-    appConfirm('Please sign up or log in to start this exam.').then(ok => { if(ok) switchTab('my'); });
-    return; 
-  }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const ex=c.exams[i];
   if(!ex) return;
@@ -1675,10 +1731,6 @@ function startUniExam(uni,stream,sem,i){
   if(hasQ&&hasFile){ appConfirm('This exam has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(ex.url,'_blank'); return; } const t=typeof ex.timeMinutes==='number'?ex.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(ex.name,ex.questions,t); }); }
 }
 function startBuiltInExam(key){
-  if(!isSignedIn()||!hasActiveSession()){ 
-    appConfirm('Please sign up or log in to start this practice exam.').then(ok => { if(ok) switchTab('my'); });
-    return; 
-  }
   const s=getGeneralSubjects()[key]; if(!s) return;
   if(checkAccess().status === 'trial' && !isTrialSubjectKey(key, s.name || '')){
     appAlert('🔒 This practice exam is not in your trial.\n\nGet Premium to unlock all content.').then(()=>renderPaymentFlow('premium'));
@@ -1693,32 +1745,23 @@ function renderCocHome(){
     setScreen('coc-home'); app.innerHTML=renderHeader('coc')+renderTrialContentLocked('coc')+renderBottomNav('coc')+renderChatFab(); restoreScroll('coc_coc-home'); return; 
   }
   const lib=getContentLibrary(); const access=checkAccess(); const isTrial=access.status==='trial'; const myStream=getUserStream(); 
-  const sem = 1; // FORCE SEMESTER 1 FOR COC
-  
+  const sem = 1;
   const trialUnis = Array.isArray(CONFIG.TRIAL_UNIVERSITIES) ? CONFIG.TRIAL_UNIVERSITIES : [];
   let preSelect = _lastUniSelection.coc || '';
   if (isTrial && trialUnis.length && (!preSelect || trialUnis.indexOf(preSelect) === -1)) preSelect = trialUnis[0];
-  
   const uniOptions=CONFIG.UNIVERSITIES.map(u=>{ const c=(lib[u]&&lib[u][myStream]&&lib[u][myStream][String(sem)])||{cocs:[]}; const has=c.cocs&&c.cocs.length; const isLocked = isTrial && trialUnis.indexOf(u) === -1; return '<option value="'+escapeHtml(u)+'" '+(u === preSelect ? 'selected' : '')+'>'+(has?'★ ':'')+escapeHtml(u)+(isLocked?' 🔒':'')+'</option>'; }).join('');
-  
   const trialNote = isTrial ? '<div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#856404; margin-bottom:12px; font-weight:600;">Trial: <strong>'+escapeHtml(trialUnisDisplay())+'</strong> only · <strong>'+access.daysLeft+' day'+(access.daysLeft===1?'':'s')+' left</strong></div>' : '';
   const staticSemesterPick = '<div class="semester-pick"><button class="active" style="opacity:1; cursor:default;">1st Semester</button></div>';
-
-  app.innerHTML = renderHeader('coc') + staticSemesterPick + 
-    '<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
-  
+  app.innerHTML = renderHeader('coc') + staticSemesterPick + '<div class="panel"><h2>COC Library <span class="stream-badge">'+myStream+'</span></h2><p style="color:#777; font-size:12.5px; margin-bottom:12px;">Center of Competence</p><select id="cocUniSelect" onchange="renderCocList(this.value)" class="field-select"><option value="">- Choose university -</option>'+uniOptions+'</select></div>'+trialNote+'<div id="cocList"></div>'+renderBottomNav('coc')+renderChatFab();
   if(preSelect) renderCocList(preSelect);
   restoreScroll('coc_coc-home');
 }
-
 function renderCocList(uni){
   if (uni) _lastUniSelection.coc = uni;
   const el=document.getElementById('cocList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('coc'); return; }
-  const myStream=getUserStream(); 
-  const sem = 1; 
-  
+  const myStream=getUserStream(); const sem = 1; 
   const c=getUniContent(uni,myStream,sem);
   const allCocs = c.cocs || [];
   if(!allCocs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No COC materials yet.</div>'; return; }
@@ -1743,10 +1786,6 @@ function renderCocList(uni){
   el.innerHTML = html;
 }
 function startUniCoc(uni,stream,sem,i){
-  if(!isSignedIn()||!hasActiveSession()){ 
-    appConfirm('Please sign up or log in to start this COC exam.').then(ok => { if(ok) switchTab('my'); });
-    return; 
-  }
   if(isTrialLockedUniversity(uni)){ appAlert('Trial: this university is not unlocked.'); return; }
   const c=getUniContent(uni,stream,sem); const cx=c.cocs[i];
   if(!cx) return;
@@ -1764,7 +1803,6 @@ function startUniCoc(uni,stream,sem,i){
   if(hasQ&&hasFile){ appConfirm('This COC has BOTH questions and an attached file.\n\nOK = Open file\nCancel = Start quiz').then(go=>{ if(go){ window.open(cx.url,'_blank'); return; } const t=typeof cx.timeMinutes==='number'?cx.timeMinutes:CONFIG.DEFAULT_EXAM_TIME_MINUTES; startQuiz(cx.name,cx.questions,t); }); }
 }
 
-/* ORDER 49: Weekly Exam (Placeholder) */
 function renderWeeklyHome() {
   setScreen('weekly-home'); 
   app.innerHTML = renderHeader('weekly') + '<div class="panel"><h2>Weekly Exam</h2><div class="empty-msg">Weekly Exams will appear here once added by admin.</div></div>' + renderBottomNav('weekly') + renderChatFab();
@@ -1776,33 +1814,53 @@ function prepareQuestions(qs){ return qs.map(q=>{
     const ct=q.options[q.answer]; const opts=shuffle(q.options); 
     return {q:q.q,options:opts,answer:opts.indexOf(ct),explanation:q.explanation}; 
   } else {
-    // Short Answer
     return {q:q.q, options: q.options || [q.answerText||''], answer: 0, explanation:q.explanation, isShort: true}; 
   }
 }); }
 
 function startQuiz(name,rawQuestions,timeMinutes){
-  // Order 4: Prevent double click
   if (quizState && quizState.subjectName === name && Date.now() - (quizState.startTime||0) < 1000) return; 
 
-  appConfirm('How do you want to take this exam?\n\n[OK] = Practice Mode (Instant feedback & explanation)\n[Cancel] = Exam Mode (Submit at the end)')
-    .then(isPractice => {
-      const returnScreen = (currentScreen === 'coc-home') ? 'coc-home' : 'exam-home';
-      _screenStack.push(returnScreen); setScreen('quiz');
-      if(quizState.timerId) clearInterval(quizState.timerId);
-      const totalSeconds=(timeMinutes&&timeMinutes>0)?timeMinutes*60:0;
+  // Unmissable Mode Selection Overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+      <h2 style="font-size:18px;margin-bottom:10px;color:#333;">Choose Exam Mode</h2>
+      <p style="font-size:13px;color:#666;margin-bottom:20px;">How do you want to take this exam?</p>
       
-      quizState={ 
-        subjectName:name, rawQuestions, timeMinutes:timeMinutes||0, 
-        questions:prepareQuestions(rawQuestions), 
-        answers: new Array(rawQuestions.length).fill(-1), 
-        revealed: {}, 
-        isPracticeMode: isPractice,
-        examSecondsLeft:totalSeconds, examSecondsElapsed:0, seconds:0, timerId:null, returnScreen:returnScreen, startTime: Date.now()
-      };
-      _startQuizTimer(totalSeconds); 
-      renderQuizScreen();
-    });
+      <button id="modePractice" class="btn btn-primary btn-full" style="margin-bottom:12px; background:#0a5c36; padding:16px;">
+        <div style="font-size:15px; font-weight:800;">Practice Mode</div>
+        <div style="font-size:11px; font-weight:normal; opacity:0.8; margin-top:4px;">See the answer and explanation instantly.</div>
+      </button>
+      
+      <button id="modeExam" class="btn btn-ghost btn-full" style="padding:16px; border:2px solid #ccc;">
+        <div style="font-size:15px; font-weight:800; color:#333;">Exam Mode</div>
+        <div style="font-size:11px; font-weight:normal; color:#666; margin-top:4px;">Submit at the end to see your score and answers.</div>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('modePractice').onclick = () => { overlay.remove(); initQuiz(name, rawQuestions, timeMinutes, true); };
+  document.getElementById('modeExam').onclick = () => { overlay.remove(); initQuiz(name, rawQuestions, timeMinutes, false); };
+}
+
+function initQuiz(name, rawQuestions, timeMinutes, isPractice) {
+  const returnScreen = (currentScreen === 'coc-home') ? 'coc-home' : 'exam-home';
+  _screenStack.push(returnScreen); setScreen('quiz');
+  if(quizState.timerId) clearInterval(quizState.timerId);
+  const totalSeconds=(timeMinutes&&timeMinutes>0)?timeMinutes*60:0;
+  quizState={ 
+    subjectName:name, rawQuestions, timeMinutes:timeMinutes||0, 
+    questions:prepareQuestions(rawQuestions), 
+    answers: new Array(rawQuestions.length).fill(-1), 
+    revealed: {}, 
+    isPracticeMode: isPractice,
+    examSecondsLeft:totalSeconds, examSecondsElapsed:0, seconds:0, timerId:null, returnScreen:returnScreen, startTime: Date.now()
+  };
+  _startQuizTimer(totalSeconds); 
+  renderQuizScreen();
 }
 
 function scrollToQuestion(idx) {
@@ -1813,10 +1871,7 @@ function scrollToQuestion(idx) {
 function renderQuizScreen(){
   const total = quizState.questions.length;
   const timerInit = quizState.timeMinutes>0 ? formatTime(Math.max(0,quizState.examSecondsLeft)) : formatTime(quizState.examSecondsElapsed);
-  
   let html = renderHeader(currentTab);
-  
-  // Sticky Header
   html += `<div class="sticky-quiz-header">
     <div style="display:flex; justify-content:space-between; color:#fff; margin-bottom:10px; font-size:13px;">
         <span>${escapeHtml(quizState.subjectName)} (${quizState.isPracticeMode?'Practice':'Exam'})</span>
@@ -1826,19 +1881,14 @@ function renderQuizScreen(){
       ${quizState.questions.map((_, i) => `<div class="quiz-nav-dot" id="dot_${i}" onclick="scrollToQuestion(${i})">${i+1}</div>`).join('')}
     </div>
   </div>`;
-
-  // Render all questions
   html += '<div id="quizContainer" style="padding-bottom: 80px;">';
   quizState.questions.forEach((q, i) => {
     html += `<div class="question-block" id="q_block_${i}">`;
     html += `<div class="q-number">QUESTION ${i+1} OF ${total}</div>`;
     html += `<div class="q-text">${escapeHtml(q.q)}</div>`;
-    
     if (!q.isShort) {
-      // Multiple Choice
       html += q.options.map((opt, j) => `<div class="option" id="opt_${i}_${j}" onclick="selectOption(${i}, ${j})"><div class="letter">${String.fromCharCode(65+j)}</div><div>${escapeHtml(opt)}</div></div>`).join('');
     } else {
-      // Short Answer
       html += `<div id="short_ans_${i}">
         <input type="text" id="sa_input_${i}" class="field-input" placeholder="Type your answer here..." onkeypress="if(event.key==='Enter') submitShortAnswer(${i})">
         <div style="display:flex; gap:8px; margin-top:10px;">
@@ -1848,45 +1898,33 @@ function renderQuizScreen(){
         <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="revealAnswer(${i})">🔍 Get Answer</button>
       </div>`;
     }
-    
     html += `<div id="fb_${i}" style="display:none;"></div>`;
     html += `</div>`;
   });
   html += '</div>';
-
   html += `<button class="btn btn-primary btn-full" style="padding:16px; font-size:16px; margin-top:20px;" onclick="finishExam()">Submit Exam</button>`;
-  
   html += renderBottomNav(currentTab)+renderChatFab();
   app.innerHTML = html;
 }
 
 function selectOption(qIndex, optIndex) {
   if (quizState.revealed[qIndex] || !quizState.isPracticeMode && quizState.answers[qIndex] !== -1) {
-     // If in exam mode and already selected, let them change it (but don't reveal).
      if (quizState.isPracticeMode) return;
   }
-  
   const q = quizState.questions[qIndex];
   quizState.answers[qIndex] = optIndex;
-  
-  // Highlight selected
   q.options.forEach((_, j) => {
     const el = document.getElementById(`opt_${qIndex}_${j}`);
     if(el) el.classList.remove('selected', 'wrong-selected');
   });
   document.getElementById(`opt_${qIndex}_${optIndex}`).classList.add('selected');
-  
   if (quizState.isPracticeMode) {
     quizState.revealed[qIndex] = true;
     const isCorrect = optIndex === q.answer;
-    
     if (!isCorrect) document.getElementById(`opt_${qIndex}_${optIndex}`).classList.add('wrong-selected');
     document.getElementById(`opt_${qIndex}_${q.answer}`).classList.add('selected');
-    
     showFeedback(qIndex, isCorrect, isCorrect ? '✅ Correct!' : '❌ Incorrect');
   }
-  
-  // Update dot
   const dot = document.getElementById(`dot_${qIndex}`);
   if (dot) { 
     dot.classList.add(quizState.isPracticeMode ? (optIndex === q.answer ? 'answered' : 'wrong') : 'answered'); 
@@ -1898,15 +1936,11 @@ function checkSmartMatch(userStr, correctStr) {
   const u = userStr.toLowerCase().trim();
   const c = correctStr.toLowerCase().trim();
   if (u === c) return true;
-  
-  // Check if user answer is part of the correct answer (ignoring stop words)
   const stopWords = ['the','a','is','of','in','and','to','for','it','on','with'];
   const uWords = u.split(' ').filter(w => w.length > 2 && !stopWords.includes(w));
   const cWords = c.split(' ').filter(w => w.length > 2 && !stopWords.includes(w));
-  
   let matches = 0;
   uWords.forEach(uw => { if (cWords.some(cw => cw.includes(uw) || uw.includes(cw))) matches++; });
-  
   return matches >= 1 && uWords.length > 0;
 }
 
@@ -1915,12 +1949,9 @@ function submitShortAnswer(qIndex) {
   const input = document.getElementById(`sa_input_${qIndex}`);
   const val = input ? input.value.trim() : '';
   if (!val) return appAlert('Please type an answer.');
-
   const q = quizState.questions[qIndex];
   const correctStr = q.options[q.answer];
-  
   const isMatch = checkSmartMatch(val, correctStr);
-  
   if (isMatch) {
     quizState.answers[qIndex] = q.answer;
     quizState.revealed[qIndex] = true;
@@ -1944,24 +1975,19 @@ function submitShortAnswer(qIndex) {
 
 async function aiGradeAnswer(qIndex) {
   if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
-  
   const input = document.getElementById(`sa_input_${qIndex}`);
   const val = input ? input.value.trim() : '';
   if (!val) return appAlert('Please type an answer first.');
-
   const q = quizState.questions[qIndex];
   const correctStr = q.options[q.answer];
-  
   const btn = document.querySelector(`#short_ans_${qIndex} button.btn-telegram`);
   if(btn) { btn.disabled = true; btn.textContent = '⏳ Grading...'; }
-
   try {
     const res = await fetch(BACKEND_URL + '/api/ai/grade', {
       method: 'POST', headers: authHeaders(),
       body: JSON.stringify({ question: q.q, correctAnswer: correctStr, userAnswer: val })
     });
     const data = await res.json();
-    
     if (data.ok) {
       quizState.revealed[qIndex] = true;
       if (data.isCorrect) {
@@ -1986,12 +2012,10 @@ async function aiGradeAnswer(qIndex) {
 function revealAnswer(qIndex) {
   const q = quizState.questions[qIndex];
   const correctStr = q.options[q.answer];
-  quizState.answers[qIndex] = -1; // Mark as wrong/skipped
+  quizState.answers[qIndex] = -1;
   quizState.revealed[qIndex] = true;
-  
   document.getElementById(`dot_${qIndex}`).classList.add('wrong');
   showFeedback(qIndex, false, `🔍 The correct answer is: ${correctStr}`);
-  
   const inputBox = document.getElementById(`short_ans_${qIndex}`);
   if (inputBox) inputBox.style.display = 'none';
 }
@@ -2000,11 +2024,9 @@ function showFeedback(qIndex, isCorrect, msg) {
   const fb = document.getElementById(`fb_${qIndex}`);
   if (!fb) return;
   const q = quizState.questions[qIndex];
-  
   let html = `<div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:${isCorrect ? '#e8f5e9' : '#ffebee'}; border-left:4px solid ${isCorrect ? '#4caf50' : '#f44336'}; font-size:13.5px; font-weight:700; color:${isCorrect ? '#2e7d32' : '#c62828'};">
     ${msg}
   </div>`;
-  
   if (q.explanation) {
     html += `<div style="margin-top:10px; padding:14px; border-radius:10px; background:#fff8e1; border-left:4px solid #ffc107; font-size:13.5px; line-height:1.7; color:#5d4037;">
       <div style="font-weight:800; color:#ff8f00; margin-bottom:6px; font-size:12px; text-transform:uppercase;">Explanation</div>
@@ -2019,11 +2041,8 @@ function finishExam(autoTimeout){
   clearInterval(quizState.timerId); currentScreen = quizState.returnScreen || 'exam-home';
   updateScreenshotGuard();
   const total=quizState.questions.length;
-  
   let score=0; quizState.questions.forEach((q,i)=>{ if(quizState.answers[i]===q.answer) score++; });
   const pct=Math.round((score/total)*100); const g=gradeFor(pct); 
-  
-  // ORDER 37: Save full history for Review
   saveHistory({
     subject: quizState.subjectName,
     score: score,
@@ -2032,14 +2051,11 @@ function finishExam(autoTimeout){
     questions: quizState.questions,
     userAnswers: quizState.answers
   });
-
   const reviewHTML=quizState.questions.map((q,i)=>{ 
     const ua=quizState.answers[i]; const ok=ua===q.answer; const to=ua===-1; 
     return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Not answered':(ua!==undefined&&q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>'; 
   }).join('');
-  
   window._retakeName=quizState.subjectName; window._retakeQuestions=quizState.rawQuestions; window._retakeTime=quizState.timeMinutes;
-  
   app.innerHTML=renderHeader(currentTab)+'<div class="result-card">'+(autoTimeout?'<div style="background:#ffebee; color:#c62828; padding:10px; border-radius:10px; margin-bottom:16px; font-weight:700;">Time up!</div>':'')+'<div class="score-circle" style="background:'+g.color+'"><div class="pct">'+pct+'%</div><div class="grade">Grade '+g.letter+'</div></div><h2>'+(pct>=60?'Well done!':'Keep studying!')+'</h2><p class="sub">'+score+'/'+total+' · Time: '+formatTime(quizState.seconds)+'</p><button class="btn btn-primary btn-full" onclick="retakeExam()">Retake</button><button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="switchTab(\''+currentTab+'\')">Back</button><div class="review"><h3>Review</h3>'+reviewHTML+'</div></div>'+renderBottomNav(currentTab)+renderChatFab();
 }
 function retakeExam(){ startQuiz(window._retakeName, window._retakeQuestions, window._retakeTime); }
@@ -2049,25 +2065,29 @@ const getHistory=()=>JSON.parse(localStorage.getItem('fs_hub_history')||'[]');
 function saveHistory(e){
   const h=getHistory(); h.unshift(e);
   localStorage.setItem('fs_hub_history', JSON.stringify(h.slice(0,30)));
-  backendSaveProgress(e).then(r => { if (r && r.ok) console.log('✅ progress synced'); }).catch(()=>{});
+  
+  let phone = getCurrentUserPhone();
+  if (!phone) phone = 'GUEST_' + getDeviceHash(); // Track guest progress in DB
+  
+  const payload = { phone, subject: e.subject, score: e.score, total: e.total, at: e.date || Date.now() };
+  fetch(BACKEND_URL + '/api/save-progress', {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).catch(()=>{});
 }
 function clearHistory(){ appConfirm('Clear local history?').then(ok=>{ if(!ok) return; localStorage.removeItem('fs_hub_history'); renderProgress(); }); }
 function computeStats(){ const h=getHistory(); let s=0,b=0,w=100; h.forEach(x=>{ const p=(x.score/x.total)*100; s+=p; if(p>b)b=p; if(p<w)w=p; }); return { total:h.length, avg:h.length?Math.round(s/h.length):0, best:Math.round(b), worst:h.length?Math.round(w):0 }; }
 
-/* ORDER 37: Progress Review */
 async function renderProgress(){
   setScreen('user-progress');
   app.innerHTML = renderHeader('my') + '<div class="panel"><h2>My Progress</h2><div class="empty-msg">Loading…</div></div>' + renderBottomNav('my') + renderChatFab();
-  
   let list = getHistory();
-  
   const rows = list.length ? list.map((x, i) => {
     const pct = Math.round((x.score / x.total) * 100);
     const hasReview = x.questions && x.userAnswers;
     const clickable = hasReview ? 'onclick="reviewPastExam('+i+')" style="cursor:pointer; border:1px solid #e0e0e6; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:#fff;"' : 'style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"';
     return '<div '+clickable+'><div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px;"><span style="font-weight:700; color:var(--primary-color);">' + escapeHtml(x.subject) + '</span> '+(hasReview?'<span style="font-size:10px; background:#e0e0e6; padding:2px 6px; border-radius:10px; color:#333;">Tap to Review</span>':'')+'</div><span class="score-badge ' + (pct < 60 ? 'low' : '') + '">' + x.score + '/' + x.total + ' — ' + pct + '%</span></div>';
   }).join('') : '<div class="empty-msg">No attempts yet.</div>';
-
   app.innerHTML = renderHeader('my') + '<div class="panel"><h2>My Progress</h2>' + rows +
     (list.length ? '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="clearHistory()">Clear (local only)</button>' : '') +
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' +
@@ -2079,14 +2099,12 @@ function reviewPastExam(index) {
   const attempt = h[index];
   if(!attempt || !attempt.questions || !attempt.userAnswers) return;
   setScreen('user-progress');
-  
   const reviewHTML = attempt.questions.map((q, i) => {
     const ua = attempt.userAnswers[i];
     const ok = ua === q.answer;
     const to = ua === -1 || ua === undefined;
     return '<div class="review-item '+(ok?'correct':'wrong')+'"><div class="rq">'+(i+1)+'. '+escapeHtml(q.q)+'</div><div class="ra">Your answer: <span style="color:'+(ok?'#2e7d32':'#c62828')+'; font-weight:600;">'+(to?'Timed out / Skipped':(q.options[ua]?escapeHtml(q.options[ua]):'-'))+'</span>'+(!ok?'<br>Correct: <span style="color:#2e7d32; font-weight:600;">'+escapeHtml(q.options[q.answer])+'</span>':'')+(q.explanation?'<div style="margin-top:8px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12.5px; color:#5d4037;"><strong style="color:#ff8f00;">Note:</strong> '+escapeHtml(q.explanation)+'</div>':'')+'</div></div>';
   }).join('');
-
   app.innerHTML = renderHeader('my') + '<div class="panel"><h2>Review: '+escapeHtml(attempt.subject)+'</h2><div class="review" style="margin-top:16px;">'+reviewHTML+'</div><button class="btn btn-primary btn-full" style="margin-top:16px;" onclick="renderProgress()">Back to Progress</button></div>' + renderBottomNav('my') + renderChatFab();
 }
 
@@ -2124,8 +2142,9 @@ async function submitForceChangePassword() {
   } catch (e) {
     msg.innerHTML = '<div style="color:#c62828;">Network error.</div>';
   }
-   }
-
+  }
+  
+  
   // ================= PART 6A STARTS HERE =================
 
 /* ============ ADMIN: GENERATE RESET CODE ============ */
@@ -2233,7 +2252,7 @@ async function submitResetWithCode() {
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;font-size:11px;" onclick="location.reload()">🔄 Reload App</button>'+
     (isAdminMode()?'<div style="margin-top:12px; background:#fff3cd; color:#856404; padding:8px 12px; border-radius:8px; font-size:11.5px; font-weight:700;">ADMIN MODE — '+escapeHtml(getCurrentUserPhone())+'</div>'+
     '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="renderAdminSettings()">⚙️ App Settings</button>'+
-    '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#e91e63;" onclick="pushLocalToKV()">🚀 Push Local to Cloud KV</button>'+ /* ORDER 29 */
+    '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#e91e63;" onclick="pushLocalToKV()">🚀 Push Local to Cloud KV</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#4caf50;" onclick="renderAdminActivateUser()">🔑 Activate User</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#ff9800;" onclick="adminGenerateResetCode()">🔐 Generate Reset Code</button>'+
     '<button class="btn btn-primary btn-full" style="margin-top:8px;background:#0088cc;" onclick="renderAdminProgress()">📊 Users Progress</button>'+
@@ -2250,11 +2269,9 @@ async function submitResetWithCode() {
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminRegisteredPhones()">Registered Phones</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="syncNow()">Sync Now</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminLockedUsers()">🔓 Reset Key Attempts</button>'+
-    /* ORDER 42 & 44 & 48 */
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminPages()">📄 Custom Pages Manager</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminCustomSettings()">🔧 Custom Settings</button>'+
     '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="renderAdminNavManager()">📱 Navigation Manager</button>'+
-    /* ORDER 47: GOD MODE */
     '<button class="btn btn-danger btn-full" style="margin-top:8px; background:#000; color:#00ff00; border:1px solid #00ff00;" onclick="repairAppData()">🚨 GOD MODE REPAIR</button>'+
     '<button class="btn btn-danger btn-full" style="margin-top:8px;" onclick="setAdminMode(false);renderMy()">Exit Admin</button>':'')+'</div>'+
     renderBottomNav('my')+renderChatFab();
@@ -2344,7 +2361,8 @@ async function renderAdminUsers(){
   
   const totalUsers = merged.length;
   const licensedUsers = merged.filter(u => u.status === 'licensed' || u.master === 1 || u.role === 'admin').length;
-  const trialUsers = merged.filter(u => u.status === 'trial' && u.master !== 1 && u.role !== 'admin').length;
+  const trialUsers = merged.filter(u => u.status === 'trial' && u.master !== 1 && u.role !== 'admin' && !String(u.phone).startsWith('GUEST_')).length;
+  const guestUsers = merged.filter(u => String(u.phone).startsWith('GUEST_')).length;
   
   const today = new Date().toDateString();
   const joinedToday = merged.filter(u => {
@@ -2375,36 +2393,35 @@ async function renderAdminUsers(){
   
   const rows = merged.length ? merged.map(user => {
     const phone = escapeHtml(user.phone || '-');
-    const name = escapeHtml(user.name || '-');
+    const name = escapeHtml(user.name || 'Guest User');
     const uni = escapeHtml(user.university || '-');
     const stream = escapeHtml(user.stream || '-');
     const hash = escapeHtml(user.deviceHash || '-');
     const created = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
     const usedKey = user.used_key ? '<span style="background:#f0e9f8;color:#6a3093;font-family:monospace;padding:2px 6px;border-radius:4px;font-size:11px;">'+escapeHtml(user.used_key)+'</span>' : '<span style="color:#888;font-size:11px;">None (Trial)</span>';
+    
     let statusBadge = '';
     const st = String(user.status || 'trial').toLowerCase();
     const dl = parseInt(user.daysLeft) || 0;
+    const isGuest = String(user.phone).startsWith('GUEST_');
+    
     if (user.role === 'admin' || user.master === 1) {
       statusBadge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">👑 ADMIN</span>';
     } else if (st === 'licensed') {
       statusBadge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟢 LICENSED · ' + dl + 'd</span>';
+    } else if (isGuest) {
+      statusBadge = '<span style="background:#ffe0b2;color:#e65100;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">👤 GUEST TRIAL</span>';
     } else if (st === 'trial') {
       statusBadge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🟡 TRIAL · ' + dl + 'd</span>';
     } else {
       statusBadge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;">🔴 EXPIRED</span>';
     }
     
-    return '<div style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;border-left:4px solid #6a3093;">' +
+    return '<div onclick="openUserEditorFor(\'' + user.phone + '\')" style="background:#f7f7fa;border-radius:10px;padding:12px;margin-bottom:8px;font-size:12.5px;border-left:4px solid #6a3093; cursor:pointer;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;"><div style="font-weight:800;color:#333;">' + name + '</div>' + statusBadge + '</div>' +
       '<div><strong>Phone:</strong> ' + phone + '</div>' +
       '<div><strong>University:</strong> ' + uni + ' (' + stream + ')</div>' +
-      '<div><strong>ID:</strong> <code>' + hash + '</code></div>' +
       '<div style="margin:6px 0;"><strong>Joined:</strong> ' + created + '</div>' +
-      '<div style="margin:6px 0;"><strong>Used Key:</strong> ' + usedKey + '</div>' +
-      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
-        '<button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;background:#e91e63;" onclick="adminUnbindDevice(\'' + user.phone + '\')">🔓 Unblock</button>' +
-        '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + user.phone + '\')">Delete</button>' +
-      '</div>' +
     '</div>';
   }).join('') : '<div class="empty-msg">No users found anywhere.</div>';
   
@@ -2412,7 +2429,7 @@ async function renderAdminUsers(){
       '<div style="background:#fff3cd;border-left:4px solid #ff9800;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#856404;margin-bottom:16px;">Admin — User Accounts</div>' +
       '<h2>User Accounts (' + merged.length + ')</h2>' + statsHTML + 
       '<button class="btn btn-primary btn-full" style="margin-bottom:14px;" onclick="renderAdminUsers()">🔄 Refresh from Server</button>' +
-      '<div id="adminUserList">' + rows + '</div>' + 
+      rows +
       '<button class="btn btn-ghost btn-full" style="margin-top:14px;" onclick="goBack()">Back</button>' +
     '</div>' + renderBottomNav('my') + renderChatFab();
  }
@@ -2543,12 +2560,10 @@ function renderAdminSettings(){
   
   app.innerHTML=renderHeader('my')+'<div class="panel"><div style="background:#fff3cd; border-left:4px solid #ff9800; border-radius:10px; padding:10px 14px; font-size:12.5px; color:#856404; margin-bottom:16px;">Admin — App Settings</div><h2>⚙️ App Settings</h2><h3>General</h3><label class="field-label">App Name</label><input type="text" id="stAppName" class="field-input" value="'+escapeAttr(s.APP_NAME)+'"><label class="field-label">Owner Name</label><input type="text" id="stOwner" class="field-input" value="'+escapeAttr(s.OWNER_NAME)+'"><label class="field-label">Contact Phone</label><input type="tel" id="stContact" class="field-input" value="'+escapeAttr(s.CONTACT_PHONE)+'"><label class="field-label">Telegram Username (without @)</label><input type="text" id="stTelegram" class="field-input" value="'+escapeAttr(s.TELEGRAM_USERNAME)+'"><label class="field-label">Support Group Link</label><input type="text" id="stSupportGroup" class="field-input" value="'+escapeAttr(s.SUPPORT_GROUP||'')+'" placeholder="https://t.me/yourgroup">'+
   
-  /* ORDER 43: App Colors */
   '<h3>Branding & Colors</h3>'+
   '<label class="field-label">Primary Color (Light Mode)</label><input type="color" id="stPrimaryColor" class="field-input" value="'+(appColors.primary||'#0a5c36')+'" style="height:50px;">'+
   '<label class="field-label">Accent Color (Gold/Dark Mode)</label><input type="color" id="stAccentColor" class="field-input" value="'+(appColors.accent||'#b8860b')+'" style="height:50px;">'+
   
-  /* ORDER 37: Global Screenshot Block */
   '<h3>Security</h3>'+
   '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid '+(s.BLOCK_ALL_SCREENSHOTS?'#ff4757':'#e0e0e6')+';border-radius:10px;cursor:pointer;margin-bottom:8px;background:'+(s.BLOCK_ALL_SCREENSHOTS?'#ffebee':'#fff')+';font-weight:700;font-size:13px;"><input type="checkbox" id="stBlockScreenshots" '+(s.BLOCK_ALL_SCREENSHOTS?'checked':'')+' style="width:auto;margin:0;"> 🚫 Block Screenshots on ALL Screens (Admins Bypass)</label>'+
   
@@ -2568,12 +2583,10 @@ async function saveAdminSettings(){
   s.SUPPORT_GROUP=(document.getElementById('stSupportGroup').value||'').trim();
   s.PRICE_BIRR=parseInt(document.getElementById('stPrice').value)||DEFAULT_CONFIG.PRICE_BIRR;
   
-  /* ORDER 43: Save Colors */
   s.APP_COLORS = s.APP_COLORS || {};
   s.APP_COLORS.primary = document.getElementById('stPrimaryColor').value;
   s.APP_COLORS.accent = document.getElementById('stAccentColor').value;
   
-  /* ORDER 37: Save Screenshot Block */
   s.BLOCK_ALL_SCREENSHOTS = document.getElementById('stBlockScreenshots').checked;
   
   const pmRows = document.querySelectorAll('#payMethodsList .pay-method-row');
@@ -2710,35 +2723,93 @@ async function adminDeleteCustomSetting(key) {
   } catch(e) {}
 }
 
-/* ORDER 48: Navigation Manager */
+/* ORDER 48 & Updated: Navigation Manager (Add/Delete Tabs) */
 function renderAdminNavManager() {
   if (!isAdminMode()) return;
   setScreen('admin-nav-manager');
   const tabs = CONFIG.NAV_TABS || [];
   
   let html = renderHeader('my') + '<div class="panel"><h2>📱 Navigation Manager</h2>' +
-    '<p style="font-size:12px;color:#666;margin-bottom:15px;">Toggle tabs to show/hide them on the bottom bar.</p>';
+    '<p style="font-size:12px;color:#666;margin-bottom:15px;">Add, delete, or hide tabs.</p>';
     
   tabs.forEach((t, i) => {
     html += '<div style="background:#f7f7fa;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
       '<div style="font-weight:700;">' + t.icon + ' ' + escapeHtml(t.label) + '</div>' +
-      '<button class="btn btn-ghost" style="padding:6px 12px;color:#c62828;" onclick="toggleNavTab('+i+')">Hide</button></div>';
+      '<div style="display:flex; gap:6px;">' +
+        '<button class="btn btn-ghost" style="padding:6px 12px;color:#c62828;" onclick="deleteNavTab(\''+t.id+'\')">Delete</button>' +
+      '</div></div>';
   });
   
+  html += '<div style="border-top:1px solid #eee; margin-top:15px; padding-top:15px;">' +
+    '<h3>Add New Tab</h3>' +
+    '<label class="field-label">Tab Label</label><input type="text" id="newTabLabel" class="field-input" placeholder="e.g. News">' +
+    '<label class="field-label">Icon (Emoji)</label><input type="text" id="newTabIcon" class="field-input" placeholder="📰" maxlength="2">' +
+    '<label class="field-label">Tab ID (lowercase, no spaces)</label><input type="text" id="newTabId" class="field-input" placeholder="news">' +
+    '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="addNavTab()">+ Add Tab</button>' +
+  '</div>';
+
   html += '<button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="saveNavSettings()">💾 Save Navigation</button>';
   html += '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetNavSettings()">↺ Restore Default Tabs</button>';
   html += '<button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="goBack()">Back</button></div>' + renderBottomNav('my') + renderChatFab();
   app.innerHTML = html;
 }
 
-window.toggleNavTab = function(index) {
+window.deleteNavTab = async function(id) {
+  if(!(await appConfirm('Delete this tab?'))) return;
   const s = getSettings();
-  if(!s.NAV_TABS) s.NAV_TABS = JSON.parse(JSON.stringify(DEFAULT_CONFIG.NAV_TABS));
-  s.NAV_TABS.splice(index, 1);
-  saveSettings(s); reloadConfig(); renderAdminNavManager();
-};
+  if(s.NAV_TABS) {
+    s.NAV_TABS = s.NAV_TABS.filter(t => t.id !== id);
+    saveSettings(s); reloadConfig();
+  }
+  
+  const coreTabs = ['book', 'note', 'exam', 'coc', 'university', 'weekly'];
+  if(coreTabs.includes(id)) {
+    if(await appConfirm('Do you also want to permanently delete ALL content in this tab from the cloud?')) {
+       const lib = getContentLibrary();
+       let changed = false;
+       Object.keys(lib).forEach(uni => {
+         Object.keys(lib[uni]).forEach(stream => {
+           Object.keys(lib[uni][stream]).forEach(sem => {
+             const c = lib[uni][stream][sem];
+             const targetKey = id === 'book' ? 'pdfs' : id === 'note' ? 'notes' : id === 'exam' ? 'exams' : id === 'coc' ? 'cocs' : id === 'weekly' ? 'weekly' : null;
+             if(targetKey && c[targetKey] && c[targetKey].length > 0) {
+               c[targetKey] = [];
+               changed = true;
+             }
+           });
+         });
+       });
+       if(changed) {
+         saveContentLibrary(lib);
+         try {
+           await fetch(BACKEND_URL + '/api/admin/save-content', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ content: lib }) });
+           await appAlert('✅ Tab and its content deleted.');
+         } catch(e) { appAlert('Network error deleting content.'); }
+       }
+    }
+  }
+  renderAdminNavManager();
+}
 
-async function saveNavSettings() {
+window.addNavTab = async function() {
+  const label = document.getElementById('newTabLabel').value.trim();
+  const icon = document.getElementById('newTabIcon').value.trim() || '📄';
+  const id = document.getElementById('newTabId').value.trim().toLowerCase().replace(/\s+/g, '_');
+  
+  if(!label || !id) return appAlert('Enter label and ID');
+  const s = getSettings();
+  if(!s.NAV_TABS) s.NAV_TABS = [];
+  if(s.NAV_TABS.some(t => t.id === id)) return appAlert('Tab ID already exists');
+  
+  if(!(await appConfirm('Add this tab?'))) return;
+  
+  s.NAV_TABS.push({ id, label, icon });
+  saveSettings(s); reloadConfig();
+  await appAlert('✅ Tab added!');
+  renderAdminNavManager();
+}
+
+window.saveNavSettings = async function() {
   if(!(await appConfirm('Save navigation order?'))) return;
   const s = getSettings();
   try {
@@ -2747,7 +2818,7 @@ async function saveNavSettings() {
   } catch(e) { appAlert('Network error.'); }
 }
 
-async function resetNavSettings() {
+window.resetNavSettings = async function() {
   if(!(await appConfirm('Restore all default tabs?'))) return;
   const s = getSettings();
   s.NAV_TABS = JSON.parse(JSON.stringify(DEFAULT_CONFIG.NAV_TABS));
@@ -2756,10 +2827,10 @@ async function resetNavSettings() {
     await fetch(BACKEND_URL + '/api/save-settings', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ settings: s }) });
     appAlert('✅ Restored!'); renderAdminNavManager();
   } catch(e) {}
-                          }
+  }
 
 
-  // ================= PART 6B STARTS HERE =================
+   // ================= PART 6B STARTS HERE =================
 
 function adminResetBulkSelection(){ adminBulkMode = false; adminSelected.clear(); }
 function adminToggleBulkMode(type){ adminBulkMode = !adminBulkMode; adminSelected.clear(); renderAdminContentManager(type); }
@@ -3521,10 +3592,6 @@ function parseQuestions(text){
   return questions.filter(q=>q.options.length>=2);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   🚨 FIX BLOCK — missing functions + state vars
-   ═══════════════════════════════════════════════════════════════ */
-
 var adminEditState = { tab:'exam', uni:'', stream:'Natural', semester:1, editing:null, addToUnis:null };
 var adminBulkState = { uni:'', stream:'Natural', semester:1, targetUnis:null };
 
@@ -3568,8 +3635,9 @@ async function renderAdminStats(){
   
   const total = users.length;
   const licensed = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin').length;
-  const trial = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin').length;
-  const expired = total - licensed - trial;
+  const trial = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin' && !String(u.phone).startsWith('GUEST_')).length;
+  const guestTrial = users.filter(u => String(u.phone).startsWith('GUEST_')).length;
+  const expired = total - licensed - trial - guestTrial;
   const today = new Date().toDateString();
   const todayCount = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today).length;
 
@@ -3577,16 +3645,17 @@ async function renderAdminStats(){
     const isActive = (currentFilter === key);
     const border = isActive ? 'border: 3px solid #6a3093; transform: scale(0.98);' : 'border: 3px solid transparent;';
     return '<div class="stat-box" onclick="filterAdminUsers(\''+key+'\')" style="background:'+color+'; cursor:pointer; '+border+' transition:0.2s;">'+
-           '<div class="num" style="color:#333;">'+n+'</div><div class="label">'+label+'</div></div>';
+           '<div class="num" style="color:#333;">'+n+'</div><div class="label" style="font-size:10px;">'+label+'</div></div>';
   };
 
   app.innerHTML = renderHeader('my')+
     '<div class="panel"><h2>Analytics</h2>'+
     '<p style="font-size:11px;color:#888;margin-bottom:8px;">Tap a box to filter users below</p>'+
-    '<div class="stat-grid">'+
+    '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
       box('total', total,'Total Users','#e3f2fd')+
       box('licensed', licensed,'Licensed','#e8f5e9')+
-      box('trial', trial,'Trial','#fff3cd')+
+      box('trial', trial,'Trial (Signed Up)','#fff3cd')+
+      box('guestTrial', guestTrial,'Trial (Guest)','#ffe0b2')+
       box('expired', expired,'Expired','#ffebee')+
       box('today', todayCount,'Joined Today','#f3e5f5')+
     '</div>'+
@@ -3609,8 +3678,9 @@ window.filterAdminUsers = function(filterKey) {
   
   let filteredUsers = users;
   if (filterKey === 'licensed') filteredUsers = users.filter(u => u.status==='licensed' || u.master===1 || u.role==='admin');
-  else if (filterKey === 'trial') filteredUsers = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin');
-  else if (filterKey === 'expired') filteredUsers = users.filter(u => u.status!=='licensed' && u.master!==1 && u.role!=='admin' && u.status!=='trial');
+  else if (filterKey === 'trial') filteredUsers = users.filter(u => u.status==='trial' && u.master!==1 && u.role!=='admin' && !String(u.phone).startsWith('GUEST_'));
+  else if (filterKey === 'guestTrial') filteredUsers = users.filter(u => String(u.phone).startsWith('GUEST_'));
+  else if (filterKey === 'expired') filteredUsers = users.filter(u => u.status!=='licensed' && u.master!==1 && u.role!=='admin' && u.status!=='trial' && !String(u.phone).startsWith('GUEST_'));
   else if (filterKey === 'today') filteredUsers = users.filter(u => u.createdAt && new Date(u.createdAt).toDateString()===today);
 
   const title = document.getElementById('adminStatsTitle');
@@ -3619,14 +3689,17 @@ window.filterAdminUsers = function(filterKey) {
   const userRows = filteredUsers.length ? filteredUsers.map(u => {
     let badge = '';
     const st = String(u.status||'trial').toLowerCase();
+    const isGuest = String(u.phone).startsWith('GUEST_');
+    
     if(u.role==='admin'||u.master===1) badge = '<span style="background:#6a3093;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">👑 ADMIN</span>';
     else if(st==='licensed') badge = '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🟢 LICENSED</span>';
+    else if(isGuest) badge = '<span style="background:#ffe0b2;color:#e65100;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">👤 GUEST TRIAL</span>';
     else if(st==='trial') badge = '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🟡 TRIAL</span>';
     else badge = '<span style="background:#ffebee;color:#c62828;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;">🔴 EXPIRED</span>';
     
-    return '<div onclick="openUserEditorFor(\''+escapeAttr(u.phone)+'\')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f7f7fa;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;font-size:13px;">'+
+    return '<div onclick="openUserEditorFor(\'' + u.phone + '\')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f7f7fa;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;font-size:13px;">'+
       '<div style="flex:1;min-width:0;">'+
-        '<div style="font-weight:700;color:#333;">'+escapeHtml(u.name||'-')+'</div>'+
+        '<div style="font-weight:700;color:#333;">'+escapeHtml(u.name||'Guest User')+'</div>'+
         '<div style="font-size:11px;color:#888;">'+escapeHtml(u.phone||'-')+' · '+escapeHtml(u.university||'-')+'</div>'+
       '</div>'+
       badge+'<span style="color:#6a3093;font-weight:800;font-size:18px;">›</span></div>';
@@ -3674,12 +3747,19 @@ function renderAdminUserEditor(){
 async function openUserEditor(){
   const phone = (document.getElementById('ueSearch').value||'').trim();
   const box = document.getElementById('ueResult');
-  if(!/^(09|07)\d{8}$/.test(phone)){ box.innerHTML='<div style="color:#c62828;">Enter valid phone.</div>'; return; }
+  
+  // FIX: Allow GUEST_ IDs to be opened!
+  if(!/^(09|07)\d{8}$/.test(phone) && !phone.startsWith('GUEST_')){ 
+    box.innerHTML='<div style="color:#c62828;">Enter valid phone or Guest ID.</div>'; return; 
+  }
+  
   box.innerHTML='<div class="empty-msg">Searching…</div>';
   
   const r = await backendListUsers();
   const users = (r && r.ok && Array.isArray(r.users)) ? r.users : [];
-  const u = users.find(x => String(x.phone).replace(/[^\d]/g,'')===String(phone).replace(/[^\d]/g,''));
+  
+  // FIX: Match exact phone or Guest ID
+  const u = users.find(x => String(x.phone) === String(phone));
   
   if(!u){ box.innerHTML='<div style="color:#c62828;">Not found.</div>'; return; }
   
@@ -3930,7 +4010,7 @@ async function fetchSettingsFast(){
   fetchSettingsFast().then(changed => {
     if(changed){
       try {
-        applyTheme(); // Apply colors instantly
+        applyTheme();
         if(currentScreen === 'my') renderMy();
         else if(BASE_SCREENS.has(currentScreen)) _renderScreenByName(currentScreen);
       } catch(e){}
@@ -4004,7 +4084,8 @@ Object.assign(window, {
   adminGenerateResetCode, renderResetWithCode, submitResetWithCode,
   adminUnbindDevice, renderAdminLockedUsers, adminUnlockSelected,
   setSessionToken, getSessionToken, setAdminToken, getAdminToken,
-  renderAdminPages, adminAddPage, adminDeletePage, renderAdminCustomSettings, adminAddCustomSetting, adminDeleteCustomSetting, renderAdminNavManager, saveNavSettings, resetNavSettings
+  renderAdminPages, adminAddPage, adminDeletePage, renderAdminCustomSettings, adminAddCustomSetting, adminDeleteCustomSetting, renderAdminNavManager, saveNavSettings, resetNavSettings,
+  translateText
 });
 </script>
 
