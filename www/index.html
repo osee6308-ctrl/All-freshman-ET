@@ -4035,6 +4035,8 @@ async function fetchSettingsFast(){
   tick();
 })();
 
+// ... (The rest of Part 6B) ...
+
 Object.assign(window, {
   switchTab, renderCurrentScreen, renderMy, renderSignUp, renderSignIn, renderForgotPassword,
   submitSignUp, submitSignIn, pickStream, togglePassword, showPostAuthWarning,
@@ -4091,9 +4093,51 @@ Object.assign(window, {
 });
 </script>
 
+<!-- 🚨 UPDATE BANNER SCRIPT GOES RIGHT HERE 🚨 -->
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(() => console.log('Offline active')).catch(err => console.log('SW error:', err)); });
+  let newWorker;
+
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateBanner();
+        }
+      });
+    });
+  }).catch(err => console.log('SW error:', err));
+
+  let refreshing;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  function showUpdateBanner() {
+    if (document.getElementById('sw-update-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'sw-update-banner';
+    banner.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#0a5c36,#b8860b); color:#fff; padding:14px 20px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:999999; display:flex; flex-direction:column; gap:10px; align-items:center; width:90%; max-width:400px; text-align:center; border:2px solid #ffd700;';
+    
+    banner.innerHTML = `
+      <div style="font-weight:800; font-size:15px; text-shadow:0 1px 2px rgba(0,0,0,0.5);">🎉 A New Update is Available!</div>
+      <div style="font-size:12px; opacity:0.9;">Please update to get the latest exams, notes, and bug fixes.</div>
+      <button id="sw-update-btn" style="background:#fff; color:#0a5c36; border:none; padding:10px 24px; border-radius:20px; font-weight:900; font-size:14px; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2);">Update Now</button>
+    `;
+    
+    document.body.appendChild(banner);
+
+    document.getElementById('sw-update-btn').onclick = () => {
+      banner.innerHTML = '<div style="font-weight:800; font-size:14px;">Updating... Please wait 🚀</div>';
+      if (newWorker) {
+        newWorker.postMessage({ type: 'SKIP_WAITING' });
+      }
+    };
+  }
 }
 </script>
 </body>
