@@ -256,6 +256,7 @@ window.setAppZoom = function(v){ applyZoom(v); if (typeof window.renderMy === 'f
 window.getAppZoom = function(){ return parseFloat(localStorage.getItem('app_zoom') || '1.0'); };
 window._applySavedZoom = function(){ applyZoom(localStorage.getItem('app_zoom') || '1.0'); };
 applyZoom(localStorage.getItem('app_zoom') || '1.0');
+}) ();
 
 const DEFAULT_CONFIG = {
   TRIAL_DAYS: 3, LICENSE_DAYS: 365, SESSION_DAYS: 365, PRICE_BIRR: 200, OWNER_NAME: "Mohammed Abdi",
