@@ -1,6 +1,6 @@
 // 🚨 IMPORTANT: Change this version number every time you upload new code to Cloudflare!
 // Example: v1.0 -> v1.1 -> v1.2
-const CACHE_NAME = 'all-freshman-v1.122';
+const CACHE_NAME = 'all-freshman-v1.123';
 
 const ASSETS = [
   './manifest.json',
