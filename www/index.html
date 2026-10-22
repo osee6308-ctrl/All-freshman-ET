@@ -1414,9 +1414,14 @@ function takeAppScreenshot() {
   });
 }
 
-// UPDATED: Single Overlay for AI Input & Result + Error Catching
+// UPDATED: Single Overlay for AI Input & Result + Error Catching + Signed-In Check
 async function manualAITranslator() {
   if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+  
+  // NEW: Security Check for Signed-In Users
+  if (!isSignedIn()) {
+     return appAlert('🔒 You must Sign Up or Sign In to use AI features.').then(()=>showAuthChoice('Please sign in to use AI:'));
+  }
   
   const overlay = document.createElement('div');
   overlay.className = 'overlay-modal';
@@ -1499,6 +1504,10 @@ async function manualAITranslator() {
 // UPDATED: Same logic for translateText
 async function translateText(text) {
   if (!navigator.onLine) return appAlert('⚠️ Internet is required for AI features. Please connect to the internet and try again.');
+
+  if (!isSignedIn()) {
+     return appAlert('🔒 You must Sign Up or Sign In to use AI features.').then(()=>showAuthChoice('Please sign in to use AI:'));
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'overlay-modal';
@@ -1658,8 +1667,7 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-  }
-  
+      }
 
   // ================= PART 4 STARTS HERE =================
 
