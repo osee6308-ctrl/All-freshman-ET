@@ -996,7 +996,8 @@ const SUBJECTS = {
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
-  // ================= PART 3 STARTS HERE =================
+
+// ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
 var adminBulkMode = false;
@@ -1366,7 +1367,7 @@ function renderBottomNav(activeTab){
   return '<div class="bottom-nav">'+tabs.map(t=>'<button class="tab '+(activeTab===t.id?'active':'')+'" onclick="switchTab(\''+t.id+'\')"><span class="ico">'+t.icon+'</span><span>'+t.label+'</span></button>').join('')+'</div>';
 }
 
-/* Floating Buttons: AI (My Tab), Screenshot (My, Exam, Quiz), Chat (My Tab) */
+/* Floating Buttons: AI (My Tab), Screenshot (Allowed Tabs Only), Chat (My Tab) */
 function renderChatFab(){
   let html = '<div class="chat-menu">';
   
@@ -1375,8 +1376,8 @@ function renderChatFab(){
     html += '<button onclick="manualAITranslator()" class="chat-fab" style="background:linear-gradient(135deg,#b8860b,#ffd700); color:#000; margin-bottom:10px; font-size:12px; font-weight:900;">✨ AI</button>';
   }
   
-  // Screenshot Button (My tab, Exam Home, and Quiz)
-  if (currentTab === 'my' || currentScreen === 'exam-home' || currentScreen === 'quiz') {
+  // Screenshot Button (ONLY shows if Admin allowed this specific tab)
+  if (isScreenshotAllowed()) {
     html += '<button onclick="takeAppScreenshot()" class="chat-fab" style="background:linear-gradient(135deg,#6a3093,#4a2568); margin-bottom:10px; font-size:12px; font-weight:900;">📷</button>';
   }
   
@@ -1392,7 +1393,13 @@ function renderChatFab(){
   return html;
 }
 
+// UPDATED: Hard Security Block for App Screenshot
 function takeAppScreenshot() {
+  // If the tab is not allowed by Admin settings, block the action completely
+  if (!isScreenshotAllowed()) {
+    return appAlert('🚫 Screenshots are disabled for this section.');
+  }
+
   const target = document.getElementById('app');
   if(!target) return;
   showToast('⏳ Taking screenshot...');
@@ -1652,6 +1659,7 @@ async function submitSignUp(){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
   }
+  
 
   // ================= PART 4 STARTS HERE =================
 
