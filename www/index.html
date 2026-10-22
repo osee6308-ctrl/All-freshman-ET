@@ -531,7 +531,8 @@ function applyTheme(){
 function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
 
-  // ================= PART 2 STARTS HERE =================
+
+// ================= PART 2 STARTS HERE =================
 
 const app = document.getElementById('app');
 let quizState = {}, currentTab = 'book', currentScreen = 'home';
@@ -789,6 +790,9 @@ function isScreenshotAllowed() {
     return true;
   }
   
+  // NEW: Never allow screenshots for unsigned/guest users
+  if (!isSignedIn()) return false; 
+  
   const perms = CONFIG.SCREENSHOT_PERMISSIONS || DEFAULT_CONFIG.SCREENSHOT_PERMISSIONS;
   
   if (currentScreen === 'quiz') return perms.quiz === true;
@@ -995,7 +999,7 @@ const SUBJECTS = {
 
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
-
+  
 
 // ================= PART 3 STARTS HERE =================
 
