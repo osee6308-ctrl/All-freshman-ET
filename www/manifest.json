@@ -1,9 +1,10 @@
 {
   "name": "All Freshman ET",
-  "short_name": "All Freshman",
-  "start_url": "./index.html",
+  "short_name": "Freshman ET",
+  "description": "An educational app for Ethiopian freshman students.",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e3c72",
+  "background_color": "#0a5c36",
   "theme_color": "#6a3093",
   "icons": [
     {
