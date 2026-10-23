@@ -1673,7 +1673,7 @@ async function submitSignUp(){
   }
       }
 
-  // ================= PART 4 STARTS HERE =================
+// ================= PART 4 STARTS HERE =================
 
  function renderSignIn(){
   setScreen('auth');
@@ -1723,7 +1723,7 @@ async function submitSignIn(){
     startSession(phone);
     markPhoneUsed(phone);
     
-    // ADDED: Force the app to save the true cloud date to local storage so the trial NEVER resets
+    // FIX: Force the app to save the true cloud date to local storage so the trial NEVER resets
     if (user.createdAt) localStorage.setItem(LS_FIRST_RUN, String(user.createdAt)); 
 
     ok('✓ Signed in!');
@@ -1839,28 +1839,41 @@ function renderBooksHome(){
   if(preSelect) renderBookList(preSelect);
   restoreScroll('book_book');
 }
+
+// UPDATED: Displays Modules as grid cards (like Exams) with premium lock state
 function renderBookList(uni){
   if (uni) _lastUniSelection.book = uni;
   const el=document.getElementById('bookList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
-  /* ORDER 35: Removed hard login block */
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('book'); return; }
+  
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allPdfs = c.pdfs || [];
-  if(!allPdfs.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; return; }
+  
+  if(!allPdfs.length){ 
+    el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No modules yet.</div>'; 
+    return; 
+  }
+  
   const isTrialNow = checkAccess().status === 'trial';
-  const listHtml = allPdfs.map((p, i) => {
+  
+  const listHtml = '<div class="subjects-grid">' + allPdfs.map((p, i) => {
     const kwSet = Array.isArray(CONFIG.TRIAL_BOOK_KEYWORDS) && CONFIG.TRIAL_BOOK_KEYWORDS.length > 0;
     const allowed = kwSet ? isTrialBookAllowed(p.name || '') === true : isTrialSubjectKey('', p.name || '');
     const locked = isTrialNow && !allowed;
-    const chapter = p.chapter ? '<span class="chapter-tag">'+escapeHtml(p.chapter)+'</span>' : '';
-    const year = p.year ? '<span style="background:#6a3093; color:#fff; font-size:10.5px; font-weight:800; padding:2px 10px; border-radius:20px;">'+escapeHtml(p.year)+'</span>' : '';
-    const desc = p.description ? '<div style="font-size:12px; color:#666; margin-top:4px;">'+escapeHtml(p.description)+'</div>' : '';
-    const borderColor = locked ? '#ff9800' : 'var(--primary-color)';
-    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
+    
+    const bg = locked ? 'linear-gradient(135deg,#fff3cd,#ffe082)' : 'linear-gradient(135deg,#e8f5e9,#c8e6c9)';
+    const lockIcon = locked ? '<div style="position:absolute; top:12px; left:12px; font-size:20px;">🔒</div>' : '';
     const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-    return '<div onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">'+chapter+year+'</div><div style="font-weight:700; color:#333;">'+escapeHtml(p.name)+lockBadge+'</div>'+desc+'</div>';
-  }).join('');
+    const metaText = p.chapter ? escapeHtml(p.chapter) : (p.year ? escapeHtml(p.year) : 'Module');
+    
+    return '<div class="subject-card" style="background:'+bg+';" onclick="openBook(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')">' +
+      lockIcon +
+      '<div class="name">'+escapeHtml(p.name)+lockBadge+'</div>' +
+      '<div class="meta">'+metaText+'</div>' +
+      '</div>';
+  }).join('') + '</div>';
+  
   el.innerHTML = listHtml;
 }
 function openBook(uni,stream,sem,i){
@@ -1899,25 +1912,40 @@ function renderNotesHome(){
   if(preSelect) renderNoteList(preSelect);
   restoreScroll('note_note');
 }
+
+// UPDATED: Displays Notes as grid cards (like Exams) with premium lock state
 function renderNoteList(uni){
   if (uni) _lastUniSelection.note = uni;
   const el=document.getElementById('noteList'); if(!el) return;
   if(!uni){ el.innerHTML=''; return; }
-  /* ORDER 35: Removed hard login block */
   if(isTrialLockedUniversity(uni)){ el.innerHTML=renderTrialLockedUniversity('note'); return; }
+  
   const myStream=getUserStream(); const sem=getCurrentSemester(); const c=getUniContent(uni,myStream,sem);
   const allNotes = c.notes || [];
-  if(!allNotes.length){ el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; return; }
+  
+  if(!allNotes.length){ 
+    el.innerHTML='<div style="background:#fff; border-radius:12px; padding:40px; text-align:center; color:#999;">No notes yet.</div>'; 
+    return; 
+  }
+  
   const isTrialNow = checkAccess().status === 'trial';
-  const listHtml = allNotes.map((n, i) => {
+  
+  const listHtml = '<div class="subjects-grid">' + allNotes.map((n, i) => {
     const kwSet = Array.isArray(CONFIG.TRIAL_NOTE_KEYWORDS) && CONFIG.TRIAL_NOTE_KEYWORDS.length > 0;
     const allowed = kwSet ? isTrialNoteAllowed(n.title || '') === true : isTrialSubjectKey('', n.title || '');
     const locked = isTrialNow && !allowed;
-    const borderColor = locked ? '#ff9800' : '#2196f3';
-    const lockIcon = locked ? '<div style="position:absolute; top:12px; right:12px; font-size:22px;">🔒</div>' : '';
+    
+    const bg = locked ? 'linear-gradient(135deg,#fff3cd,#ffe082)' : 'linear-gradient(135deg,#e3f2fd,#bbdefb)'; // Blue for unlocked notes
+    const lockIcon = locked ? '<div style="position:absolute; top:12px; left:12px; font-size:20px;">🔒</div>' : '';
     const lockBadge = locked ? '<span style="background:#ff4757; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px;">🔒 PREMIUM</span>' : '';
-    return '<div onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')" style="background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; border-left:4px solid '+borderColor+'; position:relative;">'+lockIcon+'<div style="font-weight:700; color:#333;">'+escapeHtml(n.title)+(n.url?' 📎':'')+lockBadge+'</div></div>';
-  }).join('');
+    
+    return '<div class="subject-card" style="background:'+bg+';" onclick="openNote(\''+escapeAttr(uni)+'\',\''+myStream+'\','+sem+','+i+')">' +
+      lockIcon +
+      '<div class="name">'+escapeHtml(n.title)+(n.url?' 📎':'')+lockBadge+'</div>' +
+      '<div class="meta">Note</div>' +
+      '</div>';
+  }).join('') + '</div>';
+  
   el.innerHTML = listHtml;
 }
 function openNote(uni,stream,sem,i){
@@ -1940,7 +1968,8 @@ function openNote(uni,stream,sem,i){
   _viewerState = { type:'note', uni:uni, stream:stream, sem:sem, i:i };
   _screenStack.push('note'); _renderNoteViewerDirect();
     }
-
+  
+  
   // ================= PART 5 STARTS HERE =================
 
 /* Fix for crashes from leftover calls */
