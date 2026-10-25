@@ -3,7 +3,7 @@
   "appName": "All Freshman ET",
   "webDir": "www",
   "server": {
-    "url": "https://osee6308-ctrl.github.io/All-freshman-ET/",
+    "url": "https://your-new-cloudflare-link.pages.dev",
     "androidScheme": "https",
     "cleartext": false
   },
