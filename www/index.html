@@ -1007,7 +1007,7 @@ function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_G
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
 
- // ================= PART 3 STARTS HERE =================
+  // ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
 var adminBulkMode = false;
@@ -1143,12 +1143,66 @@ function _renderBookViewerDirect(){
   loadPdfToCanvas(p.url, 'pdfCanvasContainer');
 }
 
+// IndexedDB Helper for Offline PDFs
+let pdfDbPromise = null;
+function getPdfDb() {
+  if (!pdfDbPromise) {
+    pdfDbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open('FreshmanPdfCache', 1);
+      request.onupgradeneeded = (e) => {
+        if (!e.target.result.objectStoreNames.contains('pdfs')) {
+          e.target.result.createObjectStore('pdfs');
+        }
+      };
+      request.onsuccess = (e) => resolve(e.target.result);
+      request.onerror = (e) => reject(e.target.error);
+    });
+  }
+  return pdfDbPromise;
+}
+
+async function getCachedPdf(url) {
+  const db = await getPdfDb();
+  return new Promise((resolve) => {
+    const tx = db.transaction('pdfs', 'readonly');
+    const req = tx.objectStore('pdfs').get(url);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function savePdfToCache(url, arrayBuffer) {
+  const db = await getPdfDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pdfs', 'readwrite');
+    const req = tx.objectStore('pdfs').put(arrayBuffer, url);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
 async function loadPdfToCanvas(url, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '<div style="padding:20px; text-align:center; font-weight:bold; color:#888;">Loading PDF...</div>';
+  container.innerHTML = '<div style="padding:20px; text-align:center; font-weight:bold; color:#888;">Checking offline cache...</div>';
+  
   try {
-    const loadingTask = pdfjsLib.getDocument(url);
+    // 1. Check if the PDF is already saved on the phone
+    let arrayBuffer = await getCachedPdf(url);
+    
+    if (!arrayBuffer) {
+      // 2. If not saved, download it from the internet
+      container.innerHTML = '<div style="padding:20px; text-align:center; font-weight:bold; color:#888;">Downloading PDF...</div>';
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response failed');
+      arrayBuffer = await response.arrayBuffer();
+      
+      // 3. Save it for offline use next time
+      await savePdfToCache(url, arrayBuffer);
+    }
+
+    // 4. Load the PDF from the array buffer (works offline!)
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
     container.innerHTML = '';
     
@@ -1184,7 +1238,7 @@ async function loadPdfToCanvas(url, containerId) {
     }
   } catch (err) {
     console.error(err);
-    container.innerHTML = '<div style="padding:20px; text-align:center; color:#c62828; font-weight:bold;">Failed to load PDF directly.<br><a href="'+escapeAttr(url)+'" target="_blank" style="color:#0088cc; display:inline-block; margin-top:10px; padding:10px 20px; border:2px solid #0088cc; border-radius:8px; text-decoration:none;">Open in New Tab</a></div>';
+    container.innerHTML = '<div style="padding:20px; text-align:center; color:#c62828; font-weight:bold;">Failed to load PDF.<br><span style="font-size:12px; font-weight:normal; color:#666;">Check your internet connection and try again.</span><br><a href="'+escapeAttr(url)+'" target="_blank" style="color:#0088cc; display:inline-block; margin-top:10px; padding:10px 20px; border:2px solid #0088cc; border-radius:8px; text-decoration:none;">Open in New Tab</a></div>';
   }
 }
 
@@ -1694,10 +1748,10 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-  } 
-  
+}
 
-// ================= PART 4 STARTS HERE =================
+  
+ // ================= PART 4 STARTS HERE =================
 
  function renderSignIn(){
   setScreen('auth');
