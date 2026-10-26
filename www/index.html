@@ -18,9 +18,7 @@
 <style>
   /* ORDER 43: Dynamic Variables for Admin Branding */
   :root {
-    /* Green/Gold/Blue/Yellow mix */
     --bg-light: linear-gradient(135deg, #0a5c36, #1e8449, #1e3c72, #b8860b, #ffd700);
-    /* Peep Black Dark Mode */
     --bg-dark: #000000;
     --primary-color: #0a5c36;
     --accent-color: #b8860b;
@@ -46,7 +44,7 @@
   
   body.admin-mode * { -webkit-user-select: text !important; user-select: text !important; }
   
-  /* STRICT COPY PROTECTION: Non-admins cannot select or copy any text */
+  /* STRICT COPY PROTECTION */
   body:not(.admin-mode) * { 
     -webkit-user-select: none !important; 
     -moz-user-select: none !important;
@@ -55,7 +53,7 @@
     -webkit-touch-callout: none !important; 
   }
   
-  /* Allow typing in inputs but prevent copy/paste menus */
+  /* Allow typing in inputs */
   body:not(.admin-mode) input, body:not(.admin-mode) textarea { 
     -webkit-user-select: text !important; 
     user-select: text !important; 
@@ -72,7 +70,6 @@
   .hdr-btn { position:relative; background:rgba(255,255,255,.18); border:none; color:#fff; width:42px; height:42px; border-radius:50%; cursor:pointer; font-size:19px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .hdr-btn .dot { position:absolute; top:6px; right:6px; min-width:16px; height:16px; padding:0 4px; background:#ff4757; color:#fff; border-radius:20px; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #2a5298; }
   
-  /* FIXED: Bottom Nav perfectly fits all tabs */
   .bottom-nav { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:800px; background:rgba(30,60,114,.96); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; padding:10px 2px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.15); box-shadow:0 -4px 20px rgba(0,0,0,.3); z-index:9000; gap:2px; }
   body.dark .bottom-nav { background:rgba(10,10,10,.96); }
   .bottom-nav .tab { flex:1 1 0; padding:8px 1px; border:none; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; font-size:9px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:10px; transition:.15s; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -131,7 +128,6 @@
   .progress-track { height:7px; background:rgba(255,255,255,.25); border-radius:10px; overflow:hidden; margin-bottom:16px; }
   .progress-fill { height:100%; background:#4ade80; width:0%; transition:width .3s; border-radius:10px; }
   
-  /* ORDER 13 & 14: Vertical Scroll & Sticky Quiz Header */
   .sticky-quiz-header { position: sticky; top: 0; z-index: 100; background: rgba(10,60,30,0.95); padding: 10px; margin: -12px -12px 12px -12px; backdrop-filter: blur(10px); border-bottom: 2px solid var(--accent-color); }
   body.dark .sticky-quiz-header { background: rgba(0,0,0,0.95); border-bottom: 2px solid var(--accent-color); }
   .quiz-nav-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px; }
@@ -141,7 +137,6 @@
 
   .question-block { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-bottom:20px; border-left:5px solid var(--primary-color); color: #222; }
   body.dark .question-block { background:#151515; color:#fff; border-left-color: var(--accent-color); border: 1px solid #333; }
-  
   .question-card { background:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); color:#222; }
   body.dark .question-card { background:#151515; color:#fff; border:1px solid #333; }
   .q-number { font-size:12px; color:#888; margin-bottom:6px; font-weight:600; letter-spacing:.5px; }
@@ -154,7 +149,6 @@
   body.dark .option.selected { border-color: var(--accent-color); background: #333; color: #fff; }
   .option .letter { width:26px; height:26px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0; color:#444; }
   
-  /* ORDER 31, 32, 33: 3-Method Upload Tabs */
   .method-tabs { display:flex; gap:8px; margin-bottom:12px; }
   .method-tab { flex:1; padding:10px; border:2px solid #ddd; background:#fff; border-radius:8px; font-weight:700; cursor:pointer; text-align:center; font-size:13px; color:#555; }
   .method-tab.active { border-color: var(--primary-color); background:#e8f5e9; color: var(--primary-color); }
@@ -253,7 +247,6 @@
   body.dark #appDialogOverlay > div { background:#16162a !important; }
   body.dark #appDialogOverlay div[style*="color:#333"] { color:#e0e0e0 !important; }
 
-  /* NEW OVERLAY FIX FOR AI PANEL AND MODALS */
   .overlay-modal {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0, 0, 0, 0.75); z-index: 99999;
@@ -268,6 +261,9 @@
   }
   body.dark .overlay-content { background: #111; color: #fff; border: 1px solid #333; }
   
+  /* Auto Dark Mode for PDFs */
+  body.dark .pdf-canvas { filter: invert(0.9) hue-rotate(180deg) contrast(1.2); }
+
   @media (max-width:520px) { .app-header h1 { font-size:17px; } .subjects-grid { grid-template-columns:1fr 1fr; } .q-text { font-size:15.5px; } }
 </style>
 </head>
@@ -316,13 +312,11 @@ const DEFAULT_CONFIG = {
     "Addis Ababa University","Addis Ababa Science and Technology University","Adama Science and Technology University","Adigrat University","Aksum University","Ambo University","Arba Minch University","Arsi University","Assosa University","Bahir Dar University","Bonga University","Bule Hora University","Debark University","Debre Berhan University","Debre Markos University","Debre Tabor University","Dilla University","Dire Dawa University","Ethiopian Civil Service University","Gambella University","Haramaya University","Hawassa University","Injibara University","Jigjiga University","Jimma University","Kebri Dehar University","Kotebe Metropolitan University","Madda Walabu University","Mekelle University","Mettu University","Mizan-Tepi University","Oda Bultum University","Raya University","Salale University","Semera University","University of Gondar","Wachemo University","Werabe University","Wolaita Sodo University","Woldia University","Wolkite University","Wollo University"
   ],
   
-  /* ORDER 37: Granular Screenshot Block Config */
   SCREENSHOT_PERMISSIONS: {
     book: false, note: false, exam: true, coc: false, university: false, my: true, quiz: true, admin_block: false
   },
-  TUTORIAL_VISIBILITY: 'all', /* 'all', 'trial_only', 'hide_trial', 'hide_all' */
+  TUTORIAL_VISIBILITY: 'all', 
   
-  /* ORDER 48: Dynamic Navigation Tabs */
   NAV_TABS: [
     { id: 'book', label: 'Modules', icon: '📚' },
     { id: 'note', label: 'Note', icon: '📝' },
@@ -332,11 +326,9 @@ const DEFAULT_CONFIG = {
     { id: 'my', label: 'My', icon: '👤' }
   ],
   
-  /* ORDER 42 & 44: Custom Pages & Settings */
   CUSTOM_PAGES: {},
   CUSTOM_SETTINGS: {},
   
-  /* ORDER 43: App Branding (Colors) */
   APP_COLORS: {
     lightBg: 'linear-gradient(135deg, #0a5c36, #1e8449, #1e3c72, #b8860b, #ffd700)',
     darkBg: '#000000',
@@ -516,7 +508,6 @@ function reloadConfig(){ CONFIG = getSettings(); }
 function getTheme(){ return localStorage.getItem(LS_THEME) || 'light'; }
 function setTheme(t){ localStorage.setItem(LS_THEME, t); applyTheme(); }
 
-/* ORDER 43: Apply Custom Branding Colors */
 function applyTheme(){ 
   document.body.classList.toggle('dark', getTheme() === 'dark'); 
   if (CONFIG.APP_COLORS) {
@@ -528,8 +519,23 @@ function applyTheme(){
   }
 }
 
-function toggleTheme(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); renderCurrentScreen(); }
+// UPDATED: Safe Theme Toggle that doesn't jump back to home
+function toggleTheme(){ 
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark'); 
+  
+  // Update the icon in the header instantly
+  const themeBtn = document.querySelector('.hdr-btn[title="Theme"]');
+  if (themeBtn) themeBtn.textContent = getTheme() === 'dark' ? '☀️' : '🌙';
+  
+  // Only re-render the "My" tab if we are currently on it (to fix the button colors)
+  if (currentScreen === 'my') {
+    renderMy();
+  }
+}
 function applyAdminModeClass(){ document.body.classList.toggle('admin-mode', isAdminMode()); }
+</script>
+</body>
+</html>
 
 
 // ================= PART 2 STARTS HERE =================
@@ -1001,7 +1007,7 @@ function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_G
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
 
-// ================= PART 3 STARTS HERE =================
+ // ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
 var adminBulkMode = false;
@@ -1128,7 +1134,7 @@ function _renderBookViewerDirect(){
   currentScreen = 'book-viewer'; updateScreenshotGuard();
   const z = getBookZoom();
   
-  // FIX: Set the background color based on theme
+  // Set the background color based on theme
   const bgColor = getTheme() === 'dark' ? '#111' : '#f0f0f0';
   
   app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body" style="padding:10px; background:'+bgColor+';"><div id="bookZoomWrap" style="width:100%;"><div id="pdfCanvasContainer" style="text-align:center;"></div></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
@@ -1146,9 +1152,8 @@ async function loadPdfToCanvas(url, containerId) {
     const pdf = await loadingTask.promise;
     container.innerHTML = '';
     
-    // FIX: High-Resolution Rendering for clear text
+    // High-Resolution Rendering for clear text
     const dpr = window.devicePixelRatio || 1; 
-    const isDark = getTheme() === 'dark';
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
@@ -1156,7 +1161,7 @@ async function loadPdfToCanvas(url, containerId) {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
       
-      // FIX: Apply high-DPI scaling
+      // Apply high-DPI scaling
       canvas.height = viewport.height * dpr;
       canvas.width = viewport.width * dpr;
       canvas.style.width = '100%'; 
@@ -1165,10 +1170,8 @@ async function loadPdfToCanvas(url, containerId) {
       canvas.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
       canvas.style.background = '#fff';
       
-      // FIX: Dark Mode Filter for PDF
-      if (isDark) {
-        canvas.style.filter = 'invert(0.9) hue-rotate(180deg) contrast(1.2)';
-      }
+      // Add class for CSS Dark Mode handling
+      canvas.className = 'pdf-canvas';
       
       container.appendChild(canvas);
       
@@ -1691,7 +1694,7 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-  }
+  } 
   
 
 // ================= PART 4 STARTS HERE =================
@@ -4546,4 +4549,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-  
