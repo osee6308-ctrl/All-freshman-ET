@@ -999,7 +999,7 @@ const SUBJECTS = {
 
 function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_GENERAL_SUBJECTS)||'null'); if(s&&typeof s==='object'&&Object.keys(s).length) return s; }catch(e){} return JSON.parse(JSON.stringify(SUBJECTS)); }
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
-  
+
 
 // ================= PART 3 STARTS HERE =================
 
@@ -1128,7 +1128,10 @@ function _renderBookViewerDirect(){
   currentScreen = 'book-viewer'; updateScreenshotGuard();
   const z = getBookZoom();
   
-  app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body" style="padding:10px; background:#f0f0f0;"><div id="bookZoomWrap" style="width:100%; transition:transform 0.2s;"><div id="pdfCanvasContainer" style="text-align:center;"></div></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
+  // FIX: Set the background color based on theme
+  const bgColor = getTheme() === 'dark' ? '#111' : '#f0f0f0';
+  
+  app.innerHTML = renderHeader('book')+'<div class="viewer-topbar"><button class="btn btn-ghost" style="padding:8px 14px;" onclick="goBack()">← Back</button><div class="vt-title">'+escapeHtml(p.name)+'</div><div class="zoom-group"><button class="zoom-btn" onclick="setBookZoom(getBookZoom()-0.25)" title="Zoom out">−</button><span class="zoom-pct" id="bookZoomPct">'+Math.round(z*100)+'%</span><button class="zoom-btn" onclick="setBookZoom(getBookZoom()+0.25)" title="Zoom in">+</button><button class="zoom-btn" onclick="setBookZoom(1)" title="Reset">⟲</button></div></div><div class="viewer-body" style="padding:10px; background:'+bgColor+';"><div id="bookZoomWrap" style="width:100%;"><div id="pdfCanvasContainer" style="text-align:center;"></div></div></div><div style="text-align:center; color:#fff; font-size:11.5px; margin-top:12px; opacity:.75;">Pinch or use +/− to zoom. Tap "⟲" to reset.</div>'+renderBottomNav('book')+renderChatFab();
   
   setTimeout(() => { setBookZoom(z); }, 50);
   loadPdfToCanvas(p.url, 'pdfCanvasContainer');
@@ -1137,26 +1140,43 @@ function _renderBookViewerDirect(){
 async function loadPdfToCanvas(url, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '<div style="padding:20px; text-align:center; font-weight:bold; color:#555;">Loading PDF...</div>';
+  container.innerHTML = '<div style="padding:20px; text-align:center; font-weight:bold; color:#888;">Loading PDF...</div>';
   try {
     const loadingTask = pdfjsLib.getDocument(url);
     const pdf = await loadingTask.promise;
     container.innerHTML = '';
     
+    // FIX: High-Resolution Rendering for clear text
+    const dpr = window.devicePixelRatio || 1; 
+    const isDark = getTheme() === 'dark';
+
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-      canvas.style.maxWidth = '100%';
+      
+      // FIX: Apply high-DPI scaling
+      canvas.height = viewport.height * dpr;
+      canvas.width = viewport.width * dpr;
+      canvas.style.width = '100%'; 
+      canvas.style.maxWidth = viewport.width + 'px';
       canvas.style.marginBottom = '15px';
       canvas.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
       canvas.style.background = '#fff';
+      
+      // FIX: Dark Mode Filter for PDF
+      if (isDark) {
+        canvas.style.filter = 'invert(0.9) hue-rotate(180deg) contrast(1.2)';
+      }
+      
       container.appendChild(canvas);
       
-      const renderContext = { canvasContext: context, viewport: viewport };
+      const renderContext = { 
+        canvasContext: context, 
+        viewport: viewport,
+        transform: [dpr, 0, 0, dpr, 0, 0] // This makes the text super clear
+      };
       await page.render(renderContext).promise;
     }
   } catch (err) {
@@ -1671,7 +1691,8 @@ async function submitSignUp(){
   } catch(e){
     err('Signup failed. Please try again.'); if(btn){ btn.disabled=false; btn.textContent='Create Account'; }
   }
-      }
+  }
+  
 
 // ================= PART 4 STARTS HERE =================
 
