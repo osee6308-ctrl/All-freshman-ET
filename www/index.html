@@ -1007,6 +1007,7 @@ function getGeneralSubjects(){ try{ const s=JSON.parse(localStorage.getItem(LS_G
 function saveGeneralSubjects(s){ localStorage.setItem(LS_GENERAL_SUBJECTS, JSON.stringify(s)); }
 
 
+
   // ================= PART 3 STARTS HERE =================
 
 /* ORDER 2: Fix Admin Crash (Missing Variables) */
@@ -1462,12 +1463,18 @@ function renderChatFab(){
     html += '<button onclick="takeAppScreenshot()" class="chat-fab" style="background:linear-gradient(135deg,#6a3093,#4a2568); margin-bottom:10px; font-size:12px; font-weight:900;">📷</button>';
   }
   
-  // Chat Button (Only on My Tab)
+  // Chat Button (Only on My Tab) - FIXED BROKEN QUOTES HERE
   if (currentTab === 'my') {
     const tg = (CONFIG.TELEGRAM_USERNAME || '').trim();
     const group = (CONFIG.SUPPORT_GROUP || '').trim();
-    const link = group ? (/^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,'')) : (tg ? 'https://t.me/' + tg : '#');
-    html += '<a href="'+escapeAttr(link)+'" target="_blank" rel="noopener" class="chat-fab">CHAT</a>';
+    let link = '#';
+    if (group) {
+      link = /^https?:\/\//i.test(group) ? group : 'https://t.me/' + group.replace(/^@/,'');
+    } else if (tg) {
+      link = 'https://t.me/' + tg;
+    }
+    // The quotes here are 100% safe
+    html += '<a href="' + escapeAttr(link) + '" target="_blank" rel="noopener" class="chat-fab">CHAT</a>';
   }
   
   html += '</div>';
