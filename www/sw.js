@@ -1,4 +1,4 @@
-const CACHE_NAME = 'freshman-cache-v1.127'; // Keep changing this number
+const CACHE_NAME = 'freshman-cache-v1.128'; // Keep changing this number
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Force the new service worker to activate immediately
